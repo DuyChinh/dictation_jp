@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@jd/evaluation": ["../packages/evaluation/src/index.ts"],
+      "@jd/shared-types": ["../packages/shared-types/src/index.ts"],
+      "@jd/content-schema": ["../packages/content-schema/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
