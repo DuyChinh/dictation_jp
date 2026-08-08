@@ -1,17 +1,26 @@
-import type { ContentLang } from "@jd/content-schema";
-import { getLocalizedText as sharedGet } from "@jd/content-schema";
+export type ContentLang = "ja" | "vi" | "en";
 
-export type { ContentLang } from "@jd/content-schema";
 export type LocalizedText = {
   ja?: string;
   vi?: string;
   en?: string;
 };
 
+/**
+ * Pick localized string with fallback order.
+ * Default: current lang → vi → en → ja
+ */
 export function getLocalizedText(
   obj: LocalizedText | string | null | undefined,
   lang: ContentLang = "vi",
   fallbackOrder?: ContentLang[],
 ): string {
-  return sharedGet(obj, lang, fallbackOrder);
+  if (obj == null) return "";
+  if (typeof obj === "string") return obj;
+  const order = fallbackOrder ?? [lang, "vi", "en", "ja"];
+  for (const key of order) {
+    const v = obj[key];
+    if (v != null && v.trim() !== "") return v;
+  }
+  return "";
 }

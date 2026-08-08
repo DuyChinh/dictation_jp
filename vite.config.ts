@@ -12,22 +12,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    resolve: {
-      alias: {
-        "@jd/evaluation": path.resolve(
-          rootDir,
-          "../packages/evaluation/src/index.ts",
-        ),
-        "@jd/shared-types": path.resolve(
-          rootDir,
-          "../packages/shared-types/src/index.ts",
-        ),
-        "@jd/content-schema": path.resolve(
-          rootDir,
-          "../packages/content-schema/src/index.ts",
-        ),
-      },
-    },
     server: {
       port: Number(env.VITE_DEV_PORT || 5173),
       proxy: {

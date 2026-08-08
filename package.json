@@ -1,20 +1,19 @@
 {
-  "name": "@jd/frontend",
+  "name": "dictation-jp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint placeholder: @jd/frontend'",
     "test": "vitest run"
   },
   "dependencies": {
-    "@jd/content-schema": "*",
-    "@jd/evaluation": "*",
-    "@jd/shared-types": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.3"

@@ -1,21 +1,22 @@
-# Dependencies — never commit
+# Dependencies
 node_modules/
 **/node_modules/
 
-# Local env / secrets
+# Env / secrets
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
 
-# Build & tooling
-dist
-build
-coverage
+# Build
+dist/
+build/
+coverage/
 *.log
 .DS_Store
 .vite
 .pnpm-store
 
-# Test artifacts
+# Test
 playwright-report
 test-results
