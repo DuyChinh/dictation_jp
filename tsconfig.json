@@ -18,5 +18,11 @@
     "types": ["vite/client"],
     "baseUrl": "."
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "node_modules",
+    "dist"
+  ]
 }
