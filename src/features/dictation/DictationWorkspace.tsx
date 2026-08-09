@@ -88,6 +88,7 @@ export function DictationWorkspace({
   const [checking, setChecking] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"editing" | "checked">("editing");
+  const [resetKey, setResetKey] = useState(0);
   const [autoReplay, setAutoReplay] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const settings = loadSettings();
@@ -187,6 +188,13 @@ export function DictationWorkspace({
       setUiError(e instanceof Error ? e.message : "Replay lỗi");
     }
   }, [audio, current]);
+
+  const handleClear = useCallback(() => {
+    setAnswer("");
+    setResult(null);
+    setPhase("editing");
+    setResetKey((k) => k + 1);
+  }, []);
 
   const goNext = useCallback(() => {
     if (index < items.length - 1) setIndex((i) => i + 1);
@@ -336,6 +344,7 @@ export function DictationWorkspace({
                 if (phase === "checked") setPhase("editing");
               }}
               result={result}
+              resetKey={resetKey}
             />
           </div>
 
@@ -356,7 +365,7 @@ export function DictationWorkspace({
                 type="button"
                 className="btn-base"
                 style={{ fontSize: "0.85rem", padding: "0.4rem 0.85rem" }}
-                onClick={() => setAnswer("")}
+                onClick={handleClear}
               >
                 ⊗ {t("dictation.clear")}
               </button>

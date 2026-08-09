@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DictationEvalResult } from "../../shared/api/evaluate";
+import { kanjiToHiragana, getReadingMappings } from "../../shared/utils/kanjiToHiragana";
 
 type TokenizedInputProps = {
   expectedText: string;
@@ -7,6 +8,7 @@ type TokenizedInputProps = {
   phase: "editing" | "checked";
   onAnswerChange: (answer: string) => void;
   result: DictationEvalResult | null;
+  resetKey?: number;
 };
 
 type Block =
@@ -19,6 +21,7 @@ export function TokenizedInput({
   phase,
   onAnswerChange,
   result,
+  resetKey = 0,
 }: TokenizedInputProps) {
   // 1. Tokenize expectedText and group contiguous hidden tokens into single input blocks
   const blocks = useMemo(() => {
@@ -104,10 +107,10 @@ export function TokenizedInput({
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Reset inputs when blocks change
+  // Reset inputs when blocks or resetKey change
   useEffect(() => {
     setInputValues({});
-  }, [blocks]);
+  }, [blocks, resetKey]);
 
   // Aggregate full answer string whenever inputValues or blocks change
   useEffect(() => {
@@ -149,8 +152,19 @@ export function TokenizedInput({
 
         const val = inputValues[b.key] || "";
         const isRevealed = !!result?.revealed;
-        const isCorrect = phase === "checked" && val.trim() === b.expectedText.trim();
-        const isIncorrect = phase === "checked" && !isCorrect;
+        
+        // Validation statuses
+        const isExactCorrect = phase === "checked" && val.trim() === b.expectedText.trim();
+        const isAcceptedReading =
+          phase === "checked" &&
+          !isExactCorrect &&
+          val.trim().length > 0 &&
+          kanjiToHiragana(val.trim()) === kanjiToHiragana(b.expectedText.trim());
+        const isEmptyMissing = phase === "checked" && val.trim().length === 0;
+        const isIncorrect = phase === "checked" && !isExactCorrect && !isAcceptedReading;
+
+        // Reading mappings if accepted reading
+        const mappings = isAcceptedReading ? getReadingMappings(b.expectedText, val) : [];
 
         // Dynamic width calculated from expected length or input length
         const charCount = Math.max(b.expectedText.length, val.length || 1);
@@ -174,13 +188,96 @@ export function TokenizedInput({
                 setInputValues((prev) => ({ ...prev, [b.key]: e.target.value }));
               }}
               onKeyDown={(e) => handleKeyDown(e, b.key)}
-              className={`token-input ${isIncorrect || (isRevealed && !isCorrect) ? "incorrect" : ""}`}
+              className={`token-input ${
+                isIncorrect || (isRevealed && !isExactCorrect && !isAcceptedReading)
+                  ? "incorrect"
+                  : isAcceptedReading
+                  ? "accepted-reading"
+                  : ""
+              }`}
               style={{ width }}
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
               autoComplete="off"
             />
+
+            {/* Badges in Checked Phase */}
+            {phase === "checked" && (
+              <div style={{ marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                {isAcceptedReading && (
+                  <>
+                    <span
+                      style={{
+                        background: "rgba(234, 179, 8, 0.25)",
+                        border: "1px solid rgba(234, 179, 8, 0.4)",
+                        color: "#facc15",
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      ✔ Chấp nhận theo cách đọc
+                    </span>
+                    {mappings.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
+                        {mappings.map((m, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              background: "rgba(255, 255, 255, 0.08)",
+                              border: "1px solid rgba(234, 179, 8, 0.3)",
+                              color: "#fef08a",
+                              padding: "1px 6px",
+                              borderRadius: "6px",
+                              fontSize: "0.72rem",
+                            }}
+                          >
+                            {m.hiragana} → {m.kanji}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {isEmptyMissing && (
+                  <span
+                    style={{
+                      background: "rgba(239, 68, 68, 0.25)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "#f87171",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ✖ Thiếu
+                  </span>
+                )}
+
+                {isIncorrect && !isEmptyMissing && (
+                  <span
+                    style={{
+                      background: "rgba(239, 68, 68, 0.25)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "#f87171",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ✖ Sai
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
