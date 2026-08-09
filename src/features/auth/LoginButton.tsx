@@ -16,11 +16,11 @@ export function LoginButton() {
 
   if (user) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div className="auth-user">
         {user.avatar ? (
           <img
             src={user.avatar}
-            alt="Avatar"
+            alt=""
             style={{
               width: 32,
               height: 32,
@@ -43,27 +43,34 @@ export function LoginButton() {
               fontWeight: 600,
               fontSize: "0.9rem",
             }}
+            aria-hidden
           >
             {user.displayName?.charAt(0).toUpperCase() || "U"}
           </div>
         )}
-        <span style={{ fontWeight: 500, fontSize: "0.9rem", color: "var(--text-main)" }}>
+        <span className="auth-user-name" style={{ fontWeight: 500, fontSize: "0.9rem", color: "var(--text-main)" }}>
           {user.displayName}
         </span>
         <button
+          type="button"
           onClick={logout}
+          className="auth-logout-btn"
+          aria-label={t("auth.logout")}
           style={{
-            padding: "0.4rem 0.8rem",
+            padding: "0.4rem 0.65rem",
             fontSize: "0.85rem",
             borderRadius: "8px",
             border: "1px solid var(--border-color)",
             background: "var(--card-bg)",
             color: "var(--text-muted)",
             cursor: "pointer",
-            transition: "all 0.2s ease",
+            minHeight: "var(--touch-min)",
           }}
         >
-          {t("auth.logout")}
+          <span className="auth-logout-label">{t("auth.logout")}</span>
+          <span className="auth-logout-icon" aria-hidden>
+            ⎋
+          </span>
         </button>
       </div>
     );
@@ -75,12 +82,14 @@ export function LoginButton() {
 
   return (
     <button
+      type="button"
       onClick={handleLogin}
+      className="auth-login-btn"
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: "8px",
-        padding: "0.45rem 1rem",
+        padding: "0.45rem 0.75rem",
         fontSize: "0.88rem",
         fontWeight: 600,
         borderRadius: "10px",
@@ -89,18 +98,9 @@ export function LoginButton() {
         color: "var(--text-main)",
         cursor: "pointer",
         boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
-        transition: "all 0.2s ease",
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.borderColor = "var(--primary-color)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = "var(--border-color)";
-        e.currentTarget.style.transform = "none";
       }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
         <path
           fill="#4285F4"
           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -118,7 +118,7 @@ export function LoginButton() {
           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
         />
       </svg>
-      <span>{t("auth.loginGoogle")}</span>
+      <span className="auth-login-label">{t("auth.loginGoogle")}</span>
     </button>
   );
 }

@@ -6,14 +6,13 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
+      className="theme-toggle"
       onClick={toggleTheme}
       title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
       style={{
         background: "transparent",
         border: "1px solid var(--border-color)",
         borderRadius: "10px",
-        width: "38px",
-        height: "38px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

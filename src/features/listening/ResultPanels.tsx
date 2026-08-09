@@ -12,7 +12,7 @@ export function ExplanationPanel({
   title?: string;
 }) {
   const body = getLocalizedText(text, lang);
-  if (!body) return null;
+  if (!body || body === "—") return null;
   return (
     <section style={{ marginTop: 16, padding: "1rem", borderRadius: "10px", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
       <h3 style={{ margin: "0 0 6px", fontSize: "1rem", color: "var(--text-main)", fontWeight: 700 }}>{title}</h3>

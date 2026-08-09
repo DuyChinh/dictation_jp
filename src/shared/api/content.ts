@@ -57,7 +57,9 @@ export type PracticeQuestion = {
   audio: { start_ms: number; end_ms: number };
   prompt?: LocaleText;
   choices?: PracticeChoice[];
-  choice_display_mode?: "text" | "image";
+  choice_display_mode?: "text" | "image" | "numbers";
+  listening_unit_id?: string;
+  prompt_visibility?: "always" | "after_submit";
   dialogue_translation?: LocaleText;
   segments: PracticeSegment[];
   dictation?: {

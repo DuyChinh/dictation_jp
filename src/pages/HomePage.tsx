@@ -43,8 +43,7 @@ export function HomePage() {
 
   return (
     <AppShell wide>
-      {/* Hero Header */}
-      <section style={{ textAlign: "center", margin: "1.5rem 0 3rem" }}>
+      <section className="home-hero">
         <div
           style={{
             display: "inline-flex",
@@ -62,44 +61,12 @@ export function HomePage() {
           <span>✨</span>
           <span>JLPT Dictation & Listening</span>
         </div>
-        <h1
-          style={{
-            fontSize: "2.4rem",
-            fontWeight: 800,
-            margin: "0 0 1rem",
-            letterSpacing: "-0.03em",
-            lineHeight: 1.2,
-          }}
-        >
-          {t("home.heroTitle")}
-        </h1>
-        <p
-          style={{
-            maxWidth: 600,
-            margin: "0 auto",
-            fontSize: "1.05rem",
-            color: "var(--text-muted)",
-            lineHeight: 1.6,
-          }}
-        >
-          {t("home.heroSub")}
-        </p>
+        <h1>{t("home.heroTitle")}</h1>
+        <p>{t("home.heroSub")}</p>
       </section>
 
-      {/* Resume Card */}
       {resume && (
-        <section
-          className="card-glass"
-          style={{
-            marginBottom: "2.5rem",
-            padding: "1.5rem 1.75rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-            borderLeft: "4px solid var(--primary-color)",
-          }}
-        >
+        <section className="card-glass home-resume">
           <div>
             <div
               style={{
@@ -131,49 +98,19 @@ export function HomePage() {
         </section>
       )}
 
-      {/* Level Selector */}
       <section style={{ marginBottom: "2rem" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: "1.25rem",
-          }}
-        >
+        <div className="home-lessons-head">
           <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
             {t("nav.lessons")}
           </h2>
 
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div className="home-level-chips">
             {levels.map((lvl) => (
               <button
                 key={lvl}
                 type="button"
                 onClick={() => setSelectedLevel(lvl)}
-                style={{
-                  padding: "0.4rem 0.9rem",
-                  borderRadius: "8px",
-                  border: "1px solid",
-                  borderColor:
-                    selectedLevel === lvl
-                      ? "var(--primary-color)"
-                      : "var(--border-color)",
-                  background:
-                    selectedLevel === lvl
-                      ? "var(--primary-color)"
-                      : "var(--card-bg)",
-                  color:
-                    selectedLevel === lvl
-                      ? "var(--primary-text)"
-                      : "var(--text-muted)",
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                }}
+                className={`home-level-chip${selectedLevel === lvl ? " is-active" : ""}`}
               >
                 {lvl === "ALL" ? t("home.allLevels") : lvl}
               </button>
@@ -209,14 +146,7 @@ export function HomePage() {
           </div>
         )}
 
-        {/* Lesson Cards Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "1.25rem",
-          }}
-        >
+        <div className="home-lesson-grid">
           {filteredLessons.map((l) => {
             const level = String(l.source?.level || "N2");
             const dateStr = [l.source?.year, l.source?.month].filter(Boolean).join("/");
@@ -289,6 +219,8 @@ export function HomePage() {
                     justifyContent: "space-between",
                     fontSize: "0.8rem",
                     color: "var(--text-muted)",
+                    flexWrap: "wrap",
+                    gap: 6,
                   }}
                 >
                   <span>

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LanguageProvider } from "../../shared/content/LanguageProvider";
+import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { ListeningWorkspace } from "./ListeningWorkspace";
 import type { PracticePackage } from "../../shared/api/content";
 
@@ -84,14 +85,16 @@ const practice: PracticePackage = {
 describe("ListeningWorkspace", () => {
   it("reveals explanation after submit", async () => {
     render(
-      <LanguageProvider>
-        <ListeningWorkspace lessonId="fixture" practice={practice} />
-      </LanguageProvider>,
+      <UiLanguageProvider>
+        <LanguageProvider>
+          <ListeningWorkspace lessonId="fixture" practice={practice} />
+        </LanguageProvider>
+      </UiLanguageProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: /答えA/ }));
     fireEvent.click(screen.getByRole("button", { name: "Trả lời" }));
     await waitFor(() => {
-      expect(screen.getByText(/Đúng/)).toBeTruthy();
+      expect(screen.getAllByText(/Đúng/).length).toBeGreaterThan(0);
     });
     expect(screen.getByText("Giải thích VI")).toBeTruthy();
   });

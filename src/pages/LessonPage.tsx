@@ -48,22 +48,14 @@ export function LessonPage() {
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
+            minHeight: "var(--touch-min)",
           }}
         >
           {t("lesson.back")}
         </Link>
       </div>
 
-      {/* Header Card */}
-      <div
-        className="card-glass"
-        style={{
-          padding: "2rem",
-          marginBottom: "2rem",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
+      <div className="card-glass lesson-header-card">
         <div
           style={{
             display: "inline-block",
@@ -79,16 +71,7 @@ export function LessonPage() {
           {String(lesson.source?.level || "JLPT")}
         </div>
 
-        <h1
-          style={{
-            margin: "0 0 0.4rem",
-            fontSize: "2rem",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {getLocalizedText(lesson.title, translationLang)}
-        </h1>
+        <h1>{getLocalizedText(lesson.title, translationLang)}</h1>
         <p
           style={{
             margin: "0 0 1rem",
@@ -115,7 +98,7 @@ export function LessonPage() {
           <span>✍️ {lesson.counts.dictation_segments} {t("home.dictationCount")}</span>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <div className="lesson-cta-row">
           <Link
             to={`/lessons/${encodeURIComponent(lesson.id)}/listening`}
             className="btn-base"
@@ -137,7 +120,6 @@ export function LessonPage() {
         </div>
       </div>
 
-      {/* Sections List */}
       <section>
         <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1rem" }}>
           {t("lesson.bySection")}
@@ -145,18 +127,7 @@ export function LessonPage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {lesson.sections.map((s) => (
-            <div
-              key={s.id}
-              className="card-glass"
-              style={{
-                padding: "1.25rem 1.5rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 16,
-                flexWrap: "wrap",
-              }}
-            >
+            <div key={s.id} className="card-glass lesson-section-row">
               <div>
                 <div style={{ fontWeight: 700, fontSize: "1.05rem", marginBottom: 4 }}>
                   {getLocalizedText(s.title, translationLang)}{" "}
@@ -172,11 +143,12 @@ export function LessonPage() {
                   </span>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-subtle)" }}>
-                  {s.question_count} {t("home.questionCount")} · {s.dictation_segment_count} {t("home.dictationCount")}
+                  {s.question_count} {t("home.questionCount")} · {s.dictation_segment_count}{" "}
+                  {t("home.dictationCount")}
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="lesson-section-actions">
                 <Link
                   to={`/lessons/${encodeURIComponent(lesson.id)}/listening?section=${encodeURIComponent(s.id)}`}
                   className="btn-base"

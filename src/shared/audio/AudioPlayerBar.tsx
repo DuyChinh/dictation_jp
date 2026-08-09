@@ -21,8 +21,7 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
   const isPlaying = audio.state === "playing";
   const [currentTimeSec, setCurrentTimeSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
-  
-  // Volume & Speed states
+
   const [volume, setVolume] = useState(1);
   const [prevVolume, setPrevVolume] = useState(1);
   const [showSpeedDropdown, setShowSpeedDropdown] = useState(false);
@@ -40,7 +39,6 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
     return () => clearInterval(interval);
   }, [audio.engine]);
 
-  // Click outside to close speed dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -88,92 +86,42 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
   const volumePercent = Math.round(volume * 100);
 
   return (
-    <div
-      className="card-glass"
-      style={{
-        padding: "0.85rem 1.5rem",
-        marginBottom: "1.5rem",
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        position: "relative",
-      }}
-    >
-      {/* Play/Pause Button */}
+    <div className="card-glass audio-bar">
       <button
         type="button"
+        className="audio-bar__play"
         onClick={togglePlay}
         title={isPlaying ? "Pause" : "Play"}
-        style={{
-          border: "none",
-          background: "var(--primary-color)",
-          color: "#ffffff",
-          width: 38,
-          height: 38,
-          borderRadius: "50%",
-          cursor: "pointer",
-          fontSize: "1rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 0,
-          boxShadow: "0 3px 10px rgba(2, 132, 199, 0.35)",
-          flexShrink: 0,
-        }}
       >
         {isPlaying ? "⏸" : "▶"}
       </button>
 
-      {/* Progress Bar (Timeline) */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="audio-bar__timeline">
         <input
           type="range"
+          className="audio-bar__seek"
           min={0}
           max={durationSec || 100}
           step={0.1}
           value={currentTimeSec}
           onChange={handleSeek}
-          style={{
-            width: "100%",
-            accentColor: "var(--primary-color)",
-            cursor: "pointer",
-            height: 6,
-            borderRadius: 99,
-          }}
+          aria-label="Seek"
         />
-        <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontFamily: "monospace", minWidth: 55 }}>
-          -{formatTime(remainingSec)}
-        </span>
+        <span className="audio-bar__time">-{formatTime(remainingSec)}</span>
       </div>
 
-      {/* Controls Right Section */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-        
-        {/* Speed Button & Dropdown */}
+      <div className="audio-bar__extras">
         <div ref={speedDropdownRef} style={{ position: "relative" }}>
           <button
             type="button"
+            className="audio-bar__speed-btn"
             onClick={() => setShowSpeedDropdown((v) => !v)}
             title="Tốc độ phát"
-            style={{
-              background: "var(--primary-light)",
-              color: "var(--primary-color)",
-              border: "1px solid var(--border-color)",
-              borderRadius: "8px",
-              padding: "0.3rem 0.65rem",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
           >
             <span>{audio.rate}×</span>
             <span style={{ fontSize: "0.65rem", opacity: 0.8 }}>▼</span>
           </button>
 
-          {/* Speed Dropdown Menu */}
           {showSpeedDropdown && (
             <div
               style={{
@@ -191,7 +139,16 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
                 whiteSpace: "nowrap",
               }}
             >
-              <div style={{ padding: "4px 12px", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border-color)", marginBottom: 4 }}>
+              <div
+                style={{
+                  padding: "4px 12px",
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  borderBottom: "1px solid var(--border-color)",
+                  marginBottom: 4,
+                }}
+              >
                 {t("audio.speedTitle")}
               </div>
               {SPEED_OPTIONS.map((rateOption) => {
@@ -207,7 +164,8 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
                     style={{
                       width: "100%",
                       textAlign: "left",
-                      padding: "6px 14px",
+                      padding: "10px 14px",
+                      minHeight: "var(--touch-min)",
                       background: isActive ? "var(--primary-light)" : "transparent",
                       color: isActive ? "var(--primary-color)" : "var(--text-main)",
                       border: "none",
@@ -220,8 +178,10 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
                       gap: 8,
                     }}
                   >
-                    <span>{rateOption}× {rateOption === 1 ? `(${t("audio.normalSpeed")})` : ""}</span>
-                    {isActive && <span style={{ marginLeft: 6 }}>✓</span>}
+                    <span>
+                      {rateOption}× {rateOption === 1 ? `(${t("audio.normalSpeed")})` : ""}
+                    </span>
+                    {isActive && <span>✓</span>}
                   </button>
                 );
               })}
@@ -229,29 +189,20 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
           )}
         </div>
 
-        {/* Volume Control matching Image 13 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="audio-bar__volume">
           <button
             type="button"
+            className="audio-bar__mute"
             onClick={toggleMute}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              display: "flex",
-              alignItems: "center",
-              padding: 0,
-            }}
             title={volume === 0 ? "Bật âm thanh" : "Tắt âm thanh"}
           >
             {volume === 0 ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
               </svg>
             )}
           </button>
@@ -263,16 +214,13 @@ export function AudioPlayerBar({ audio }: AudioPlayerBarProps) {
             step={0.01}
             value={volume}
             onChange={(e) => handleVolumeChange(Number(e.target.value))}
-            className="volume-slider"
+            className="volume-slider audio-bar__volume-slider"
             style={{
-              width: "75px",
-              cursor: "pointer",
               ["--volume-percent" as string]: `${volumePercent}%`,
             }}
             title={`Âm lượng: ${volumePercent}%`}
           />
         </div>
-
       </div>
     </div>
   );

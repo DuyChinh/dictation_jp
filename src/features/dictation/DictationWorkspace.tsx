@@ -403,20 +403,18 @@ export function DictationWorkspace({
   const progress = ((index + 1) / items.length) * 100;
 
   return (
-    <div style={{ maxWidth: 840, margin: "0 auto" }}>
-      {/* Title Header */}
+    <div className="practice-workspace">
       <div style={{ marginBottom: "1.25rem" }}>
-        <h2 style={{ fontSize: "1.35rem", fontWeight: 800, margin: "0 0 0.5rem" }}>
+        <h2 className="practice-title">
           {getLocalizedText(practice.title, "vi")} | {getLocalizedText(current.sectionTitle, "vi")}
         </h2>
 
-        {/* Mode Switcher Tabs */}
-        <div style={{ display: "flex", gap: 10, marginTop: "0.85rem" }}>
+        <div className="practice-mode-tabs">
           <button
             type="button"
             className={`btn-base ${activeTab === "dictation" ? "btn-primary" : ""}`}
             onClick={() => setActiveTab("dictation")}
-            style={{ fontSize: "0.9rem", padding: "0.45rem 1rem", borderRadius: "8px" }}
+            style={{ fontSize: "0.9rem", borderRadius: "8px" }}
           >
             ✍️ {t("dictation.modeSentence")}
           </button>
@@ -424,40 +422,28 @@ export function DictationWorkspace({
             type="button"
             className={`btn-base ${activeTab === "transcript" ? "btn-primary" : ""}`}
             onClick={() => setActiveTab("transcript")}
-            style={{ fontSize: "0.9rem", padding: "0.45rem 1rem", borderRadius: "8px" }}
+            style={{ fontSize: "0.9rem", borderRadius: "8px" }}
           >
             📄 {t("dictation.modeTranscript")}
           </button>
         </div>
       </div>
 
-      {/* Audio Player Bar */}
       <AudioPlayerBar audio={audio} />
 
       {activeTab === "transcript" ? (
-        <div className="card-glass" style={{ padding: "1.5rem" }}>
+        <div className="card-glass" style={{ padding: "1.25rem" }}>
           <TranscriptPanel segments={current.question.segments} speakers={practice.speakers} />
           <TranslationPanel dialogue={current.question.dialogue_translation} segments={current.question.segments} lang="vi" />
         </div>
       ) : (
         <>
-          {/* Mode Selector */}
-          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-            <label style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-main)" }}>
-              {t("dictation.selectMode")}{" "}
+          <div className="practice-mode-select">
+            <label>
+              {t("dictation.selectMode")}
               <select
                 value={dictationMode}
-                onChange={(e) => setDictationMode(e.target.value as any)}
-                style={{
-                  marginLeft: 8,
-                  padding: "0.4rem 0.8rem",
-                  borderRadius: 8,
-                  border: "1px solid var(--border-color)",
-                  background: "var(--card-bg)",
-                  color: "var(--text-main)",
-                  fontSize: "0.95rem",
-                  cursor: "pointer",
-                }}
+                onChange={(e) => setDictationMode(e.target.value as "full" | "medium" | "hard")}
               >
                 <option value="full">{t("dictation.modeFull")}</option>
                 <option value="medium">{t("dictation.modeMedium")}</option>
@@ -466,10 +452,8 @@ export function DictationWorkspace({
             </label>
           </div>
 
-          {/* Main Action Bar */}
-          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-            {/* Segmented Button Controls */}
-            <div className="segmented-group">
+          <div className="practice-action-bar">
+            <div className="segmented-group practice-controls">
               <button type="button" onClick={goPrev} disabled={index === 0}>
                 ‹ {t("dictation.prev")}
               </button>
@@ -490,7 +474,6 @@ export function DictationWorkspace({
             </div>
           </div>
 
-          {/* Tokenized Input Box */}
           <div style={{ marginBottom: "1rem" }}>
             <TokenizedInput
               expectedText={current.segment.text.ja ?? ""}
@@ -505,19 +488,8 @@ export function DictationWorkspace({
             />
           </div>
 
-          {/* Secondary Action Controls & Auto Replay Toggle */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 16,
-              marginBottom: "1.5rem",
-            }}
-          >
-            {/* Left: Clear & Reveal Buttons */}
-            <div style={{ display: "flex", gap: 8 }}>
+          <div className="practice-secondary-bar">
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 type="button"
                 className="btn-base"
@@ -536,7 +508,6 @@ export function DictationWorkspace({
               </button>
             </div>
 
-            {/* Right: Auto Replay Switch */}
             <div
               className="toggle-switch-container"
               onClick={() => setAutoReplay((v) => !v)}
@@ -589,12 +560,8 @@ export function DictationWorkspace({
             </div>
           )}
 
-          {/* Shortcuts Legend */}
-          <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-subtle)", fontStyle: "italic", margin: "1.5rem 0" }}>
-            {t("dictation.shortcutsText")}
-          </p>
+          <p className="practice-shortcuts">{t("dictation.shortcutsText")}</p>
 
-          {/* Timeline Bar & Pagination Pills (Dark Mode Fix) */}
           <div style={{ marginTop: "2rem" }}>
             <div
               style={{
@@ -615,7 +582,6 @@ export function DictationWorkspace({
               />
             </div>
 
-            {/* Question-level nav: Câu 1 / Câu 2 / … */}
             {questionGroups.length > 1 && (
               <div style={{ marginBottom: "0.85rem" }}>
                 <div
@@ -631,39 +597,17 @@ export function DictationWorkspace({
                     ? ` · ${t("dictation.questionLabel")} ${activeQuestionGroup.order} · ${segmentIndexInQuestion}/${activeQuestionGroup.count}`
                     : null}
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    justifyContent: "center",
-                  }}
-                >
+                <div className="nav-scroll-row">
                   {questionGroups.map((g) => {
                     const active = g.questionId === activeQuestionId;
                     return (
                       <button
                         key={g.questionId}
                         type="button"
+                        className={`question-nav-btn${active ? " is-active" : ""}`}
                         onClick={() => jumpToQuestion(g.questionId)}
                         aria-current={active ? "true" : undefined}
                         title={`${t("dictation.questionLabel")} ${g.order} (${g.count})`}
-                        style={{
-                          padding: "0.4rem 0.85rem",
-                          borderRadius: 8,
-                          border: active
-                            ? "2px solid var(--primary-color)"
-                            : "1px solid var(--border-color)",
-                          background: active
-                            ? "var(--primary-color)"
-                            : "var(--surface-color, transparent)",
-                          color: active
-                            ? "#fff"
-                            : "var(--text-main)",
-                          fontWeight: active ? 700 : 500,
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
-                        }}
                       >
                         {t("dictation.questionLabel")} {g.order}
                       </button>
@@ -673,7 +617,6 @@ export function DictationWorkspace({
               </div>
             )}
 
-            {/* Segment pills — highlight auto-activates parent Câu via index */}
             <div
               style={{
                 fontSize: "0.8rem",
@@ -684,14 +627,7 @@ export function DictationWorkspace({
             >
               {t("dictation.segmentNav")}
             </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 6,
-                justifyContent: "center",
-              }}
-            >
+            <div className="segment-pill-grid">
               {items.map((it, i) => {
                 const sameQuestion = it.question.id === activeQuestionId;
                 return (
@@ -699,7 +635,9 @@ export function DictationWorkspace({
                     key={it.key}
                     type="button"
                     onClick={() => setIndex(i)}
-                    className={`pagination-pill ${i === index ? "active" : ""}`}
+                    className={`pagination-pill ${i === index ? "active" : ""} ${
+                      sameQuestion ? "segment-pill--current-q" : "segment-pill--other-q"
+                    }`}
                     title={`${t("dictation.questionLabel")} ${it.question.order}`}
                     style={
                       sameQuestion && i !== index

@@ -21,13 +21,7 @@ export function ImageChoiceGrid({
   reveal,
 }: Props) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-        gap: 12,
-      }}
-    >
+    <div className="image-choice-grid">
       {choices.map((c) => (
         <ImageChoiceCard
           key={c.id}
@@ -81,17 +75,11 @@ function ImageChoiceCard({
       disabled={disabled}
       onClick={onSelect}
       aria-label={`${choice.id}. ${alt}`}
+      className="image-choice-card"
       style={{
         border: `2px solid ${border}`,
         boxShadow: ring,
-        borderRadius: 12,
-        padding: 8,
-        background: "#fff",
         cursor: disabled ? "default" : "pointer",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        fontFamily: "inherit",
       }}
     >
       <div
