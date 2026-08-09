@@ -9,12 +9,9 @@ type TokenizedInputProps = {
   result: DictationEvalResult | null;
 };
 
-type Token = {
-  id: string;
-  originalText: string;
-  isWord: boolean;
-  isHidden: boolean;
-};
+type Block =
+  | { type: "static"; key: string; text: string }
+  | { type: "input"; key: string; expectedText: string };
 
 export function TokenizedInput({
   expectedText,
@@ -23,41 +20,82 @@ export function TokenizedInput({
   onAnswerChange,
   result,
 }: TokenizedInputProps) {
-  // 1. Tokenize expectedText using Intl.Segmenter
-  const tokens = useMemo(() => {
+  // 1. Tokenize expectedText and group contiguous hidden tokens into single input blocks
+  const blocks = useMemo(() => {
     try {
       const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
       const segments = Array.from(segmenter.segment(expectedText));
-      
+
       const wordsCount = segments.filter((s) => s.isWordLike).length;
       let hideCount = wordsCount;
       if (mode === "medium") hideCount = Math.floor(wordsCount * 0.3);
       if (mode === "hard") hideCount = Math.floor(wordsCount * 0.6);
 
-      // Randomly select which word indices to hide for medium/hard
-      // In full mode, all words are hidden.
       const wordIndices = segments
         .map((s, i) => (s.isWordLike ? i : -1))
         .filter((i) => i !== -1);
-      
-      // Shuffle word indices for random hiding
+
       const shuffled = [...wordIndices].sort(() => Math.random() - 0.5);
       const hiddenIndices = new Set(shuffled.slice(0, hideCount));
 
-      return segments.map((s, idx) => ({
-        id: `t_${idx}`,
-        originalText: s.segment,
+      const tokens = segments.map((s, idx) => ({
+        text: s.segment,
         isWord: !!s.isWordLike,
         isHidden: mode === "full" ? !!s.isWordLike : hiddenIndices.has(idx),
       }));
+
+      // Group contiguous tokens into blocks
+      const resultBlocks: Block[] = [];
+      let currentBlock: { isHidden: boolean; texts: string[] } | null = null;
+
+      tokens.forEach((t) => {
+        if (!currentBlock) {
+          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
+        } else if (currentBlock.isHidden === t.isHidden) {
+          currentBlock.texts.push(t.text);
+        } else {
+          const joined = currentBlock.texts.join("");
+          if (currentBlock.isHidden) {
+            resultBlocks.push({
+              type: "input",
+              key: `b_${resultBlocks.length}`,
+              expectedText: joined,
+            });
+          } else {
+            resultBlocks.push({
+              type: "static",
+              key: `b_${resultBlocks.length}`,
+              text: joined,
+            });
+          }
+          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
+        }
+      });
+
+      if (currentBlock) {
+        const joined = (currentBlock as { isHidden: boolean; texts: string[] }).texts.join("");
+        if ((currentBlock as { isHidden: boolean; texts: string[] }).isHidden) {
+          resultBlocks.push({
+            type: "input",
+            key: `b_${resultBlocks.length}`,
+            expectedText: joined,
+          });
+        } else {
+          resultBlocks.push({
+            type: "static",
+            key: `b_${resultBlocks.length}`,
+            text: joined,
+          });
+        }
+      }
+
+      return resultBlocks;
     } catch {
-      // Fallback if Intl.Segmenter is not available (e.g. older browser)
       return [
         {
-          id: "t_0",
-          originalText: expectedText,
-          isWord: true,
-          isHidden: true,
+          type: "input" as const,
+          key: "b_0",
+          expectedText,
         },
       ];
     }
@@ -66,89 +104,77 @@ export function TokenizedInput({
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Reset inputs when text or mode changes
+  // Reset inputs when blocks change
   useEffect(() => {
     setInputValues({});
-  }, [tokens]);
+  }, [blocks]);
 
-  // Aggregate the full string whenever inputs change
+  // Aggregate full answer string whenever inputValues or blocks change
   useEffect(() => {
-    const fullText = tokens
-      .map((t) => (t.isHidden ? inputValues[t.id] || "" : t.originalText))
+    const fullText = blocks
+      .map((b) => (b.type === "input" ? inputValues[b.key] || "" : b.text))
       .join("");
     onAnswerChange(fullText);
-  }, [inputValues, tokens, onAnswerChange]);
+  }, [inputValues, blocks, onAnswerChange]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number) => {
-    const isNavigationKey = e.key === " " || e.key === "Tab" || e.key === "ArrowRight" || e.key === "ArrowLeft";
-    
-    // Prevent default scrolling for Space
-    if (e.key === " ") e.preventDefault();
+  const inputBlocks = useMemo(
+    () => blocks.filter((b): b is Extract<Block, { type: "input" }> => b.type === "input"),
+    [blocks]
+  );
 
-    if (isNavigationKey && phase === "editing") {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentKey: string) => {
+    const isNavKey = e.key === "Tab" || e.key === "Enter";
+
+    if (isNavKey && phase === "editing") {
       e.preventDefault();
-      const direction = (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) ? -1 : 1;
-      
-      // Find the next hidden token input
-      let nextIdx = idx + direction;
-      while (nextIdx >= 0 && nextIdx < tokens.length) {
-        if (tokens[nextIdx].isHidden) {
-          inputRefs.current[tokens[nextIdx].id]?.focus();
-          break;
-        }
-        nextIdx += direction;
+      const currentIndex = inputBlocks.findIndex((b) => b.key === currentKey);
+      const direction = e.shiftKey ? -1 : 1;
+      const nextBlock = inputBlocks[currentIndex + direction];
+      if (nextBlock) {
+        inputRefs.current[nextBlock.key]?.focus();
       }
     }
   };
 
-  // Compute validation results for individual words if we are checked
-  // We can't perfectly map a monolithic Diff to individual inputs if they misaligned,
-  // but if the input value strictly matches the expected word, it's correct.
-  const checkTokenStatus = (t: Token) => {
-    if (phase === "editing") return null;
-    const val = inputValues[t.id] || "";
-    // If it was forced to reveal or it's correct
-    if (result?.revealed) return "revealed";
-    if (val === t.originalText) return "correct";
-    return "incorrect";
-  };
-
   return (
     <div className="tokenized-container">
-      {tokens.map((t, idx) => {
-        if (!t.isHidden) {
+      {blocks.map((b) => {
+        if (b.type === "static") {
           return (
-            <span key={t.id} className="token-static">
-              {t.originalText}
+            <span key={b.key} className="token-static">
+              {b.text}
             </span>
           );
         }
 
-        const val = inputValues[t.id] || "";
-        const status = checkTokenStatus(t);
-        const isIncorrect = status === "incorrect" || status === "revealed";
+        const val = inputValues[b.key] || "";
+        const isRevealed = !!result?.revealed;
+        const isCorrect = phase === "checked" && val.trim() === b.expectedText.trim();
+        const isIncorrect = phase === "checked" && !isCorrect;
 
-        // Calculate dynamic width based on the maximum of expected length or typed length
-        const charCount = Math.max(t.originalText.length, val.length || 1);
-        const width = `${Math.max(2, charCount * 1.5)}rem`;
+        // Dynamic width calculated from expected length or input length
+        const charCount = Math.max(b.expectedText.length, val.length || 1);
+        const width = `${Math.max(4, charCount * 1.5)}rem`;
 
         return (
-          <div key={t.id} className="token-word">
-            {status === "revealed" && (
-              <div className="token-reveal-correct">{t.originalText}</div>
+          <div key={b.key} className="token-word">
+            {isRevealed && (
+              <div className="token-reveal-correct">{b.expectedText}</div>
             )}
-            
+
             <input
-              ref={(el) => { inputRefs.current[t.id] = el; }}
+              ref={(el) => {
+                inputRefs.current[b.key] = el;
+              }}
               type="text"
               value={val}
-              disabled={phase === "checked" && !result?.revealed}
+              disabled={phase === "checked" && !isRevealed}
               onChange={(e) => {
                 if (phase === "checked") return;
-                setInputValues((prev) => ({ ...prev, [t.id]: e.target.value }));
+                setInputValues((prev) => ({ ...prev, [b.key]: e.target.value }));
               }}
-              onKeyDown={(e) => handleKeyDown(e, idx)}
-              className={`token-input ${isIncorrect ? "incorrect" : ""}`}
+              onKeyDown={(e) => handleKeyDown(e, b.key)}
+              className={`token-input ${isIncorrect || (isRevealed && !isCorrect) ? "incorrect" : ""}`}
               style={{ width }}
               autoCapitalize="off"
               autoCorrect="off"
