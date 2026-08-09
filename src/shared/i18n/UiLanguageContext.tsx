@@ -24,7 +24,8 @@ export function UiLanguageProvider({ children }: { children: ReactNode }) {
 
   const t = (key: TranslationKey): string => {
     const langDict = translations[uiLang] || translations.vi;
-    return langDict[key] || translations.vi[key] || key;
+    const str = langDict[key] || translations.vi[key] || key;
+    return str.normalize("NFC");
   };
 
   return (

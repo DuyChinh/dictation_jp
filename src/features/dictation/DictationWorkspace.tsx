@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   PracticePackage,
   PracticeQuestion,
@@ -89,8 +89,7 @@ export function DictationWorkspace({
   const [uiError, setUiError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"editing" | "checked">("editing");
   const [resetKey, setResetKey] = useState(0);
-  const [autoReplay, setAutoReplay] = useState(true);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [autoReplay, setAutoReplay] = useState(false);
   const settings = loadSettings();
   const audio = useAudioEngine();
   const current = items[index];
@@ -103,7 +102,7 @@ export function DictationWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [practice.audio_url]);
 
-  // Play segment on index change / autoplay
+  // Play segment on index change with a 2-second delay
   useEffect(() => {
     if (!current) return;
     setAnswer("");
@@ -120,22 +119,40 @@ export function DictationWorkspace({
       segment_id: current.segment.id,
     });
 
-    const play = async () => {
-      if (!autoReplay) return;
-      try {
-        await audio.playSegment({
-          startMs: current.segment.start_ms as number,
-          endMs: current.segment.end_ms as number,
-        });
-        audio.engine?.setPlaybackRate(settings.playbackRate);
-      } catch {
-        /* user gesture needed */
-      }
-      textareaRef.current?.focus();
-    };
-    void play();
+    if (current.segment.start_ms != null && current.segment.end_ms != null) {
+      const timer = setTimeout(() => {
+        void audio
+          .playSegment({
+            startMs: current.segment.start_ms as number,
+            endMs: current.segment.end_ms as number,
+          })
+          .then(() => {
+            audio.engine?.setPlaybackRate(settings.playbackRate);
+          })
+          .catch(() => {});
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, current?.key]);
+
+  // Continuous auto-looping of current sentence when autoReplay toggle is ON
+  useEffect(() => {
+    const eng = audio.engine;
+    if (!eng) return;
+
+    const unsub = eng.subscribe((e) => {
+      if (e.type === "segmentend" && autoReplay) {
+        setTimeout(() => {
+          if (eng.getState() !== "playing") {
+            void eng.replaySegment().catch(() => {});
+          }
+        }, 300);
+      }
+    });
+
+    return () => unsub();
+  }, [audio.engine, autoReplay]);
 
   const onCheck = useCallback(async (overrideForceReveal?: boolean) => {
     if (!current || checking) return;

@@ -16,11 +16,11 @@ export function getLocalizedText(
   fallbackOrder?: ContentLang[],
 ): string {
   if (obj == null) return "";
-  if (typeof obj === "string") return obj;
+  if (typeof obj === "string") return obj.normalize("NFC");
   const order = fallbackOrder ?? [lang, "vi", "en", "ja"];
   for (const key of order) {
     const v = obj[key];
-    if (v != null && v.trim() !== "") return v;
+    if (v != null && v.trim() !== "") return v.normalize("NFC");
   }
   return "";
 }
