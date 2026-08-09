@@ -28,6 +28,11 @@ export type DictationItem = {
   sectionTitle: { ja?: string; vi?: string; en?: string };
 };
 
+/**
+ * Build sentence-dictation pool.
+ * Prefer verified ranges; if a segment lacks start/end, fall back to proportional
+ * slices of the question audio range so Mondai without verified timing still work.
+ */
 function buildItems(practice: PracticePackage, sectionId?: string): DictationItem[] {
   const items: DictationItem[] = [];
   for (const section of practice.sections) {
@@ -35,20 +40,111 @@ function buildItems(practice: PracticePackage, sectionId?: string): DictationIte
     for (const q of section.questions) {
       const mode = q.dictation?.modes?.sentence_dictation;
       if (mode && mode.enabled === false) continue;
-      const pool = mode?.segment_ids
+
+      const candidates = mode?.segment_ids
         ? q.segments.filter((s) => mode.segment_ids!.includes(s.id))
-        : q.segments.filter(
-            (s) =>
-              s.dictation_eligible !== false &&
-              s.start_ms != null &&
-              s.end_ms != null &&
-              s.end_ms > s.start_ms,
-          );
-      for (const segment of pool) {
+        : q.segments.filter((s) => s.dictation_eligible !== false);
+
+      const withText = candidates.filter(
+        (s) => (s.text.ja ?? "").trim().length > 0,
+      );
+      if (!withText.length) continue;
+
+      const qStart = q.audio?.start_ms ?? 0;
+      const qEnd = q.audio?.end_ms ?? 0;
+      const qDur = Math.max(0, qEnd - qStart);
+      /** Skip 「N番」; keep full sentence duration if start is shifted. */
+      const numberCueSkipMs = 4000;
+      // ~ms/char floor so slices are not shorter than spoken Japanese
+      const MS_PER_CHAR = 310;
+      const MIN_SEG_MS = 1400;
+
+      const weightedDur = (text: string) => {
+        const len = Math.max(1, text.length);
+        let d = Math.max(MIN_SEG_MS, Math.round(len * MS_PER_CHAR));
+        if (/[。．.?!？！]$/.test(text.trim())) d += 450;
+        return d;
+      };
+
+      // Preferred raw durations, then scale into remaining window after cue pad
+      const cuePad =
+        q.order > 1
+          ? Math.min(numberCueSkipMs, Math.max(0, qDur - 8000))
+          : 0;
+      let cursor = qStart + cuePad;
+      const avail = Math.max(1000, qEnd - cursor);
+      const raws = withText.map((s) => weightedDur(s.text.ja ?? ""));
+      let rawSum = raws.reduce((a, b) => a + b, 0) || 1;
+      const scale = avail / rawSum;
+      const durs = raws.map((d) => Math.max(900, Math.floor(d * scale)));
+      const drift = avail - durs.reduce((a, b) => a + b, 0);
+      durs[durs.length - 1] = Math.max(900, (durs[durs.length - 1] ?? 900) + drift);
+
+      for (let si = 0; si < withText.length; si++) {
+        const segment = withText[si]!;
+        let startMs = segment.start_ms;
+        let endMs = segment.end_ms;
+        const hasRealRange =
+          startMs != null &&
+          endMs != null &&
+          Number.isFinite(startMs) &&
+          Number.isFinite(endMs) &&
+          endMs > startMs;
+
+        const jaCompact = (segment.text.ja ?? "").replace(/\s/g, "");
+        const looksLikeBanner =
+          /^[1-9１-９]番/.test(jaCompact) ||
+          /^(いち|に|さん|よん|ご)?ばん/i.test(jaCompact);
+
+        if (hasRealRange && segment.timing_status === "verified") {
+          // keep verified
+        } else if (hasRealRange && segment.timing_status !== "verified") {
+          // Keep package estimates but: (1) skip number cue (2) enforce min duration by text length
+          const minStart =
+            si === 0 && q.order > 1 && !looksLikeBanner
+              ? qStart + cuePad
+              : startMs!;
+          if (startMs! < minStart) {
+            const delta = minStart - startMs!;
+            startMs = minStart;
+            endMs = (endMs as number) + delta; // preserve length when shifting
+          }
+          const minDur = weightedDur(segment.text.ja ?? "");
+          if ((endMs as number) - (startMs as number) < minDur) {
+            endMs = Math.min(qEnd, (startMs as number) + minDur);
+          }
+          // avoid overlapping next by stopping at next segment start if available
+          const next = withText[si + 1];
+          if (
+            next?.start_ms != null &&
+            next.timing_status === "verified" &&
+            (endMs as number) > next.start_ms
+          ) {
+            endMs = next.start_ms;
+          }
+        } else {
+          // synthesize contiguous non-overlapping ranges
+          if (qDur <= 0) continue;
+          if (si === 0 && q.order > 1 && !looksLikeBanner) {
+            cursor = Math.max(cursor, qStart + cuePad);
+          }
+          startMs = cursor;
+          endMs = Math.min(qEnd, cursor + (durs[si] ?? 1200));
+          if (si === withText.length - 1) endMs = qEnd;
+          if ((endMs as number) <= (startMs as number)) {
+            endMs = Math.min(qEnd, (startMs as number) + 900);
+          }
+          cursor = endMs as number;
+        }
+
         items.push({
           key: `${q.id}::${segment.id}`,
           question: q,
-          segment,
+          segment: {
+            ...segment,
+            start_ms: startMs as number,
+            end_ms: endMs as number,
+          },
           sectionTitle: section.title,
         });
       }
@@ -75,8 +171,52 @@ export function DictationWorkspace({
     () => buildItems(practice, sectionId),
     [practice, sectionId],
   );
+
+  /** Question groups in display order for [Câu 1][Câu 2]… navigation */
+  const questionGroups = useMemo(() => {
+    const groups: Array<{
+      questionId: string;
+      order: number;
+      firstIndex: number;
+      count: number;
+    }> = [];
+    const seen = new Map<string, number>();
+    items.forEach((it, i) => {
+      const id = it.question.id;
+      if (!seen.has(id)) {
+        seen.set(id, groups.length);
+        groups.push({
+          questionId: id,
+          order: it.question.order,
+          firstIndex: i,
+          count: 1,
+        });
+      } else {
+        groups[seen.get(id)!]!.count += 1;
+      }
+    });
+    return groups;
+  }, [items]);
+
   const [index, setIndex] = useState(
     Math.min(Math.max(initialIndex, 0), Math.max(items.length - 1, 0)),
+  );
+
+  const activeQuestionId = items[index]?.question.id;
+  const activeQuestionGroup = questionGroups.find(
+    (g) => g.questionId === activeQuestionId,
+  );
+  const segmentIndexInQuestion =
+    activeQuestionGroup != null
+      ? index - activeQuestionGroup.firstIndex + 1
+      : 0;
+
+  const jumpToQuestion = useCallback(
+    (questionId: string) => {
+      const g = questionGroups.find((x) => x.questionId === questionId);
+      if (g) setIndex(g.firstIndex);
+    },
+    [questionGroups],
   );
 
   const [activeTab, setActiveTab] = useState<"dictation" | "transcript">("dictation");
@@ -130,7 +270,7 @@ export function DictationWorkspace({
             audio.engine?.setPlaybackRate(settings.playbackRate);
           })
           .catch(() => {});
-      }, 2000);
+      }, 1000);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -475,7 +615,75 @@ export function DictationWorkspace({
               />
             </div>
 
-            {/* Pagination Pills */}
+            {/* Question-level nav: Câu 1 / Câu 2 / … */}
+            {questionGroups.length > 1 && (
+              <div style={{ marginBottom: "0.85rem" }}>
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "var(--text-muted)",
+                    marginBottom: 6,
+                    textAlign: "center",
+                  }}
+                >
+                  {t("dictation.questionNav")}
+                  {activeQuestionGroup
+                    ? ` · ${t("dictation.questionLabel")} ${activeQuestionGroup.order} · ${segmentIndexInQuestion}/${activeQuestionGroup.count}`
+                    : null}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    justifyContent: "center",
+                  }}
+                >
+                  {questionGroups.map((g) => {
+                    const active = g.questionId === activeQuestionId;
+                    return (
+                      <button
+                        key={g.questionId}
+                        type="button"
+                        onClick={() => jumpToQuestion(g.questionId)}
+                        aria-current={active ? "true" : undefined}
+                        title={`${t("dictation.questionLabel")} ${g.order} (${g.count})`}
+                        style={{
+                          padding: "0.4rem 0.85rem",
+                          borderRadius: 8,
+                          border: active
+                            ? "2px solid var(--primary-color)"
+                            : "1px solid var(--border-color)",
+                          background: active
+                            ? "var(--primary-color)"
+                            : "var(--surface-color, transparent)",
+                          color: active
+                            ? "#fff"
+                            : "var(--text-main)",
+                          fontWeight: active ? 700 : 500,
+                          fontSize: "0.9rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {t("dictation.questionLabel")} {g.order}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Segment pills — highlight auto-activates parent Câu via index */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                marginBottom: 6,
+                textAlign: "center",
+              }}
+            >
+              {t("dictation.segmentNav")}
+            </div>
             <div
               style={{
                 display: "flex",
@@ -484,16 +692,25 @@ export function DictationWorkspace({
                 justifyContent: "center",
               }}
             >
-              {items.map((it, i) => (
-                <button
-                  key={it.key}
-                  type="button"
-                  onClick={() => setIndex(i)}
-                  className={`pagination-pill ${i === index ? "active" : ""}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {items.map((it, i) => {
+                const sameQuestion = it.question.id === activeQuestionId;
+                return (
+                  <button
+                    key={it.key}
+                    type="button"
+                    onClick={() => setIndex(i)}
+                    className={`pagination-pill ${i === index ? "active" : ""}`}
+                    title={`${t("dictation.questionLabel")} ${it.question.order}`}
+                    style={
+                      sameQuestion && i !== index
+                        ? { borderColor: "var(--primary-color)", opacity: 0.9 }
+                        : undefined
+                    }
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>

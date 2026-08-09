@@ -20,7 +20,8 @@ export function resolveAudioSrc(audioUrl: string): string {
 export function useAudioEngine() {
   const engineRef = useRef<AudioEngine | null>(null);
   const [state, setState] = useState<TransportState>("idle");
-  const [rate, setRate] = useState(1);
+  const [rate, setRateState] = useState(1);
+  const [volume, setVolumeState] = useState(1);
 
   useEffect(() => {
     const engine = new AudioEngine();
@@ -28,7 +29,8 @@ export function useAudioEngine() {
 
     const unsub = engine.subscribe((e: AudioEngineEvent) => {
       if (e.type === "statechange") setState(e.state);
-      if (e.type === "ratechange") setRate(e.rate);
+      if (e.type === "ratechange") setRateState(e.rate);
+      if (e.type === "volumechange") setVolumeState(e.volume);
     });
 
     return () => {
@@ -46,6 +48,15 @@ export function useAudioEngine() {
     },
     state,
     rate,
+    volume,
+    setVolume: (v: number) => {
+      getEngine()?.setVolume(v);
+      setVolumeState(v);
+    },
+    setRate: (r: number) => {
+      getEngine()?.setPlaybackRate(r);
+      setRateState(r);
+    },
     load: (src: string) => getEngine()?.load(resolveAudioSrc(src)) ?? Promise.resolve(),
     playSegment: (range: SegmentRange, opts?: { rate?: number }) =>
       getEngine()?.playSegment(range, opts) ?? Promise.resolve(),
@@ -59,7 +70,7 @@ export function useAudioEngine() {
       const idx = steps.findIndex((s) => Math.abs(s - cur) < 0.01);
       const next = steps[(idx + 1) % steps.length]!;
       eng.setPlaybackRate(next);
-      setRate(next);
+      setRateState(next);
     },
   };
 }

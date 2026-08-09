@@ -16,6 +16,7 @@ export interface MediaAdapter {
   currentTime: number;
   duration: number;
   playbackRate: number;
+  volume: number;
   paused: boolean;
   readyState: number;
   play(): Promise<void>;
@@ -36,6 +37,7 @@ export class FakeMediaAdapter implements MediaAdapter {
   currentTime = 0;
   duration = 60;
   playbackRate = 1;
+  volume = 1;
   paused = true;
   readyState = 0;
   private listeners = new Map<MediaEventName, Set<Listener>>();
@@ -132,6 +134,12 @@ export function createHtmlAudioAdapter(): MediaAdapter {
     },
     set playbackRate(v: number) {
       el.playbackRate = v;
+    },
+    get volume() {
+      return el.volume;
+    },
+    set volume(v: number) {
+      el.volume = Math.max(0, Math.min(1, v));
     },
     get paused() {
       return el.paused;

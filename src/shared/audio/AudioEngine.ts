@@ -19,7 +19,8 @@ export type AudioEngineEvent =
   | { type: "timeupdate"; currentTimeMs: number }
   | { type: "segmentend"; range: SegmentRange }
   | { type: "error"; message: string }
-  | { type: "ratechange"; rate: number };
+  | { type: "ratechange"; rate: number }
+  | { type: "volumechange"; volume: number };
 
 export type AudioEngineOptions = {
   media?: MediaAdapter;
@@ -94,6 +95,16 @@ export class AudioEngine {
   setPlaybackRate(rate: number): void {
     this.media.playbackRate = rate;
     this.emit({ type: "ratechange", rate });
+  }
+
+  getVolume(): number {
+    return this.media.volume;
+  }
+
+  setVolume(volume: number): void {
+    const clamped = Math.max(0, Math.min(1, volume));
+    this.media.volume = clamped;
+    this.emit({ type: "volumechange", volume: clamped });
   }
 
   getCurrentTimeMs(): number {

@@ -23,15 +23,39 @@ export function TokenizedInput({
   result,
   resetKey = 0,
 }: TokenizedInputProps) {
-  // 1. Tokenize expectedText and group contiguous hidden tokens into single input blocks
+  // 1. Tokenize expectedText into clause input blocks (full mode splits at punctuation for continuous lines)
   const blocks = useMemo(() => {
     try {
+      if (mode === "full") {
+        // Split by punctuation: 、 , 。 . ! ? ！？ \s
+        const parts = expectedText.split(/([、、,，。．.！？!?\s]+)/);
+        const resultBlocks: Block[] = [];
+        parts.forEach((part, idx) => {
+          if (!part) return;
+          const isPunct = /^[、、,，。．.！？!?\s]+$/.test(part);
+          if (isPunct) {
+            resultBlocks.push({
+              type: "static",
+              key: `b_${idx}`,
+              text: part,
+            });
+          } else {
+            resultBlocks.push({
+              type: "input",
+              key: `b_${idx}`,
+              expectedText: part,
+            });
+          }
+        });
+        return resultBlocks;
+      }
+
+      // Medium and Hard modes: tokenize words and hide 30% or 60%
       const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
       const segments = Array.from(segmenter.segment(expectedText));
 
       const wordsCount = segments.filter((s) => s.isWordLike).length;
-      let hideCount = wordsCount;
-      if (mode === "medium") hideCount = Math.floor(wordsCount * 0.3);
+      let hideCount = Math.floor(wordsCount * 0.3);
       if (mode === "hard") hideCount = Math.floor(wordsCount * 0.6);
 
       const wordIndices = segments
@@ -44,40 +68,17 @@ export function TokenizedInput({
       const tokens = segments.map((s, idx) => ({
         text: s.segment,
         isWord: !!s.isWordLike,
-        isHidden: mode === "full" ? !!s.isWordLike : hiddenIndices.has(idx),
+        isHidden: hiddenIndices.has(idx),
       }));
 
-      // Group contiguous tokens into blocks
+      // Group contiguous hidden tokens
       const resultBlocks: Block[] = [];
       let currentBlock: { isHidden: boolean; texts: string[] } | null = null;
 
-      tokens.forEach((t) => {
-        if (!currentBlock) {
-          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
-        } else if (currentBlock.isHidden === t.isHidden) {
-          currentBlock.texts.push(t.text);
-        } else {
-          const joined = currentBlock.texts.join("");
-          if (currentBlock.isHidden) {
-            resultBlocks.push({
-              type: "input",
-              key: `b_${resultBlocks.length}`,
-              expectedText: joined,
-            });
-          } else {
-            resultBlocks.push({
-              type: "static",
-              key: `b_${resultBlocks.length}`,
-              text: joined,
-            });
-          }
-          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
-        }
-      });
-
-      if (currentBlock) {
-        const joined = (currentBlock as { isHidden: boolean; texts: string[] }).texts.join("");
-        if ((currentBlock as { isHidden: boolean; texts: string[] }).isHidden) {
+      const flushBlock = () => {
+        if (!currentBlock) return;
+        const joined = currentBlock.texts.join("");
+        if (currentBlock.isHidden) {
           resultBlocks.push({
             type: "input",
             key: `b_${resultBlocks.length}`,
@@ -90,7 +91,20 @@ export function TokenizedInput({
             text: joined,
           });
         }
-      }
+        currentBlock = null;
+      };
+
+      tokens.forEach((t) => {
+        if (!currentBlock) {
+          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
+        } else if (currentBlock.isHidden === t.isHidden) {
+          currentBlock.texts.push(t.text);
+        } else {
+          flushBlock();
+          currentBlock = { isHidden: t.isHidden, texts: [t.text] };
+        }
+      });
+      flushBlock();
 
       return resultBlocks;
     } catch {
