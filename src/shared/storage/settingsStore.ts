@@ -1,5 +1,7 @@
 const KEY = "jd.settings.v1";
 
+export type MascotType = "shiba" | "kitsune" | "neko" | "panda";
+
 export type UserSettings = {
   autoPlay: boolean;
   playbackRate: number;
@@ -7,6 +9,7 @@ export type UserSettings = {
   explanationLang?: "vi" | "en";
   translationLang?: "vi" | "en";
   showTranslation?: boolean;
+  mascot?: MascotType;
 };
 
 const defaults: UserSettings = {
@@ -16,6 +19,7 @@ const defaults: UserSettings = {
   explanationLang: "vi",
   translationLang: "vi",
   showTranslation: true,
+  mascot: "shiba",
 };
 
 export function loadSettings(): UserSettings {

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
+import { HistoryPage } from "../pages/HistoryPage";
 import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
@@ -11,16 +12,19 @@ import { GoogleCallbackPage } from "../pages/GoogleCallbackPage";
 import { AuthProvider } from "../features/auth/AuthContext";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
+import { LevelProvider } from "../shared/context/LevelContext";
 
 export function AppRouter() {
   return (
     <ThemeProvider>
       <UiLanguageProvider>
-        <AuthProvider>
-          <LanguageProvider>
-            <BrowserRouter>
+        <LevelProvider>
+          <AuthProvider>
+            <LanguageProvider>
+              <BrowserRouter>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/history" element={<HistoryPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
@@ -39,7 +43,8 @@ export function AppRouter() {
             </BrowserRouter>
           </LanguageProvider>
         </AuthProvider>
-      </UiLanguageProvider>
-    </ThemeProvider>
-  );
+      </LevelProvider>
+    </UiLanguageProvider>
+  </ThemeProvider>
+);
 }

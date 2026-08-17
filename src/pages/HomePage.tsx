@@ -4,12 +4,13 @@ import { listLessons, type LessonSummary } from "../shared/api/content";
 import { loadResume } from "../shared/storage/resumeStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
+import { useLevel, type JlptLevel } from "../shared/context/LevelContext";
 
 export function HomePage() {
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedLevel, setSelectedLevel] = useState<string>("ALL");
+  const { level: selectedLevel, setLevel: setSelectedLevel, getLevelLabel } = useLevel();
   const { t } = useUiLanguage();
   const resume = loadResume();
 
@@ -34,7 +35,7 @@ export function HomePage() {
     };
   }, []);
 
-  const levels = ["ALL", "N1", "N2", "N3", "N4", "N5"];
+  const levels: JlptLevel[] = ["ALL", "N1", "N2", "N3", "N4", "N5"];
 
   const filteredLessons = lessons.filter((l) => {
     if (selectedLevel === "ALL") return true;
@@ -112,7 +113,7 @@ export function HomePage() {
                 onClick={() => setSelectedLevel(lvl)}
                 className={`home-level-chip${selectedLevel === lvl ? " is-active" : ""}`}
               >
-                {lvl === "ALL" ? t("home.allLevels") : lvl}
+                {getLevelLabel(lvl)}
               </button>
             ))}
           </div>

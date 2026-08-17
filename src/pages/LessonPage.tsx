@@ -1,15 +1,34 @@
 import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useLesson } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useContentLanguage } from "../shared/content/LanguageProvider";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
+import {
+  getLessonProgress,
+  syncLessonProgressFromServer,
+  type SegmentProgressData,
+} from "../shared/storage/dictationProgressStore";
 
 export function LessonPage() {
   const { lessonId = "" } = useParams();
   const { translationLang } = useContentLanguage();
   const { t } = useUiLanguage();
   const { lesson, error, loading } = useLesson(lessonId);
+  const [progressMap, setProgressMap] = useState<Record<string, SegmentProgressData>>(() =>
+    getLessonProgress(lessonId)
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    syncLessonProgressFromServer(lessonId).then((map) => {
+      if (!cancelled) setProgressMap(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId]);
 
   if (loading) {
     return (
@@ -35,6 +54,10 @@ export function LessonPage() {
       </AppShell>
     );
   }
+
+  const correctCount = Object.values(progressMap).filter((p) => p.status === "correct").length;
+  const totalSegments = lesson.counts.dictation_segments || 1;
+  const progressPercent = Math.min(100, Math.round((correctCount / totalSegments) * 100));
 
   return (
     <AppShell wide>
@@ -96,6 +119,11 @@ export function LessonPage() {
           <span>📂 {lesson.counts.sections} {t("home.sectionCount")}</span>
           <span>💬 {lesson.counts.questions} {t("home.questionCount")}</span>
           <span>✍️ {lesson.counts.dictation_segments} {t("home.dictationCount")}</span>
+          {correctCount > 0 && (
+            <span style={{ color: "#22c55e", fontWeight: 700 }}>
+              ✓ Đã đúng {correctCount}/{lesson.counts.dictation_segments} câu ({progressPercent}%)
+            </span>
+          )}
         </div>
 
         <div className="lesson-cta-row">

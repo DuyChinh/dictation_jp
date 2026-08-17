@@ -10,8 +10,15 @@ import {
 } from "../../shared/api/evaluate";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { AudioPlayerBar } from "../../shared/audio/AudioPlayerBar";
-import { loadSettings, saveSettings } from "../../shared/storage/settingsStore";
+import { loadSettings, saveSettings, type MascotType } from "../../shared/storage/settingsStore";
 import { saveResume } from "../../shared/storage/resumeStore";
+import {
+  getLessonProgress,
+  saveSegmentProgress,
+  syncLessonProgressFromServer,
+  type SegmentProgressData,
+} from "../../shared/storage/dictationProgressStore";
+import { recordAnswerAttempt, addPracticeSession } from "../../shared/storage/practiceHistoryStore";
 import { DiffView } from "./DiffView";
 import { TokenizedInput } from "./TokenizedInput";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
@@ -21,6 +28,9 @@ import {
   TranslationPanel,
 } from "../listening/ResultPanels";
 import { getSegmentTranslation } from "./getSegmentTranslation";
+import { DictationMascot, type MascotMood } from "./DictationMascot";
+import { triggerConfetti, triggerFireworks } from "../../shared/utils/confetti";
+import { sfx } from "../../shared/utils/sfx";
 
 export type DictationItem = {
   key: string;
@@ -231,10 +241,25 @@ export function DictationWorkspace({
   const [phase, setPhase] = useState<"editing" | "checked">("editing");
   const [resetKey, setResetKey] = useState(0);
   const [autoReplay, setAutoReplay] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [mascot, setMascot] = useState<MascotType>(() => loadSettings().mascot ?? "shiba");
   const [showTranslation, setShowTranslation] = useState<boolean>(() => {
     const s = loadSettings();
     return s.showTranslation ?? true;
   });
+  const [progressMap, setProgressMap] = useState<Record<string, SegmentProgressData>>(() =>
+    getLessonProgress(lessonId)
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    syncLessonProgressFromServer(lessonId).then((map) => {
+      if (!cancelled) setProgressMap(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId]);
 
   const handleToggleShowTranslation = useCallback(() => {
     setShowTranslation((prev) => {
@@ -247,6 +272,24 @@ export function DictationWorkspace({
   const settings = loadSettings();
   const audio = useAudioEngine();
   const current = items[index];
+
+  const mascotMood: MascotMood = useMemo(() => {
+    if (phase === "checked") {
+      if (result?.correct) {
+        return streak >= 3 ? "streak" : "correct";
+      }
+      if (result && !result.correct) {
+        return "incorrect";
+      }
+    }
+    if (audio.state === "playing") {
+      return "listening";
+    }
+    if (streak >= 3) {
+      return "streak";
+    }
+    return "idle";
+  }, [phase, result, streak, audio.state]);
 
   const segmentTranslation = useMemo(() => {
     if (!current) return "";
@@ -334,8 +377,66 @@ export function DictationWorkspace({
       });
       setResult(r);
       setPhase("checked");
-      if (!r.correct) {
+
+      // Save segment progress and update map
+      const nextStatus = r.correct ? "correct" : "incorrect";
+      saveSegmentProgress(lessonId, current.question.id, current.segment.id, {
+        status: nextStatus,
+        score: r.score,
+        lastAnswer: answer,
+      });
+      setProgressMap((prev) => ({
+        ...prev,
+        [current.segment.id]: {
+          status: nextStatus,
+          score: Math.max(r.score, prev[current.segment.id]?.score || 0),
+          attempts: (prev[current.segment.id]?.attempts || 0) + 1,
+          lastAnswer: answer,
+          updatedAt: Date.now(),
+        },
+      }));
+
+      const nextStreak = r.correct ? (forceReveal ? 0 : streak + 1) : 0;
+      recordAnswerAttempt({
+        lessonId,
+        correct: r.correct,
+        score: r.score,
+        streak: nextStreak,
+        mascot,
+      });
+
+      if (r.correct) {
+        if (!forceReveal) {
+          setStreak(nextStreak);
+          if (nextStreak >= 3) {
+            sfx.playStreak(nextStreak);
+          } else {
+            sfx.playVictory();
+          }
+          triggerFireworks();
+        } else {
+          setStreak(0);
+        }
+      } else {
+        sfx.playEncourage();
+        setStreak(0);
         setAttemptIndex((n) => n + 1);
+      }
+
+      // Record session history entry if at least 1 correct or last segment
+      if (r.correct) {
+        const totalCorrectSoFar =
+          Object.values(progressMap).filter((p) => p.status === "correct").length + 1;
+        addPracticeSession({
+          lessonId,
+          lessonTitle: getLocalizedText(practice.title, "vi") || lessonId,
+          level: "JLPT",
+          score: Math.round((totalCorrectSoFar / items.length) * 100),
+          maxStreak: Math.max(streak, nextStreak),
+          correctCount: totalCorrectSoFar,
+          totalCount: items.length,
+          mascot,
+        });
       }
     } catch (e) {
       setUiError(e instanceof Error ? e.message : "Không chấm được bài");
@@ -413,6 +514,18 @@ export function DictationWorkspace({
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev, onCheck, onReplay, phase, result]);
 
+  const progressStats = useMemo(() => {
+    let correctCount = 0;
+    let incorrectCount = 0;
+    items.forEach((it) => {
+      const p = progressMap[it.segment.id];
+      if (p?.status === "correct") correctCount++;
+      else if (p?.status === "incorrect") incorrectCount++;
+    });
+    const unattemptedCount = Math.max(0, items.length - correctCount - incorrectCount);
+    return { correctCount, incorrectCount, unattemptedCount };
+  }, [items, progressMap]);
+
   if (items.length === 0) {
     return <p style={{ color: "var(--text-muted)", textAlign: "center" }}>Không có câu dictation trong phạm vi này.</p>;
   }
@@ -457,18 +570,32 @@ export function DictationWorkspace({
         </div>
       ) : (
         <>
-          <div className="practice-mode-select">
-            <label>
-              {t("dictation.selectMode")}
-              <select
-                value={dictationMode}
-                onChange={(e) => setDictationMode(e.target.value as "full" | "medium" | "hard")}
-              >
-                <option value="full">{t("dictation.modeFull")}</option>
-                <option value="medium">{t("dictation.modeMedium")}</option>
-                <option value="hard">{t("dictation.modeHard")}</option>
-              </select>
-            </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: "0.75rem" }}>
+            <div className="practice-mode-select" style={{ margin: 0 }}>
+              <label>
+                {t("dictation.selectMode")}
+                <select
+                  value={dictationMode}
+                  onChange={(e) => setDictationMode(e.target.value as "full" | "medium" | "hard")}
+                >
+                  <option value="full">{t("dictation.modeFull")}</option>
+                  <option value="medium">{t("dictation.modeMedium")}</option>
+                  <option value="hard">{t("dictation.modeHard")}</option>
+                </select>
+              </label>
+            </div>
+
+            <DictationMascot
+              mascot={mascot}
+              mood={mascotMood}
+              streakCount={streak}
+              score={result ? result.score : undefined}
+              onSelectMascot={(m) => setMascot(m)}
+              onPet={() => {
+                sfx.playVictory();
+                triggerConfetti({ particleCount: 35 });
+              }}
+            />
           </div>
 
           <div className="practice-action-bar">
@@ -664,25 +791,67 @@ export function DictationWorkspace({
             <div className="segment-pill-grid">
               {items.map((it, i) => {
                 const sameQuestion = it.question.id === activeQuestionId;
+                const p = progressMap[it.segment.id];
+                const statusClass =
+                  p?.status === "correct"
+                    ? "segment-pill--correct"
+                    : p?.status === "incorrect"
+                    ? "segment-pill--incorrect"
+                    : "segment-pill--unattempted";
+
                 return (
                   <button
                     key={it.key}
                     type="button"
                     onClick={() => setIndex(i)}
-                    className={`pagination-pill ${i === index ? "active" : ""} ${
+                    className={`pagination-pill ${i === index ? "active" : ""} ${statusClass} ${
                       sameQuestion ? "segment-pill--current-q" : "segment-pill--other-q"
                     }`}
-                    title={`${t("dictation.questionLabel")} ${it.question.order}`}
+                    title={`${t("dictation.questionLabel")} ${it.question.order} - Câu ${i + 1} (${
+                      p?.status === "correct"
+                        ? "Đã chép đúng"
+                        : p?.status === "incorrect"
+                        ? "Chưa chuẩn / Cần luyện lại"
+                        : "Chưa làm"
+                    })`}
                     style={
-                      sameQuestion && i !== index
+                      sameQuestion && i !== index && !p
                         ? { borderColor: "var(--primary-color)", opacity: 0.9 }
                         : undefined
                     }
                   >
+                    {p?.status === "correct" ? "✓ " : p?.status === "incorrect" ? "✗ " : ""}
                     {i + 1}
                   </button>
                 );
               })}
+            </div>
+
+            {/* Progress Legend & Summary */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 16,
+                marginTop: "0.85rem",
+                fontSize: "0.82rem",
+                color: "var(--text-muted)",
+              }}
+            >
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#22c55e" }} />
+                <span>Đúng: <strong style={{ color: "#22c55e" }}>{progressStats.correctCount}</strong></span>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#ef4444" }} />
+                <span>Cần sửa: <strong style={{ color: "#ef4444" }}>{progressStats.incorrectCount}</strong></span>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "var(--border-color)" }} />
+                <span>Chưa làm: <strong>{progressStats.unattemptedCount}</strong></span>
+              </div>
             </div>
           </div>
         </>
