@@ -4,6 +4,9 @@ import { HomePage } from "../pages/HomePage";
 import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
+import { AuthPage } from "../pages/AuthPage";
+import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { GoogleCallbackPage } from "../pages/GoogleCallbackPage";
 import { AuthProvider } from "../features/auth/AuthContext";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
@@ -18,6 +21,9 @@ export function AppRouter() {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
                 <Route path="/lessons/:lessonId" element={<LessonPage />} />
                 <Route

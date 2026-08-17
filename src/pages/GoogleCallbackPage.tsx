@@ -4,39 +4,27 @@ import { useAuth } from "../features/auth/AuthContext";
 
 export function GoogleCallbackPage() {
   const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithToken } = useAuth(); // We need to add this method to AuthContext
 
   useEffect(() => {
-    const token = searchParams.get("token");
     if (token) {
-      login(token);
-      navigate("/", { replace: true });
+      // Save token and fetch user
+      loginWithToken(token).then(() => {
+        navigate("/", { replace: true });
+      }).catch(err => {
+        console.error("Login failed after Google callback:", err);
+        navigate("/auth", { replace: true });
+      });
     } else {
-      const error = searchParams.get("error");
-      if (error) {
-        console.error("Google Auth Error:", error);
-      }
-      navigate("/", { replace: true });
+      navigate("/auth", { replace: true });
     }
-  }, [searchParams, navigate, login]);
+  }, [token, navigate, loginWithToken]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        background: "var(--bg-gradient)",
-        color: "var(--text-main)",
-      }}
-    >
-      <div className="card-glass" style={{ padding: "2.5rem 3rem", textAlign: "center" }}>
-        <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>
-        <h2 style={{ margin: 0, fontWeight: 700 }}>Đang xác thực đăng nhập...</h2>
-      </div>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+      <p style={{ color: "var(--text-main)", fontSize: "1.2rem" }}>Logging you in...</p>
     </div>
   );
 }

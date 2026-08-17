@@ -6,6 +6,7 @@ export type UserSettings = {
   retryBeforeReveal: number;
   explanationLang?: "vi" | "en";
   translationLang?: "vi" | "en";
+  showTranslation?: boolean;
 };
 
 const defaults: UserSettings = {
@@ -14,6 +15,7 @@ const defaults: UserSettings = {
   retryBeforeReveal: 1,
   explanationLang: "vi",
   translationLang: "vi",
+  showTranslation: true,
 };
 
 export function loadSettings(): UserSettings {

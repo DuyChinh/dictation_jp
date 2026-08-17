@@ -15,6 +15,10 @@ type Block =
   | { type: "static"; key: string; text: string }
   | { type: "input"; key: string; expectedText: string };
 
+function cleanToken(str: string): string {
+  return str.replace(/[、、,，。．.！？!?\s\u3000]/g, "").trim();
+}
+
 export function TokenizedInput({
   expectedText,
   mode,
@@ -140,7 +144,7 @@ export function TokenizedInput({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentKey: string) => {
-    const isNavKey = e.key === "Tab" || e.key === "Enter";
+    const isNavKey = e.key === "Tab";
 
     if (isNavKey && phase === "editing") {
       e.preventDefault();
@@ -165,17 +169,21 @@ export function TokenizedInput({
         }
 
         const val = inputValues[b.key] || "";
+        const valClean = cleanToken(val);
+        const expClean = cleanToken(b.expectedText);
         const isRevealed = !!result?.revealed;
         
         // Validation statuses
-        const isExactCorrect = phase === "checked" && val.trim() === b.expectedText.trim();
+        const isExactCorrect = phase === "checked" && valClean.length > 0 && valClean === expClean;
         const isAcceptedReading =
           phase === "checked" &&
           !isExactCorrect &&
-          val.trim().length > 0 &&
-          kanjiToHiragana(val.trim()) === kanjiToHiragana(b.expectedText.trim());
-        const isEmptyMissing = phase === "checked" && val.trim().length === 0;
-        const isIncorrect = phase === "checked" && !isExactCorrect && !isAcceptedReading;
+          valClean.length > 0 &&
+          kanjiToHiragana(valClean) === kanjiToHiragana(expClean);
+
+        const isCorrect = isExactCorrect || isAcceptedReading;
+        const isEmptyMissing = phase === "checked" && valClean.length === 0;
+        const isIncorrect = phase === "checked" && !isCorrect;
 
         // Reading mappings if accepted reading
         const mappings = isAcceptedReading ? getReadingMappings(b.expectedText, val) : [];
@@ -184,9 +192,12 @@ export function TokenizedInput({
         const charCount = Math.max(b.expectedText.length, val.length || 1);
         const width = `${Math.max(4, charCount * 1.5)}rem`;
 
+        // Only show reveal text above input if user did NOT answer correctly (missing or incorrect)
+        const showRevealAbove = isRevealed && !isCorrect;
+
         return (
           <div key={b.key} className="token-word">
-            {isRevealed && (
+            {showRevealAbove && (
               <div className="token-reveal-correct">{b.expectedText}</div>
             )}
 
@@ -203,10 +214,10 @@ export function TokenizedInput({
               }}
               onKeyDown={(e) => handleKeyDown(e, b.key)}
               className={`token-input ${
-                isIncorrect || (isRevealed && !isExactCorrect && !isAcceptedReading)
+                isCorrect
+                  ? "correct"
+                  : isIncorrect
                   ? "incorrect"
-                  : isAcceptedReading
-                  ? "accepted-reading"
                   : ""
               }`}
               style={{ width }}

@@ -606,9 +606,15 @@ a {
 }
 
 .token-input.incorrect {
-  color: #ef4444;
-  border-bottom-color: #ef4444;
-  text-decoration: line-through;
+  color: #ef4444 !important;
+  border-bottom-color: #ef4444 !important;
+  text-decoration: line-through !important;
+}
+
+.token-input.correct {
+  color: #22c55e !important;
+  border-bottom-color: #22c55e !important;
+  text-decoration: none !important;
 }
 
 /* Volume Slider Styling */

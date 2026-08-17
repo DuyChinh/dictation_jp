@@ -10,7 +10,7 @@ import {
 } from "../../shared/api/evaluate";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { AudioPlayerBar } from "../../shared/audio/AudioPlayerBar";
-import { loadSettings } from "../../shared/storage/settingsStore";
+import { loadSettings, saveSettings } from "../../shared/storage/settingsStore";
 import { saveResume } from "../../shared/storage/resumeStore";
 import { DiffView } from "./DiffView";
 import { TokenizedInput } from "./TokenizedInput";
@@ -20,6 +20,7 @@ import {
   TranscriptPanel,
   TranslationPanel,
 } from "../listening/ResultPanels";
+import { getSegmentTranslation } from "./getSegmentTranslation";
 
 export type DictationItem = {
   key: string;
@@ -166,7 +167,7 @@ export function DictationWorkspace({
   sectionId,
   initialIndex = 0,
 }: Props) {
-  const { t } = useUiLanguage();
+  const { t, uiLang } = useUiLanguage();
   const items = useMemo(
     () => buildItems(practice, sectionId),
     [practice, sectionId],
@@ -230,9 +231,27 @@ export function DictationWorkspace({
   const [phase, setPhase] = useState<"editing" | "checked">("editing");
   const [resetKey, setResetKey] = useState(0);
   const [autoReplay, setAutoReplay] = useState(false);
+  const [showTranslation, setShowTranslation] = useState<boolean>(() => {
+    const s = loadSettings();
+    return s.showTranslation ?? true;
+  });
+
+  const handleToggleShowTranslation = useCallback(() => {
+    setShowTranslation((prev) => {
+      const next = !prev;
+      saveSettings({ showTranslation: next });
+      return next;
+    });
+  }, []);
+
   const settings = loadSettings();
   const audio = useAudioEngine();
   const current = items[index];
+
+  const segmentTranslation = useMemo(() => {
+    if (!current) return "";
+    return getSegmentTranslation(current.segment, current.question, uiLang);
+  }, [current, uiLang]);
 
   // Load audio when practice ready
   useEffect(() => {
@@ -508,14 +527,27 @@ export function DictationWorkspace({
               </button>
             </div>
 
-            <div
-              className="toggle-switch-container"
-              onClick={() => setAutoReplay((v) => !v)}
-            >
-              <div className={`toggle-switch ${autoReplay ? "checked" : ""}`}>
-                <div className="toggle-switch-handle" />
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <div
+                className="toggle-switch-container"
+                onClick={handleToggleShowTranslation}
+                title={t("dictation.showTranslation")}
+              >
+                <div className={`toggle-switch ${showTranslation ? "checked" : ""}`}>
+                  <div className="toggle-switch-handle" />
+                </div>
+                <span>🌐 {t("dictation.showTranslation")}</span>
               </div>
-              <span>⚡ {t("dictation.autoReplay")}</span>
+
+              <div
+                className="toggle-switch-container"
+                onClick={() => setAutoReplay((v) => !v)}
+              >
+                <div className={`toggle-switch ${autoReplay ? "checked" : ""}`}>
+                  <div className="toggle-switch-handle" />
+                </div>
+                <span>⚡ {t("dictation.autoReplay")}</span>
+              </div>
             </div>
           </div>
 
@@ -548,13 +580,15 @@ export function DictationWorkspace({
               <DiffView ops={result.ops} />
 
               {result.revealed && (
-                <div style={{ marginTop: "1.25rem", padding: "1rem", borderRadius: "10px", background: "var(--primary-light)", color: "var(--text-main)" }}>
+                <div style={{ marginTop: "1.25rem", padding: "1.1rem", borderRadius: "10px", background: "var(--primary-light)", color: "var(--text-main)" }}>
                   <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>
-                    {t("dictation.expectedAnswer")}: {result.revealed.expected_text.ja}
+                    {t("dictation.expectedAnswer")}: <span style={{ color: "var(--primary-color)" }}>{result.revealed.expected_text.ja}</span>
                   </div>
-                  <div style={{ color: "var(--text-muted)", marginTop: 4, fontSize: "0.95rem" }}>
-                    {result.revealed.expected_text.vi}
-                  </div>
+                  {showTranslation && segmentTranslation ? (
+                    <div style={{ color: "var(--text-muted)", marginTop: 6, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                      <strong>{uiLang === "vi" ? "Dịch nghĩa (VI):" : "Translation (EN):"}</strong> {segmentTranslation}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
