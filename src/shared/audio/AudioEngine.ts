@@ -50,6 +50,8 @@ export class AudioEngine {
   private onEnded: () => void;
   private onError: () => void;
   private onSeeked: (() => void) | null = null;
+  /** Polls for the segment end: `timeupdate` only fires every ~250ms, too coarse for short sentences. */
+  private endMonitor: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: AudioEngineOptions = {}) {
     this.media = opts.media ?? createHtmlAudioAdapter();
@@ -160,12 +162,14 @@ export class AudioEngine {
 
   pause(): void {
     this.ensureNotDisposed();
+    this.stopEndMonitor();
     this.media.pause();
     if (this.state === "playing") this.setState("paused");
   }
 
   stop(): void {
     this.ensureNotDisposed();
+    this.stopEndMonitor();
     this.media.pause();
     if (this.activeRange) {
       this.media.currentTime = this.activeRange.startMs / 1000;
@@ -182,6 +186,7 @@ export class AudioEngine {
     const gen = ++this.playGeneration;
 
     // Cancel previous
+    this.stopEndMonitor();
     this.media.pause();
     this.segmentMode = "none";
 
@@ -209,6 +214,7 @@ export class AudioEngine {
     await this.media.play();
     if (gen !== this.playGeneration) return;
     this.setState("playing");
+    this.endMonitor = setInterval(() => this.checkSegmentEnd(), 15);
   }
 
   async replaySegment(): Promise<void> {
@@ -221,6 +227,7 @@ export class AudioEngine {
   dispose(): void {
     this.disposed = true;
     this.playGeneration++;
+    this.stopEndMonitor();
     this.media.pause();
     this.media.removeEventListener("timeupdate", this.onTimeUpdate);
     this.media.removeEventListener("ended", this.onEnded);
@@ -241,6 +248,13 @@ export class AudioEngine {
   private fail(message: string): void {
     this.setState("error");
     this.emit({ type: "error", message });
+  }
+
+  private stopEndMonitor(): void {
+    if (this.endMonitor) {
+      clearInterval(this.endMonitor);
+      this.endMonitor = null;
+    }
   }
 
   private cancelSegmentMonitor(): void {
@@ -308,10 +322,18 @@ export class AudioEngine {
       });
     }
 
-    if (this.segmentMode !== "playing_segment" || !this.activeRange) return;
+    this.checkSegmentEnd();
+  }
+
+  private checkSegmentEnd(): void {
+    if (this.segmentMode !== "playing_segment" || !this.activeRange) {
+      this.stopEndMonitor();
+      return;
+    }
 
     const endThreshold = this.activeRange.endMs - this.endEpsilonMs;
     if (this.getCurrentTimeMs() >= endThreshold) {
+      this.stopEndMonitor();
       this.media.pause();
       this.segmentMode = "none";
       const range = this.activeRange;
@@ -321,6 +343,7 @@ export class AudioEngine {
   }
 
   private handleMediaEnded(): void {
+    this.stopEndMonitor();
     this.segmentMode = "none";
     this.setState("ended");
     if (this.activeRange) {
