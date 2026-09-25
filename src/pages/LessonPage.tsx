@@ -18,7 +18,7 @@ import {
   type SegmentProgressData,
 } from "../shared/storage/dictationProgressStore";
 import { loadResume } from "../shared/storage/resumeStore";
-import { getListeningAnswers } from "../shared/storage/listeningScoreStore";
+import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { scoreBySection } from "../features/listening/listeningUnits";
 
 export function LessonPage() {
@@ -51,9 +51,10 @@ export function LessonPage() {
     return out;
   }, [practice, progressMap]);
 
+  const { answers: listeningAnswers } = useSyncedListeningAnswers(lessonId);
   const listeningScore = useMemo(
-    () => (practice ? scoreBySection(practice, getListeningAnswers(lessonId)) : null),
-    [practice, lessonId],
+    () => (practice ? scoreBySection(practice, listeningAnswers) : null),
+    [practice, listeningAnswers],
   );
   const listeningDone = listeningScore ? listeningScore.right + listeningScore.wrong : 0;
 

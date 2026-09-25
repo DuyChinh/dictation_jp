@@ -10,7 +10,7 @@ export interface SegmentProgressData {
   updatedAt: number;
 }
 
-const STORAGE_KEY = "jd.dictation_progress.v1";
+export const DICTATION_PROGRESS_KEY = "jd.dictation_progress.v1";
 
 /**
  * Load all stored progress map from localStorage
@@ -18,7 +18,7 @@ const STORAGE_KEY = "jd.dictation_progress.v1";
  */
 export function getAllDictationProgress(): Record<string, Record<string, SegmentProgressData>> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(DICTATION_PROGRESS_KEY);
     if (!raw) return {};
     return JSON.parse(raw);
   } catch {
@@ -62,7 +62,7 @@ export function saveSegmentProgress(
   all[lessonId]![segmentId] = updated;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    localStorage.setItem(DICTATION_PROGRESS_KEY, JSON.stringify(all));
   } catch {
     // ignore
   }
@@ -112,7 +112,7 @@ export async function syncLessonProgressFromServer(
         const all = getAllDictationProgress();
         all[lessonId] = { ...(all[lessonId] || {}), ...data.progress };
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+          localStorage.setItem(DICTATION_PROGRESS_KEY, JSON.stringify(all));
         } catch {
           // ignore
         }

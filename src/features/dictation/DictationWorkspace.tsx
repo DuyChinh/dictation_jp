@@ -753,7 +753,7 @@ export function DictationWorkspace({
           {parts && parts.length > 1 && (
             <div className="dict-nav__block">
               <span className="eyebrow">{t("dictation.part")}</span>
-              <div className={`pill-grid${parts.length === 6 ? " pill-grid--6" : ""}`}>
+              <div className="pill-grid">
                 {parts.map((p) => (
                   <Link
                     key={p.id ?? "all"}

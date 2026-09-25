@@ -5,7 +5,8 @@ import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonShortTitle, partLabel, partType } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { fmt } from "../shared/i18n/format";
-import { clearListeningAnswers, getListeningAnswers } from "../shared/storage/listeningScoreStore";
+import { clearListeningAnswers } from "../shared/storage/listeningScoreStore";
+import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import {
@@ -23,7 +24,7 @@ export function ListeningResultPage() {
   const navigate = useNavigate();
   const { t, uiLang } = useUiLanguage();
   const { practice, error, loading } = usePractice(lessonId);
-  const [answers] = useState(() => getListeningAnswers(lessonId));
+  const { answers, ready: answersReady } = useSyncedListeningAnswers(lessonId);
   const [filter, setFilter] = useState<string>("all");
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
@@ -63,10 +64,10 @@ export function ListeningResultPage() {
     { label: t("lresult.crumb") },
   ];
 
-  if (loading || error || !practice || !score) {
+  if (loading || !answersReady || error || !practice || !score) {
     return (
       <AppShell breadcrumbs={crumbs}>
-        {loading && <div className="notice">{t("dictation.loading")}</div>}
+        {(loading || !answersReady) && !error && <div className="notice">{t("dictation.loading")}</div>}
         {error && (
           <div className="notice notice--error" role="alert">
             <Icon name="alert" />

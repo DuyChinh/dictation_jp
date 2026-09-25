@@ -237,7 +237,7 @@ export function DictationMascot({
           className="card-glass"
           style={{
             position: "absolute",
-            top: "calc(100% + 8px)",
+            bottom: "calc(100% + 8px)",
             right: 0,
             zIndex: 1000,
             width: "280px",

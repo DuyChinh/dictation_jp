@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ListeningWorkspace } from "../features/listening/ListeningWorkspace";
+import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
@@ -20,6 +21,8 @@ export function ListeningPage() {
   );
   // Whole lesson: the score panel covers every part even when one part is open.
   const { practice, error, loading } = usePractice(lessonId);
+  // The workspace reads saved answers once when it mounts, so wait for the account's.
+  const { ready: answersReady } = useSyncedListeningAnswers(lessonId);
   const { t, uiLang } = useUiLanguage();
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
@@ -33,7 +36,7 @@ export function ListeningPage() {
         { label: t("listening.title") },
       ]}
     >
-      {loading && <div className="notice">{t("dictation.loading")}</div>}
+      {(loading || !answersReady) && <div className="notice">{t("dictation.loading")}</div>}
 
       {error && (
         <div className="notice notice--error" role="alert">
@@ -42,7 +45,7 @@ export function ListeningPage() {
         </div>
       )}
 
-      {practice && !loading && (
+      {practice && !loading && answersReady && (
         <ListeningWorkspace
           key={`${sectionId ?? "all"}:${onlyParam}`}
           lessonId={lessonId}

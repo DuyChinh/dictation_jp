@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiUrl } from "../../shared/env";
+import { adoptLocalData, clearAccountData } from "../../shared/storage/accountData";
 
 export interface User {
   _id: string;
@@ -36,9 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
+        await adoptLocalData(data.user._id, token, { fromGuest: false });
         setUser(data.user);
       } else {
         localStorage.removeItem("token");
+        // An expired session counts as signing out; a server error doesn't.
+        if (res.status === 401) clearAccountData();
         setUser(null);
       }
     } catch (error) {
@@ -65,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem("token", data.token);
+    await adoptLocalData(data.user._id, data.token, { fromGuest: true });
     setUser(data.user);
   };
 
@@ -81,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem("token", data.token);
+    await adoptLocalData(data.user._id, data.token, { fromGuest: true });
     setUser(data.user);
   };
 
@@ -92,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (res.ok) {
       const data = await res.json();
+      await adoptLocalData(data.user._id, token, { fromGuest: true });
       setUser(data.user);
     } else {
       localStorage.removeItem("token");
@@ -102,7 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("token");
+    clearAccountData();
     setUser(null);
+    // Pages hold the signed-out user's progress in memory; start them over from the cleared storage.
+    window.location.reload();
   };
 
   return (

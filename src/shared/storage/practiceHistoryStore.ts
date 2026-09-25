@@ -23,8 +23,8 @@ export interface PracticeSessionItem {
   timestamp: number;
 }
 
-const STATS_KEY = "jd.user_stats.v1";
-const HISTORY_KEY = "jd.practice_history.v1";
+export const STATS_KEY = "jd.user_stats.v1";
+export const HISTORY_KEY = "jd.practice_history.v1";
 
 const defaultStats: UserOverallStats = {
   bestStreak: 0,

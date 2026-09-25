@@ -1,6 +1,7 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { DictationWorkspace, type PartLink } from "../features/dictation/DictationWorkspace";
 import { useLesson, usePractice } from "../shared/content/hooks";
+import type { LessonDetail } from "../shared/api/content";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonShortTitle, partLabel, partType } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
@@ -11,9 +12,35 @@ export function DictationPage() {
   const { lessonId = "" } = useParams();
   const [params] = useSearchParams();
   const sectionId = params.get("section") ?? undefined;
+  const { lesson, loading } = useLesson(lessonId);
+  const { t } = useUiLanguage();
+
+  // There is no whole-lesson mode: a link without a section opens the first one.
+  if (!sectionId) {
+    if (loading) return <AppShell><div className="notice">{t("dictation.loading")}</div></AppShell>;
+    const first = lesson?.sections[0];
+    if (first) {
+      const next = new URLSearchParams(params);
+      next.set("section", first.id);
+      return <Navigate replace to={`?${next.toString()}`} />;
+    }
+  }
+
+  return <DictationContent lessonId={lessonId} lesson={lesson} sectionId={sectionId} />;
+}
+
+function DictationContent({
+  lessonId,
+  lesson,
+  sectionId,
+}: {
+  lessonId: string;
+  lesson: LessonDetail | null;
+  sectionId: string | undefined;
+}) {
+  const [params] = useSearchParams();
   const questionId = params.get("question") ?? undefined;
   const { practice, error, loading } = usePractice(lessonId, sectionId);
-  const { lesson } = useLesson(lessonId);
   const { t, uiLang } = useUiLanguage();
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
@@ -26,10 +53,6 @@ export function DictationPage() {
     href: `${lessonHref}/dictation?section=${encodeURIComponent(s.id)}`,
     active: s.id === sectionId,
   }));
-  const partsWithAll = parts && [
-    { label: t("dictation.allSections"), href: `${lessonHref}/dictation`, active: !sectionId },
-    ...parts,
-  ];
 
   const currentSection = sectionId ? lesson?.sections.find((s) => s.id === sectionId) : undefined;
   const sectionTypeLabel = currentSection
@@ -60,7 +83,7 @@ export function DictationPage() {
           practice={practice}
           sectionId={sectionId}
           initialQuestionId={questionId}
-          parts={partsWithAll}
+          parts={parts}
           lessonHref={lessonHref}
           sectionTypeLabel={sectionTypeLabel || undefined}
         />

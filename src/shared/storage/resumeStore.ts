@@ -1,4 +1,4 @@
-const KEY = "jd.resume.v1";
+export const RESUME_KEY = "jd.resume.v1";
 
 export type ResumePointer = {
   lesson_id: string;
@@ -10,7 +10,7 @@ export type ResumePointer = {
 
 export function loadResume(): ResumePointer | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(RESUME_KEY);
     return raw ? (JSON.parse(raw) as ResumePointer) : null;
   } catch {
     return null;
@@ -18,5 +18,5 @@ export function loadResume(): ResumePointer | null {
 }
 
 export function saveResume(pointer: ResumePointer): void {
-  localStorage.setItem(KEY, JSON.stringify(pointer));
+  localStorage.setItem(RESUME_KEY, JSON.stringify(pointer));
 }
