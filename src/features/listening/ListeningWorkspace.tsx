@@ -338,6 +338,14 @@ export function ListeningWorkspace({
                     {submitted && promptTr && promptTr !== prompt && <span>{promptTr}</span>}
                   </div>
                 )}
+                {q.image?.url && (
+                  <figure className="listen-figure">
+                    <img
+                      src={q.image.url}
+                      alt={getLocalizedText(q.image.alt, uiLang) || t("listening.figureAlt")}
+                    />
+                  </figure>
+                )}
                 {mode === "image" ? (
                   <ImageChoiceGrid
                     choices={q.choices ?? []}

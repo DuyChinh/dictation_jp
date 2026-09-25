@@ -61,6 +61,8 @@ export type PracticeQuestion = {
   listening_unit_id?: string;
   prompt_visibility?: "always" | "after_submit";
   dialogue_translation?: LocaleText;
+  /** Illustration printed with the question in the booklet. */
+  image?: { url: string; alt?: LocaleText };
   segments: PracticeSegment[];
   dictation?: {
     enabled: boolean;

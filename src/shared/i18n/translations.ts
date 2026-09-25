@@ -310,6 +310,7 @@ export const translations = {
     "lresult.start": "Bắt đầu làm bài",
     "lesson.listeningScore": "câu đúng",
     "listening.seeResult": "Xem kết quả",
+    "listening.figureAlt": "Hình minh hoạ trong đề",
   },
   ja: {
     "dictation.accepted": "読み方OK",
@@ -620,6 +621,7 @@ export const translations = {
     "lresult.start": "解き始める",
     "lesson.listeningScore": "問正解",
     "listening.seeResult": "結果を見る",
+    "listening.figureAlt": "問題用紙のイラスト",
   },
   en: {
     "dictation.accepted": "Accepted (same reading)",
@@ -930,6 +932,7 @@ export const translations = {
     "lresult.start": "Start",
     "lesson.listeningScore": "correct",
     "listening.seeResult": "See results",
+    "listening.figureAlt": "Illustration from the question booklet",
   },
 } as const;
 

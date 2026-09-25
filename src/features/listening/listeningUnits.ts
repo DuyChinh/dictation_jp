@@ -58,8 +58,12 @@ export function resolveListeningUi(
   // JLPT N2 問題1–5: always hide stem until answer submit
   if (mNum != null && mNum >= 1 && mNum <= 5) {
     hidePromptUntilSubmit = true;
-    // 問題3–5: number-only chips (do not override true image mode e.g. 問題1図)
-    if (mNum >= 3 && mode !== "image") {
+    // 問題3–5: number-only chips (do not override true image mode e.g. 問題1図).
+    // Exception: sub-questions whose options are printed in the booklet (問題5 last item)
+    // are marked "text" by the package and keep their labels.
+    const printedSubQuestion =
+      q.choice_display_mode === "text" && !!q.listening_unit_id && q.listening_unit_id !== q.id;
+    if (mNum >= 3 && mode !== "image" && !printedSubQuestion) {
       mode = "numbers";
     }
   }
