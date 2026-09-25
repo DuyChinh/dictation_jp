@@ -54,18 +54,18 @@ function ImageChoiceCard({
   const caption = getLocalizedText(choice.text, "ja");
   const alt = getLocalizedText(choice.image?.alt ?? choice.text, "ja") || caption;
 
-  let border = selected ? "#2f5d50" : "#c5cfc8";
-  let ring = selected ? "0 0 0 2px #2f5d50" : "none";
+  let border = selected ? "var(--primary-color)" : "var(--input-border)";
+  let ring = selected ? "0 0 0 2px var(--primary-color)" : "none";
   if (reveal) {
     if (choice.id === reveal.correctId) {
-      border = "#1b5e20";
-      ring = "0 0 0 2px #1b5e20";
+      border = "var(--ok)";
+      ring = "0 0 0 2px var(--ok)";
     } else if (
       choice.id === reveal.selectedId &&
       choice.id !== reveal.correctId
     ) {
-      border = "#8b2942";
-      ring = "0 0 0 2px #8b2942";
+      border = "var(--bad)";
+      ring = "0 0 0 2px var(--bad)";
     }
   }
 
@@ -87,7 +87,7 @@ function ImageChoiceCard({
           position: "relative",
           width: "100%",
           aspectRatio: "1",
-          background: "#f0f3f1",
+          background: "var(--surface-2)",
           borderRadius: 8,
           overflow: "hidden",
           display: "flex",

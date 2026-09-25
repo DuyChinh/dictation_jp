@@ -1,245 +1,195 @@
-import { useState, useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { LoginButton } from "../../features/auth/LoginButton";
-import { ThemeToggle } from "./ThemeToggle";
-import { LanguageSelector } from "./LanguageSelector";
-import { LevelSelector } from "./LevelSelector";
 import { useUiLanguage } from "../i18n/UiLanguageContext";
+import type { TranslationKey, UiLang } from "../i18n/translations";
+import { useTheme } from "../theme/ThemeProvider";
+import { Icon, type IconName } from "./Icon";
+
+export type Crumb = { label: string; to?: string };
+
+const NAV: Array<{ to: string; label: TranslationKey; icon: IconName; end?: boolean }> = [
+  { to: "/", label: "nav.home", icon: "home", end: true },
+  { to: "/lessons", label: "nav.practice", icon: "book" },
+  { to: "/history", label: "nav.progress", icon: "chart" },
+  { to: "/pricing", label: "nav.pro", icon: "crown" },
+];
+
+const LANGS: Array<{ value: UiLang; label: string }> = [
+  { value: "vi", label: "Tiếng Việt" },
+  { value: "ja", label: "日本語" },
+  { value: "en", label: "English" },
+];
+
+export function Brand({ onClick }: { onClick?: () => void }) {
+  const { t } = useUiLanguage();
+  return (
+    <Link to="/" className="shell-brand" onClick={onClick}>
+      <span className="shell-brand__logo" aria-hidden="true">
+        聴
+      </span>
+      <span className="shell-brand__text">
+        <span className="shell-brand__name">Japanese Dictation</span>
+        <span className="shell-brand__tag">{t("brand.tagline")}</span>
+      </span>
+    </Link>
+  );
+}
+
+export function Breadcrumbs({ items }: { items: Crumb[] }) {
+  const { t } = useUiLanguage();
+  return (
+    <nav className="breadcrumb" aria-label={t("nav.breadcrumb")}>
+      <ol>
+        {items.map((c, i) => {
+          const last = i === items.length - 1;
+          return (
+            <li key={`${c.label}-${i}`}>
+              {last || !c.to ? (
+                <span aria-current={last ? "page" : undefined}>{c.label}</span>
+              ) : (
+                <>
+                  <Link to={c.to}>{c.label}</Link>
+                  <span className="breadcrumb__sep" aria-hidden="true">
+                    <Icon name="chevronRight" size={16} strokeWidth={2} />
+                  </span>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
 
 export function AppShell({
   children,
-  wide,
+  breadcrumbs,
+  title,
 }: {
   children: ReactNode;
-  wide?: boolean;
+  /** Trail shown in the top bar; the last item is the current page. */
+  breadcrumbs?: Crumb[];
+  /** Plain page name for the top bar when there is no trail. */
+  title?: string;
 }) {
-  const { t } = useUiLanguage();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem("jd.sidebar_collapsed") === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  const toggleSidebar = () => {
-    if (window.innerWidth < 768) {
-      setMobileOpen((v) => !v);
-    } else {
-      setIsCollapsed((prev) => {
-        const next = !prev;
-        try {
-          localStorage.setItem("jd.sidebar_collapsed", String(next));
-        } catch {
-          // ignore
-        }
-        return next;
-      });
-    }
-  };
+  const { t, uiLang, setUiLang } = useUiLanguage();
+  const { theme, toggleTheme } = useTheme();
+  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setMobileOpen(false);
-      }
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
     };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    document.documentElement.lang = uiLang;
+  }, [uiLang]);
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div
-      className={`app-shell-layout ${
-        isCollapsed ? "is-collapsed-layout" : "is-expanded-layout"
-      }`}
-    >
-      {/* Mobile Backdrop Overlay */}
-      {mobileOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+    <div className="shell">
+      {menuOpen && <div className="shell-backdrop" onClick={closeMenu} aria-hidden="true" />}
 
-      {/* Left Sidebar Navigation */}
-      <aside
-        className={`app-sidebar ${isCollapsed ? "is-collapsed" : "is-expanded"} ${
-          mobileOpen ? "is-mobile-open" : ""
-        }`}
-      >
-        {/* Sidebar Header: Always has [☰] toggle on top */}
-        <div className="app-sidebar__head">
+      <aside id="app-sidebar" className={`shell-sidebar${menuOpen ? " is-open" : ""}`}>
+        <div className="shell-sidebar__top">
+          <Brand onClick={closeMenu} />
           <button
             type="button"
-            className="sidebar-toggle-btn"
-            onClick={toggleSidebar}
-            aria-label={isCollapsed ? "Mở rộng menu" : "Thu gọn menu"}
-            title={isCollapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            className="icon-btn icon-btn--ghost shell-sidebar__close"
+            onClick={closeMenu}
+            aria-label={t("nav.closeMenu")}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
+            <Icon name="close" />
           </button>
-
-          {!isCollapsed && (
-            <Link
-              to="/"
-              className="app-header__brand sidebar-brand"
-              onClick={() => setMobileOpen(false)}
-              title="Japanese Dictation"
-            >
-              <span className="app-header__logo" aria-hidden>
-                聴
-              </span>
-              <span className="app-header__title">Japanese Dictation</span>
-            </Link>
-          )}
-
-          {/* Close button on mobile */}
-          {!isCollapsed && (
-            <button
-              type="button"
-              className="sidebar-close-btn"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Đóng menu"
-              title="Đóng menu"
-            >
-              ✕
-            </button>
-          )}
         </div>
 
-        {/* Navigation Items List */}
-        <nav className="app-sidebar__nav" aria-label="Main Navigation">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `sidebar-nav-item ${isActive ? "active" : ""}`
-            }
-            onClick={() => setMobileOpen(false)}
-            title={t("nav.home")}
-          >
-            <span className="sidebar-nav-icon" aria-hidden="true">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-              </svg>
-            </span>
-            {!isCollapsed && (
-              <span className="sidebar-nav-label">{t("nav.home")}</span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/history"
-            className={({ isActive }) =>
-              `sidebar-nav-item ${isActive ? "active" : ""}`
-            }
-            onClick={() => setMobileOpen(false)}
-            title={t("nav.history")}
-          >
-            <span className="sidebar-nav-icon" aria-hidden="true">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 21h8"></path>
-                <path d="M12 17v4"></path>
-                <path d="M7 4h10v5a5 5 0 0 1-10 0V4z"></path>
-                <path d="M7 6H4a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4h1"></path>
-                <path d="M17 6h3a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4h-1"></path>
-              </svg>
-            </span>
-            {!isCollapsed && (
-              <span className="sidebar-nav-label">{t("nav.history")}</span>
-            )}
-          </NavLink>
+        <nav className="shell-nav" aria-label={t("nav.main")}>
+          <span className="shell-nav__group">{t("nav.group")}</span>
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `shell-nav__item${isActive ? " active" : ""}`}
+              onClick={closeMenu}
+            >
+              <Icon name={item.icon} />
+              {t(item.label)}
+            </NavLink>
+          ))}
         </nav>
-      </aside>
 
-      {/* Main Content Area */}
-      <div className="app-shell-content">
-        <header className="app-header">
-          <div className="app-header__left">
-            {/* Mobile Hamburger Button (Only on screen < 768px) */}
+        <div className="shell-sidebar__foot">
+          {pathname !== "/pricing" && (
+            <div className="upsell">
+              <span className="upsell__title">{t("upsell.title")}</span>
+              <span className="upsell__body">{t("upsell.body")}</span>
+              <Link to="/pricing" className="btn btn--dark btn--sm btn--block" onClick={closeMenu}>
+                {t("upsell.cta")}
+              </Link>
+            </div>
+          )}
+          <div className="shell-prefs">
+            <label className="shell-lang">
+              <span className="visually-hidden">{t("ui.language")}</span>
+              <Icon name="globe" size={18} />
+              <select value={uiLang} onChange={(e) => setUiLang(e.target.value as UiLang)}>
+                {LANGS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
-              className="sidebar-toggle-btn mobile-header-toggle"
-              onClick={toggleSidebar}
-              aria-label="Đóng / Mở menu"
-              title="Đóng / Mở menu điều hướng"
+              className="icon-btn"
+              onClick={toggleTheme}
+              aria-label={t("theme.toggle")}
+              title={theme === "dark" ? t("theme.light") : t("theme.dark")}
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
+              <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />
             </button>
-
-            {/* Header Brand: Displays [聴] Japanese Dictation on the main header */}
-            <Link
-              to="/"
-              className="app-header__brand header-brand"
-              onClick={() => setMobileOpen(false)}
-            >
-              <span className="app-header__logo" aria-hidden>
-                聴
-              </span>
-              <span className="app-header__title">Japanese Dictation</span>
-            </Link>
           </div>
+        </div>
+      </aside>
 
-          <div className="app-header__actions">
-            <LevelSelector />
-            <LanguageSelector />
-            <ThemeToggle />
+      <div className="shell-main">
+        <header className="shell-header">
+          <button
+            type="button"
+            className="icon-btn icon-btn--ghost shell-header__menu"
+            onClick={() => setMenuOpen(true)}
+            aria-label={t("nav.openMenu")}
+            aria-controls="app-sidebar"
+            aria-expanded={menuOpen}
+          >
+            <Icon name="menu" size={22} />
+          </button>
+          {breadcrumbs && breadcrumbs.length > 0 ? (
+            <Breadcrumbs items={breadcrumbs} />
+          ) : title ? (
+            <span className="shell-header__title">{title}</span>
+          ) : null}
+          <div className="shell-header__actions">
             <LoginButton />
           </div>
         </header>
 
-        <main className={`app-main${wide ? " app-main--wide" : ""}`}>
-          {children}
-        </main>
+        <main className="shell-content">{children}</main>
       </div>
     </div>
   );

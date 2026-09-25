@@ -1,108 +1,52 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { Icon } from "../../shared/ui/Icon";
 
+/** Top-bar account area: log in / sign up when signed out, the user chip when signed in. */
 export function LoginButton() {
   const { user, logout, loading } = useAuth();
   const { t } = useUiLanguage();
 
   if (loading) {
-    return (
-      <span style={{ fontSize: "0.88rem", color: "var(--text-muted)", padding: "0.4rem 0.8rem" }}>
-        …
-      </span>
-    );
+    return <span className="account" aria-busy="true" style={{ width: 120, height: 44 }} />;
   }
 
   if (user) {
+    const initial = user.displayName?.trim().charAt(0).toUpperCase() || "U";
     return (
-      <div className="auth-user">
-        {user.avatar ? (
-          <img
-            src={user.avatar}
-            alt=""
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "1px solid var(--border-color)",
-              objectFit: "cover",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "var(--primary-color)",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 600,
-              fontSize: "0.9rem",
-            }}
-            aria-hidden
-          >
-            {user.displayName?.charAt(0).toUpperCase() || "U"}
-          </div>
-        )}
-        <span className="auth-user-name" style={{ fontWeight: 500, fontSize: "0.9rem", color: "var(--text-main)" }}>
-          {user.displayName}
+      <div className="account">
+        <span className="account__chip" title={user.displayName}>
+          {user.avatar ? (
+            <img src={user.avatar} alt="" className="account__avatar" />
+          ) : (
+            <span className="account__avatar" aria-hidden="true">
+              {initial}
+            </span>
+          )}
+          <span className="account__name">{user.displayName}</span>
         </span>
         <button
           type="button"
           onClick={logout}
-          className="auth-logout-btn"
+          className="icon-btn icon-btn--ghost"
           aria-label={t("auth.logout")}
-          style={{
-            padding: "0.4rem 0.65rem",
-            fontSize: "0.85rem",
-            borderRadius: "8px",
-            border: "1px solid var(--border-color)",
-            background: "var(--card-bg)",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            minHeight: "var(--touch-min)",
-          }}
+          title={t("auth.logout")}
         >
-          <span className="auth-logout-label">{t("auth.logout")}</span>
-          <span className="auth-logout-icon" aria-hidden>
-            ⎋
-          </span>
+          <Icon name="logout" size={18} />
         </button>
       </div>
     );
   }
 
-  const navigate = useNavigate();
-
-  const handleLogin = () => {
-    navigate("/auth");
-  };
-
   return (
-    <button
-      type="button"
-      onClick={handleLogin}
-      className="auth-login-btn"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "0.45rem 0.75rem",
-        fontSize: "0.88rem",
-        fontWeight: 600,
-        borderRadius: "10px",
-        border: "1px solid var(--border-color)",
-        background: "var(--card-bg)",
-        color: "var(--text-main)",
-        cursor: "pointer",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
-      }}
-    >
-      <span className="auth-login-label">Sign In</span>
-    </button>
+    <div className="account">
+      <Link to="/auth?mode=register" className="btn btn--ghost hide-sm">
+        {t("auth.register")}
+      </Link>
+      <Link to="/auth" className="btn btn--primary">
+        {t("auth.login")}
+      </Link>
+    </div>
   );
 }

@@ -234,9 +234,9 @@ export function TokenizedInput({
                   <>
                     <span
                       style={{
-                        background: "rgba(234, 179, 8, 0.25)",
-                        border: "1px solid rgba(234, 179, 8, 0.4)",
-                        color: "#facc15",
+                        background: "var(--acc-soft)",
+                        border: "1px solid var(--acc)",
+                        color: "var(--acc)",
                         padding: "2px 8px",
                         borderRadius: "12px",
                         fontSize: "0.72rem",
@@ -252,9 +252,9 @@ export function TokenizedInput({
                           <span
                             key={i}
                             style={{
-                              background: "rgba(255, 255, 255, 0.08)",
-                              border: "1px solid rgba(234, 179, 8, 0.3)",
-                              color: "#fef08a",
+                              background: "var(--surface-2)",
+                              border: "1px solid var(--acc)",
+                              color: "var(--acc)",
                               padding: "1px 6px",
                               borderRadius: "6px",
                               fontSize: "0.72rem",
@@ -271,9 +271,9 @@ export function TokenizedInput({
                 {isEmptyMissing && (
                   <span
                     style={{
-                      background: "rgba(239, 68, 68, 0.25)",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      color: "#f87171",
+                      background: "var(--bad-soft)",
+                      border: "1px solid var(--bad)",
+                      color: "var(--bad)",
                       padding: "2px 8px",
                       borderRadius: "12px",
                       fontSize: "0.72rem",
@@ -288,9 +288,9 @@ export function TokenizedInput({
                 {isIncorrect && !isEmptyMissing && (
                   <span
                     style={{
-                      background: "rgba(239, 68, 68, 0.25)",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      color: "#f87171",
+                      background: "var(--bad-soft)",
+                      border: "1px solid var(--bad)",
+                      color: "var(--bad)",
                       padding: "2px 8px",
                       borderRadius: "12px",
                       fontSize: "0.72rem",

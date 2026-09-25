@@ -1,57 +1,58 @@
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useMemo } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ListeningWorkspace } from "../features/listening/ListeningWorkspace";
 import { usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
+import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
+import { Icon } from "../shared/ui/Icon";
 
 export function ListeningPage() {
   const { lessonId = "" } = useParams();
   const [params] = useSearchParams();
   const sectionId = params.get("section") ?? undefined;
   const questionId = params.get("question") ?? undefined;
-  const { practice, error, loading } = usePractice(lessonId, sectionId);
-  const { t } = useUiLanguage();
+  const onlyParam = params.get("only") ?? "";
+  const onlyQuestionIds = useMemo(
+    () => (onlyParam ? onlyParam.split(",").filter(Boolean) : undefined),
+    [onlyParam],
+  );
+  // Whole lesson: the score panel covers every part even when one part is open.
+  const { practice, error, loading } = usePractice(lessonId);
+  const { t, uiLang } = useUiLanguage();
+
+  const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
+  const fallback = (practice && getLocalizedText(practice.title, uiLang)) || lessonId;
 
   return (
-    <AppShell wide>
-      <div style={{ marginBottom: "1rem" }}>
-        <Link
-          to={`/lessons/${encodeURIComponent(lessonId)}`}
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-muted)",
-            fontWeight: 500,
-          }}
-        >
-          {t("dictation.backLesson")}
-        </Link>
-      </div>
-
-      {loading && (
-        <div style={{ textAlign: "center", padding: "3rem 0", color: "var(--text-muted)" }}>
-          ⏳ Đang tải bài luyện nghe...
-        </div>
-      )}
+    <AppShell
+      breadcrumbs={[
+        { label: t("nav.practice"), to: "/lessons" },
+        { label: lessonShortTitle(practice?.source, fallback), to: lessonHref },
+        { label: t("listening.title") },
+      ]}
+    >
+      {loading && <div className="notice">{t("dictation.loading")}</div>}
 
       {error && (
-        <div className="card-glass" style={{ color: "#ef4444", borderColor: "#f87171", padding: "1.25rem", textAlign: "center" }}>
-          Lỗi: {error}
+        <div className="notice notice--error" role="alert">
+          <Icon name="alert" />
+          {error}
         </div>
       )}
 
-      {practice && (
-        <>
-          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "1.5rem", color: "var(--text-main)" }}>
-            {getLocalizedText(practice.title, "vi")} · Listening
-          </h1>
-          <ListeningWorkspace
-            lessonId={lessonId}
-            practice={practice}
-            sectionId={sectionId}
-            initialQuestionId={questionId}
-          />
-        </>
+      {practice && !loading && (
+        <ListeningWorkspace
+          key={`${sectionId ?? "all"}:${onlyParam}`}
+          lessonId={lessonId}
+          practice={practice}
+          sectionId={sectionId}
+          initialQuestionId={questionId}
+          onlyQuestionIds={onlyQuestionIds}
+          basePath={`${lessonHref}/listening`}
+          lessonHref={lessonHref}
+        />
       )}
     </AppShell>
   );

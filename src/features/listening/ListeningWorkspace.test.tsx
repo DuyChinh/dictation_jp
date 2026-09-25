@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { getListeningAnswers } from "../../shared/storage/listeningScoreStore";
 import { LanguageProvider } from "../../shared/content/LanguageProvider";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { ListeningWorkspace } from "./ListeningWorkspace";
@@ -35,13 +37,18 @@ vi.mock("../../shared/api/evaluate", () => ({
 
 vi.mock("../../shared/audio/useAudioEngine", () => ({
   useAudioEngine: () => ({
+    engine: null,
+    state: "idle",
     load: vi.fn(async () => undefined),
     playSegment: vi.fn(async () => undefined),
+    pause: vi.fn(),
+    setRate: vi.fn(),
     cycleRate: vi.fn(),
     rate: 1,
   }),
 }));
 
+beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 const practice: PracticePackage = {
@@ -82,20 +89,46 @@ const practice: PracticePackage = {
   ],
 };
 
-describe("ListeningWorkspace", () => {
-  it("reveals explanation after submit", async () => {
-    render(
+function renderWorkspace() {
+  return render(
+    <MemoryRouter>
       <UiLanguageProvider>
         <LanguageProvider>
-          <ListeningWorkspace lessonId="fixture" practice={practice} />
+          <ListeningWorkspace
+            lessonId="fixture"
+            practice={practice}
+            basePath="/lessons/fixture/listening"
+            lessonHref="/lessons/fixture"
+          />
         </LanguageProvider>
-      </UiLanguageProvider>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: /答えA/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Trả lời" }));
+      </UiLanguageProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe("ListeningWorkspace", () => {
+  it("scores the answer and reveals the explanation", async () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole("radio", { name: /答えA/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Trả lời/ }));
     await waitFor(() => {
-      expect(screen.getAllByText(/Đúng/).length).toBeGreaterThan(0);
+      expect(screen.getByText("Chính xác!")).toBeTruthy();
     });
     expect(screen.getByText("Giải thích VI")).toBeTruthy();
+    expect(screen.getByText("+1 điểm")).toBeTruthy();
+    expect(screen.getByText(/1 \/ 1 câu đúng/)).toBeTruthy();
+    expect(getListeningAnswers("fixture").q1).toMatchObject({ choiceId: "1", correct: true });
+  });
+
+  it("keeps the first answer when the question is opened again", async () => {
+    localStorage.setItem(
+      "jd.listening.v1",
+      JSON.stringify({ fixture: { q1: { choiceId: "1", correct: true, correctChoiceId: "1", answeredAt: 1 } } }),
+    );
+    renderWorkspace();
+    await waitFor(() => {
+      expect(screen.getByText("Chính xác!")).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: /Trả lời/ })).toBeNull();
   });
 });

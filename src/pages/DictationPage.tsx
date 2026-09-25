@@ -1,55 +1,69 @@
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { DictationWorkspace } from "../features/dictation/DictationWorkspace";
-import { usePractice } from "../shared/content/hooks";
+import { useParams, useSearchParams } from "react-router-dom";
+import { DictationWorkspace, type PartLink } from "../features/dictation/DictationWorkspace";
+import { useLesson, usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
+import { lessonShortTitle, partLabel, partType } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
+import { Icon } from "../shared/ui/Icon";
 
 export function DictationPage() {
   const { lessonId = "" } = useParams();
   const [params] = useSearchParams();
   const sectionId = params.get("section") ?? undefined;
+  const questionId = params.get("question") ?? undefined;
   const { practice, error, loading } = usePractice(lessonId, sectionId);
-  const { t } = useUiLanguage();
+  const { lesson } = useLesson(lessonId);
+  const { t, uiLang } = useUiLanguage();
+
+  const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
+  const source = practice?.source ?? lesson?.source;
+  const fallback = (practice && getLocalizedText(practice.title, uiLang)) || lessonId;
+
+  const parts: PartLink[] | undefined = lesson?.sections.map((s) => ({
+    id: s.id,
+    label: `問${s.order}`,
+    href: `${lessonHref}/dictation?section=${encodeURIComponent(s.id)}`,
+    active: s.id === sectionId,
+  }));
+  const partsWithAll = parts && [
+    { label: t("dictation.allSections"), href: `${lessonHref}/dictation`, active: !sectionId },
+    ...parts,
+  ];
+
+  const currentSection = sectionId ? lesson?.sections.find((s) => s.id === sectionId) : undefined;
+  const sectionTypeLabel = currentSection
+    ? partLabel(partType(source, currentSection.order), uiLang)
+    : undefined;
 
   return (
-    <AppShell wide>
-      <div style={{ marginBottom: "1rem" }}>
-        <Link
-          to={`/lessons/${encodeURIComponent(lessonId)}`}
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-muted)",
-            fontWeight: 500,
-          }}
-        >
-          {t("dictation.backLesson")}
-        </Link>
-      </div>
-
-      {loading && (
-        <div style={{ textAlign: "center", padding: "3rem 0", color: "var(--text-muted)" }}>
-          ⏳ Đang tải bài luyện chép chính tả...
-        </div>
-      )}
+    <AppShell
+      breadcrumbs={[
+        { label: t("nav.practice"), to: "/lessons" },
+        { label: lessonShortTitle(source, fallback), to: lessonHref },
+        { label: t("lesson.dictationTitle") },
+      ]}
+    >
+      {loading && <div className="notice">{t("dictation.loading")}</div>}
 
       {error && (
-        <div className="card-glass" style={{ color: "#ef4444", borderColor: "#f87171", padding: "1.25rem", textAlign: "center" }}>
-          Lỗi: {error}
+        <div className="notice notice--error" role="alert">
+          <Icon name="alert" />
+          {error}
         </div>
       )}
 
-      {practice && (
-        <>
-          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "1.5rem", color: "var(--text-main)" }}>
-            {getLocalizedText(practice.title, "vi")}
-          </h1>
-          <DictationWorkspace
-            lessonId={lessonId}
-            practice={practice}
-            sectionId={sectionId}
-          />
-        </>
+      {practice && !loading && (
+        <DictationWorkspace
+          key={sectionId ?? "all"}
+          lessonId={lessonId}
+          practice={practice}
+          sectionId={sectionId}
+          initialQuestionId={questionId}
+          parts={partsWithAll}
+          lessonHref={lessonHref}
+          sectionTypeLabel={sectionTypeLabel || undefined}
+        />
       )}
     </AppShell>
   );

@@ -21,71 +21,57 @@ export function ExplanationPanel({
   );
 }
 
-export function TranscriptPanel({
+function usable(text: string): boolean {
+  const s = text.trim();
+  return s !== "" && s !== "—";
+}
+
+/**
+ * Whole dialogue: each line in Japanese with its translation under it.
+ * When lines have no translation, the question-level translation is shown after the dialogue.
+ */
+export function DialoguePanel({
   segments,
   speakers,
+  dialogue,
+  lang,
 }: {
-  segments: Array<{
-    speaker_id: string;
-    text: LocalizedText;
-  }>;
+  segments: Array<{ speaker_id: string; text: LocalizedText }>;
   speakers: Array<{ id: string; label: LocalizedText }>;
+  dialogue?: LocalizedText | null;
+  lang: SupportLang;
 }) {
   const labelOf = (id: string) => {
     const s = speakers.find((x) => x.id === id);
     return getLocalizedText(s?.label, "ja") || id;
   };
-  return (
-    <section style={{ marginTop: 16, padding: "1rem", borderRadius: "10px", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-      <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "var(--text-main)", fontWeight: 700 }}>Transcript (JA)</h3>
-      <div style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "var(--text-main)" }}>
-        {segments.map((s, i) => (
-          <div key={i} style={{ marginBottom: 4 }}>
-            <strong style={{ color: "var(--primary-color)" }}>{labelOf(s.speaker_id)}:</strong>{" "}
-            {getLocalizedText(s.text, "ja")}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+  // Only the requested language: getLocalizedText would fall back to Japanese or "—".
+  const lineTr = (t: LocalizedText) => (usable(t[lang] ?? "") ? t[lang]!.trim() : "");
+  const hasLineTr = segments.some((s) => lineTr(s.text));
+  const full = dialogue && usable(dialogue[lang] ?? "") ? dialogue[lang]!.trim() : "";
 
-export function TranslationPanel({
-  dialogue,
-  segments,
-  lang,
-}: {
-  dialogue?: LocalizedText | null;
-  segments: Array<{ text: LocalizedText }>;
-  lang: SupportLang;
-}) {
-  const full = getLocalizedText(dialogue, lang);
-  if (full) {
-    return (
-      <section style={{ marginTop: 16, padding: "1rem", borderRadius: "10px", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-        <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "var(--text-main)", fontWeight: 700 }}>
-          Bản dịch ({lang.toUpperCase()})
-        </h3>
-        <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "var(--text-muted)", fontSize: "0.95rem" }}>
-          {full}
-        </p>
-      </section>
-    );
-  }
-  const lines = segments
-    .map((s) => getLocalizedText(s.text, lang))
-    .filter(Boolean);
-  if (!lines.length) return null;
   return (
-    <section style={{ marginTop: 16, padding: "1rem", borderRadius: "10px", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-      <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "var(--text-main)", fontWeight: 700 }}>
-        Bản dịch ({lang.toUpperCase()})
-      </h3>
-      {lines.map((l, i) => (
-        <p key={i} style={{ margin: "0 0 6px", color: "var(--text-muted)", fontSize: "0.95rem" }}>
-          {l}
-        </p>
-      ))}
+    <section className="dialogue" aria-label="Transcript">
+      <ol className="dialogue__lines">
+        {segments.map((s, i) => {
+          const tr = lineTr(s.text);
+          return (
+            <li key={i} className="dialogue__line">
+              <strong className="dialogue__who jp">{labelOf(s.speaker_id)}</strong>
+              <div className="dialogue__text">
+                <span className="jp">{getLocalizedText(s.text, "ja")}</span>
+                {tr && <span className="dialogue__tr">{tr}</span>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {!hasLineTr && full && (
+        <div className="dialogue__full">
+          <span className="eyebrow">{lang === "vi" ? "Bản dịch" : "Translation"}</span>
+          <p>{full}</p>
+        </div>
+      )}
     </section>
   );
 }

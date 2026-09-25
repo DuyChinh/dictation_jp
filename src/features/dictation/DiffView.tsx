@@ -106,15 +106,15 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
         }}
       >
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e" }} />
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--ok)" }} />
           Đúng
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#eab308" }} />
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--acc)" }} />
           Chấp nhận (hiragana/biến thể đúng theo cách đọc)
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--bad)" }} />
           Sai / thiếu
         </span>
       </div>
@@ -147,8 +147,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
               <span
                 key={i}
                 style={{
-                  background: "rgba(239, 68, 68, 0.2)",
-                  color: "#f87171",
+                  background: "var(--bad-soft)",
+                  color: "var(--bad)",
                   textDecoration: "line-through",
                   padding: "2px 6px",
                   borderRadius: "6px",
@@ -166,8 +166,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
               <span
                 key={i}
                 style={{
-                  background: "rgba(239, 68, 68, 0.25)",
-                  color: "#f87171",
+                  background: "var(--bad-soft)",
+                  color: "var(--bad)",
                   padding: "3px 7px",
                   borderRadius: "6px",
                   margin: "0 2px",
@@ -192,8 +192,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
               <span key={i} style={{ display: "inline-flex", alignItems: "center", margin: "0 4px", flexWrap: "wrap" }}>
                 <span
                   style={{
-                    background: "rgba(34, 197, 94, 0.2)",
-                    color: "#4ade80",
+                    background: "var(--ok-soft)",
+                    color: "var(--ok)",
                     padding: "2px 6px",
                     borderRadius: "6px",
                     fontWeight: 600,
@@ -205,8 +205,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                 <span style={{ color: "var(--text-subtle)", margin: "0 4px", fontSize: "0.9rem" }}>↓</span>
                 <span
                   style={{
-                    background: "rgba(234, 179, 8, 0.25)",
-                    color: "#facc15",
+                    background: "var(--acc-soft)",
+                    color: "var(--acc)",
                     padding: "2px 6px",
                     borderRadius: "6px",
                     fontWeight: 600,
@@ -233,8 +233,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                   margin: "0 4px",
                   padding: "2px 6px",
                   borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--bad)",
                   flexWrap: "wrap",
                   gap: 3,
                 }}
@@ -245,7 +245,7 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                 {subOps.map((sop, idx) => {
                   if (sop.type === "equal") {
                     return (
-                      <span key={idx} style={{ color: "#22c55e", fontWeight: 600 }}>
+                      <span key={idx} style={{ color: "var(--ok)", fontWeight: 600 }}>
                         {sop.text}
                       </span>
                     );
@@ -255,8 +255,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                       <span
                         key={idx}
                         style={{
-                          background: "rgba(239, 68, 68, 0.25)",
-                          color: "#f87171",
+                          background: "var(--bad-soft)",
+                          color: "var(--bad)",
                           padding: "1px 5px",
                           borderRadius: "4px",
                           fontWeight: 700,
@@ -278,8 +278,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                       <span
                         key={idx}
                         style={{
-                          background: "rgba(239, 68, 68, 0.25)",
-                          color: "#f87171",
+                          background: "var(--bad-soft)",
+                          color: "var(--bad)",
                           padding: "1px 5px",
                           borderRadius: "4px",
                         }}
@@ -294,8 +294,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
                       <span
                         key={idx}
                         style={{
-                          background: "rgba(239, 68, 68, 0.25)",
-                          color: "#f87171",
+                          background: "var(--bad-soft)",
+                          color: "var(--bad)",
                           padding: "1px 5px",
                           borderRadius: "4px",
                           textDecoration: "line-through",
@@ -316,8 +316,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
             <span key={i} style={{ display: "inline-flex", alignItems: "center", margin: "0 4px", flexWrap: "wrap" }}>
               <span
                 style={{
-                  background: "rgba(34, 197, 94, 0.2)",
-                  color: "#4ade80",
+                  background: "var(--ok-soft)",
+                  color: "var(--ok)",
                   padding: "2px 6px",
                   borderRadius: "6px",
                   fontWeight: 600,
@@ -328,8 +328,8 @@ export function DiffView({ ops }: { ops: DiffOp[] }) {
               <span style={{ color: "var(--text-subtle)", margin: "0 4px", fontSize: "0.9rem" }}>↓</span>
               <span
                 style={{
-                  background: "rgba(239, 68, 68, 0.25)",
-                  color: "#f87171",
+                  background: "var(--bad-soft)",
+                  color: "var(--bad)",
                   padding: "2px 6px",
                   borderRadius: "6px",
                   fontWeight: 600,

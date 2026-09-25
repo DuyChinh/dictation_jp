@@ -9,7 +9,6 @@ import {
   type DictationEvalResult,
 } from "../../shared/api/evaluate";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
-import { AudioPlayerBar } from "../../shared/audio/AudioPlayerBar";
 import { loadSettings, saveSettings, type MascotType } from "../../shared/storage/settingsStore";
 import { saveResume } from "../../shared/storage/resumeStore";
 import {
@@ -23,14 +22,14 @@ import { DiffView } from "./DiffView";
 import { TokenizedInput } from "./TokenizedInput";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
-import {
-  TranscriptPanel,
-  TranslationPanel,
-} from "../listening/ResultPanels";
+import { DialoguePanel } from "../listening/ResultPanels";
 import { getSegmentTranslation } from "./getSegmentTranslation";
 import { DictationMascot, type MascotMood } from "./DictationMascot";
 import { triggerConfetti, triggerFireworks } from "../../shared/utils/confetti";
 import { sfx } from "../../shared/utils/sfx";
+import { Link } from "react-router-dom";
+import { Icon } from "../../shared/ui/Icon";
+import { SegmentPlayer } from "../../shared/audio/SegmentPlayer";
 
 export type DictationItem = {
   key: string;
@@ -164,11 +163,21 @@ function buildItems(practice: PracticePackage, sectionId?: string): DictationIte
   return items;
 }
 
+export type PartLink = { id?: string; label: string; href: string; active: boolean };
+
 type Props = {
   lessonId: string;
   practice: PracticePackage;
   sectionId?: string;
   initialIndex?: number;
+  /** Start on the first sentence of this question (overrides initialIndex). */
+  initialQuestionId?: string;
+  /** Part (問題) switcher entries; each is a link to that part's dictation. */
+  parts?: PartLink[];
+  /** Lesson detail page, linked from the progress card. */
+  lessonHref?: string;
+  /** Name of the current part's type (e.g. "Hiểu vấn đề"), shown under the title. */
+  sectionTypeLabel?: string;
 };
 
 export function DictationWorkspace({
@@ -176,6 +185,10 @@ export function DictationWorkspace({
   practice,
   sectionId,
   initialIndex = 0,
+  initialQuestionId,
+  parts,
+  lessonHref,
+  sectionTypeLabel,
 }: Props) {
   const { t, uiLang } = useUiLanguage();
   const items = useMemo(
@@ -209,9 +222,13 @@ export function DictationWorkspace({
     return groups;
   }, [items]);
 
-  const [index, setIndex] = useState(
-    Math.min(Math.max(initialIndex, 0), Math.max(items.length - 1, 0)),
-  );
+  const [index, setIndex] = useState(() => {
+    const fromQuestion = initialQuestionId
+      ? items.findIndex((it) => it.question.id === initialQuestionId)
+      : -1;
+    const start = fromQuestion >= 0 ? fromQuestion : initialIndex;
+    return Math.min(Math.max(start, 0), Math.max(items.length - 1, 0));
+  });
 
   const activeQuestionId = items[index]?.question.id;
   const activeQuestionGroup = questionGroups.find(
@@ -485,7 +502,12 @@ export function DictationWorkspace({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
-      if (meta && e.key === "Enter") {
+      const target = e.target as HTMLElement | null;
+      const onControl = !!target?.closest("button, a, select, textarea");
+      // Plain Enter submits too, but never while an IME is composing (Japanese input confirms with Enter).
+      const plainEnter =
+        e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && !e.shiftKey && !e.altKey && !onControl;
+      if ((meta && e.key === "Enter") || plainEnter) {
         e.preventDefault();
         if (phase === "editing" || (result && !result.correct)) {
           void onCheck();
@@ -514,6 +536,11 @@ export function DictationWorkspace({
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev, onCheck, onReplay, phase, result]);
 
+  const onAnswerChange = (val: string) => {
+    setAnswer(val);
+    if (phase === "checked") setPhase("editing");
+  };
+
   const progressStats = useMemo(() => {
     let correctCount = 0;
     let incorrectCount = 0;
@@ -527,335 +554,317 @@ export function DictationWorkspace({
   }, [items, progressMap]);
 
   if (items.length === 0) {
-    return <p style={{ color: "var(--text-muted)", textAlign: "center" }}>Không có câu dictation trong phạm vi này.</p>;
+    return <div className="notice">{t("dictation.empty")}</div>;
   }
 
   if (!current) return null;
 
-  const progress = ((index + 1) / items.length) * 100;
+  const questionItems = items
+    .map((it, i) => ({ it, i }))
+    .filter(({ it }) => it.question.id === activeQuestionId);
+  const questionCorrect = questionItems.filter(
+    ({ it }) => progressMap[it.segment.id]?.status === "correct",
+  ).length;
+  const examPct = Math.round((progressStats.correctCount / items.length) * 100);
+  const questionLabel = `${t("dictation.questionLabel")} ${current.question.order}`;
 
   return (
-    <div className="practice-workspace">
-      <div style={{ marginBottom: "1.25rem" }}>
-        <h2 className="practice-title">
-          {getLocalizedText(practice.title, "vi")} | {getLocalizedText(current.sectionTitle, "vi")}
-        </h2>
-
-        <div className="practice-mode-tabs">
-          <button
-            type="button"
-            className={`btn-base ${activeTab === "dictation" ? "btn-primary" : ""}`}
-            onClick={() => setActiveTab("dictation")}
-            style={{ fontSize: "0.9rem", borderRadius: "8px" }}
-          >
-            ✍️ {t("dictation.modeSentence")}
-          </button>
-          <button
-            type="button"
-            className={`btn-base ${activeTab === "transcript" ? "btn-primary" : ""}`}
-            onClick={() => setActiveTab("transcript")}
-            style={{ fontSize: "0.9rem", borderRadius: "8px" }}
-          >
-            📄 {t("dictation.modeTranscript")}
-          </button>
-        </div>
-      </div>
-
-      <AudioPlayerBar audio={audio} />
-
-      {activeTab === "transcript" ? (
-        <div className="card-glass" style={{ padding: "1.25rem" }}>
-          <TranscriptPanel segments={current.question.segments} speakers={practice.speakers} />
-          <TranslationPanel dialogue={current.question.dialogue_translation} segments={current.question.segments} lang="vi" />
-        </div>
-      ) : (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: "0.75rem" }}>
-            <div className="practice-mode-select" style={{ margin: 0 }}>
-              <label>
-                {t("dictation.selectMode")}
-                <select
-                  value={dictationMode}
-                  onChange={(e) => setDictationMode(e.target.value as "full" | "medium" | "hard")}
-                >
-                  <option value="full">{t("dictation.modeFull")}</option>
-                  <option value="medium">{t("dictation.modeMedium")}</option>
-                  <option value="hard">{t("dictation.modeHard")}</option>
-                </select>
-              </label>
-            </div>
-
-            <DictationMascot
-              mascot={mascot}
-              mood={mascotMood}
-              streakCount={streak}
-              score={result ? result.score : undefined}
-              onSelectMascot={(m) => setMascot(m)}
-              onPet={() => {
-                sfx.playVictory();
-                triggerConfetti({ particleCount: 35 });
-              }}
-            />
+    <div className="dict">
+      <div className="dict__main">
+        <div className="dict-head">
+          <div className="dict-head__title">
+            <span className="jp">{getLocalizedText(current.sectionTitle, "ja")}{sectionTypeLabel ? ` · ${sectionTypeLabel}` : ""}</span>
+            <h1>
+              {questionLabel}{" "}
+              <small>
+                · {t("dictation.sentence")} {segmentIndexInQuestion} / {activeQuestionGroup?.count ?? 1}
+              </small>
+            </h1>
           </div>
-
-          <div className="practice-action-bar">
-            <div className="segmented-group practice-controls">
-              <button type="button" onClick={goPrev} disabled={index === 0}>
-                ‹ {t("dictation.prev")}
-              </button>
-              <button type="button" onClick={() => void onReplay()}>
-                ⟳ {t("dictation.replay")}
-              </button>
-              <button
-                type="button"
-                className="btn-check-active"
-                disabled={checking || !answer.trim()}
-                onClick={() => void onCheck()}
-              >
-                ✔ {checking ? t("dictation.checking") : t("dictation.check")}
-              </button>
-              <button type="button" onClick={goNext} disabled={index >= items.length - 1}>
-                {t("dictation.next")} ›
-              </button>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "1rem" }}>
-            <TokenizedInput
-              expectedText={current.segment.text.ja ?? ""}
-              mode={dictationMode}
-              phase={phase}
-              onAnswerChange={(val) => {
-                setAnswer(val);
-                if (phase === "checked") setPhase("editing");
-              }}
-              result={result}
-              resetKey={resetKey}
-            />
-          </div>
-
-          <div className="practice-secondary-bar">
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn-base"
-                style={{ fontSize: "0.85rem", padding: "0.4rem 0.85rem" }}
-                onClick={handleClear}
-              >
-                ⊗ {t("dictation.clear")}
-              </button>
-              <button
-                type="button"
-                className="btn-base"
-                style={{ fontSize: "0.85rem", padding: "0.4rem 0.85rem" }}
-                onClick={() => void onCheck(true)}
-              >
-                ⚑ {t("dictation.showAnswer")}
-              </button>
-            </div>
-
-            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-              <div
-                className="toggle-switch-container"
-                onClick={handleToggleShowTranslation}
-                title={t("dictation.showTranslation")}
-              >
-                <div className={`toggle-switch ${showTranslation ? "checked" : ""}`}>
-                  <div className="toggle-switch-handle" />
-                </div>
-                <span>🌐 {t("dictation.showTranslation")}</span>
+          <div className="dict-head__tools">
+            {activeTab === "dictation" && (
+              <div className="segmented" role="radiogroup" aria-label={t("dictation.level")}>
+                {(["full", "medium", "hard"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={dictationMode === m}
+                    onClick={() => setDictationMode(m)}
+                  >
+                    {t(m === "full" ? "dictation.modeFull" : m === "medium" ? "dictation.modeMedium" : "dictation.modeHard")}
+                  </button>
+                ))}
               </div>
-
-              <div
-                className="toggle-switch-container"
-                onClick={() => setAutoReplay((v) => !v)}
-              >
-                <div className={`toggle-switch ${autoReplay ? "checked" : ""}`}>
-                  <div className="toggle-switch-handle" />
-                </div>
-                <span>⚡ {t("dictation.autoReplay")}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Error display */}
-          {uiError && (
-            <div className="card-glass" style={{ color: "#ef4444", borderColor: "#f87171", textAlign: "center", padding: "0.85rem", marginBottom: "1rem" }}>
-              {uiError}
-            </div>
-          )}
-
-          {/* Result Panel */}
-          {result && (
-            <div
-              className="card-glass"
-              style={{
-                marginBottom: "1.75rem",
-                padding: "1.5rem",
-                borderLeft: result.correct ? "4px solid #22c55e" : "4px solid #ef4444",
-              }}
+            )}
+            <button
+              type="button"
+              className="btn btn--outline btn--sm"
+              aria-pressed={activeTab === "transcript"}
+              onClick={() => setActiveTab((v) => (v === "transcript" ? "dictation" : "transcript"))}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
-                  {t("dictation.score")}: <span style={{ color: result.correct ? "#22c55e" : "#ef4444" }}>{result.score}%</span>
-                </h3>
-                <span style={{ fontWeight: 700, color: result.correct ? "#22c55e" : "#ef4444" }}>
-                  {result.correct ? t("dictation.correct") : t("dictation.incorrect")}
-                </span>
+              <Icon name={activeTab === "transcript" ? "pencil" : "file"} size={16} />
+              {activeTab === "transcript" ? t("dictation.hideTranscript") : t("dictation.transcript")}
+            </button>
+          </div>
+        </div>
+
+        <SegmentPlayer
+          audio={audio}
+          range={
+            current.segment.start_ms != null && current.segment.end_ms != null
+              ? { startMs: current.segment.start_ms, endMs: current.segment.end_ms }
+              : null
+          }
+          onReplay={() => void onReplay()}
+        />
+
+        {activeTab === "transcript" ? (
+          <section className="panel" style={{ padding: 24 }}>
+            <DialoguePanel
+              segments={current.question.segments}
+              speakers={practice.speakers}
+              dialogue={current.question.dialogue_translation}
+              lang="vi"
+            />
+          </section>
+        ) : (
+          <>
+            <section className="panel answer" aria-label={t("dictation.typeHere")}>
+              <span className="answer__label" id="dict-answer-label">
+                {t("dictation.typeHere")}
+              </span>
+              <div role="group" aria-labelledby="dict-answer-label">
+                <TokenizedInput
+                  expectedText={current.segment.text.ja ?? ""}
+                  mode={dictationMode}
+                  phase={phase}
+                  onAnswerChange={onAnswerChange}
+                  result={result}
+                  resetKey={resetKey}
+                />
               </div>
-
-              <DiffView ops={result.ops} />
-
-              {result.revealed && (
-                <div style={{ marginTop: "1.25rem", padding: "1.1rem", borderRadius: "10px", background: "var(--primary-light)", color: "var(--text-main)" }}>
-                  <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>
-                    {t("dictation.expectedAnswer")}: <span style={{ color: "var(--primary-color)" }}>{result.revealed.expected_text.ja}</span>
-                  </div>
-                  {showTranslation && segmentTranslation ? (
-                    <div style={{ color: "var(--text-muted)", marginTop: 6, fontSize: "0.95rem", lineHeight: 1.5 }}>
-                      <strong>{uiLang === "vi" ? "Dịch nghĩa (VI):" : "Translation (EN):"}</strong> {segmentTranslation}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          )}
-
-          <p className="practice-shortcuts">{t("dictation.shortcutsText")}</p>
-
-          <div style={{ marginTop: "2rem" }}>
-            <div
-              style={{
-                height: 6,
-                background: "var(--border-color)",
-                borderRadius: 99,
-                overflow: "hidden",
-                marginBottom: "1rem",
-              }}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  width: `${progress}%`,
-                  background: "var(--primary-color)",
-                  transition: "width 0.3s ease",
-                }}
-              />
-            </div>
-
-            {questionGroups.length > 1 && (
-              <div style={{ marginBottom: "0.85rem" }}>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "var(--text-muted)",
-                    marginBottom: 6,
-                    textAlign: "center",
-                  }}
+              <div className="answer__bar">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={checking || !answer.trim()}
+                  onClick={() => void onCheck()}
                 >
-                  {t("dictation.questionNav")}
-                  {activeQuestionGroup
-                    ? ` · ${t("dictation.questionLabel")} ${activeQuestionGroup.order} · ${segmentIndexInQuestion}/${activeQuestionGroup.count}`
-                    : null}
+                  {checking ? t("dictation.checking") : t("dictation.check")}
+                  <kbd className="kbd">Enter</kbd>
+                </button>
+                <button type="button" className="btn btn--outline" onClick={() => void onCheck(true)}>
+                  <Icon name="eye" size={18} />
+                  {t("dictation.showAnswer")}
+                </button>
+                <button type="button" className="btn btn--ghost" onClick={handleClear}>
+                  {t("dictation.clearAnswer")}
+                </button>
+                <div className="answer__toggles">
+                  <label className="check">
+                    <input type="checkbox" checked={showTranslation} onChange={handleToggleShowTranslation} />
+                    {t("dictation.showTranslation")}
+                  </label>
+                  <label className="check">
+                    <input type="checkbox" checked={autoReplay} onChange={() => setAutoReplay((v) => !v)} />
+                    {t("dictation.autoReplay")}
+                  </label>
                 </div>
-                <div className="nav-scroll-row">
-                  {questionGroups.map((g) => {
-                    const active = g.questionId === activeQuestionId;
-                    return (
-                      <button
-                        key={g.questionId}
-                        type="button"
-                        className={`question-nav-btn${active ? " is-active" : ""}`}
-                        onClick={() => jumpToQuestion(g.questionId)}
-                        aria-current={active ? "true" : undefined}
-                        title={`${t("dictation.questionLabel")} ${g.order} (${g.count})`}
-                      >
-                        {t("dictation.questionLabel")} {g.order}
-                      </button>
-                    );
-                  })}
-                </div>
+              </div>
+            </section>
+
+            {uiError && (
+              <div className="notice notice--error" role="alert">
+                <Icon name="alert" />
+                {uiError}
               </div>
             )}
 
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "var(--text-muted)",
-                marginBottom: 6,
-                textAlign: "center",
-              }}
-            >
-              {t("dictation.segmentNav")}
-            </div>
-            <div className="segment-pill-grid">
-              {items.map((it, i) => {
-                const sameQuestion = it.question.id === activeQuestionId;
-                const p = progressMap[it.segment.id];
-                const statusClass =
-                  p?.status === "correct"
-                    ? "segment-pill--correct"
-                    : p?.status === "incorrect"
-                    ? "segment-pill--incorrect"
-                    : "segment-pill--unattempted";
+            {result && (
+              <section className="panel result" aria-live="polite">
+                <div className="result__head">
+                  <div
+                    className="score-ring"
+                    style={{
+                      ["--pct" as string]: result.score,
+                      ["--ring-color" as string]: result.correct
+                        ? "var(--ok)"
+                        : result.score >= 60
+                          ? "var(--acc)"
+                          : "var(--bad)",
+                    }}
+                  >
+                    <span>{result.score}%</span>
+                  </div>
+                  <div className="result__verdict">
+                    <strong>{result.correct ? t("dictation.correct") : t("dictation.incorrect")}</strong>
+                    <span>{result.correct ? t("dictation.perfectSub") : t("dictation.nearly")}</span>
+                  </div>
+                </div>
 
+                <DiffView ops={result.ops} />
+
+                {(result.revealed || (showTranslation && segmentTranslation)) && (
+                  <div className="result__pair">
+                    {result.revealed && (
+                      <div>
+                        <span className="eyebrow">{t("dictation.expectedAnswer")}</span>
+                        <span className="result__answer">{result.revealed.expected_text.ja}</span>
+                      </div>
+                    )}
+                    {showTranslation && segmentTranslation && (
+                      <div>
+                        <span className="eyebrow">{t("dictation.translation")}</span>
+                        <span className="result__translation">{segmentTranslation}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            <div className="dict-foot">
+              <button type="button" className="btn btn--outline" onClick={goPrev} disabled={index === 0}>
+                <Icon name="chevronLeft" size={18} strokeWidth={2} />
+                {t("dictation.prev")}
+              </button>
+              <span className="dict-foot__keys">
+                {t("dictation.shortcuts")}: <kbd className="kbd">Enter</kbd> {t("dictation.kbSubmit")} ·{" "}
+                <kbd className="kbd">Alt</kbd>+<kbd className="kbd">R</kbd> {t("dictation.kbReplay")} ·{" "}
+                <kbd className="kbd">Shift</kbd>+<kbd className="kbd">← / →</kbd> {t("dictation.kbNav")}
+              </span>
+              <button
+                type="button"
+                className="btn btn--dark dict-foot__next"
+                onClick={goNext}
+                disabled={index >= items.length - 1}
+              >
+                {t("dictation.next")}
+                <Icon name="chevronRight" size={18} strokeWidth={2} />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <aside className="dict__aside" aria-label={t("dictation.questionNav")}>
+        <section className="panel dict-nav">
+          {parts && parts.length > 1 && (
+            <div className="dict-nav__block">
+              <span className="eyebrow">{t("dictation.part")}</span>
+              <div className={`pill-grid${parts.length === 6 ? " pill-grid--6" : ""}`}>
+                {parts.map((p) => (
+                  <Link
+                    key={p.id ?? "all"}
+                    to={p.href}
+                    className={`pill${p.active ? " is-active" : ""}`}
+                    aria-current={p.active ? "page" : undefined}
+                  >
+                    {p.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {questionGroups.length > 1 && (
+            <div className="dict-nav__block">
+              <span className="eyebrow">{t("dictation.questions")}</span>
+              <div className="pill-grid">
+                {questionGroups.map((g) => {
+                  const active = g.questionId === activeQuestionId;
+                  return (
+                    <button
+                      key={g.questionId}
+                      type="button"
+                      className={`pill${active ? " is-active" : ""}`}
+                      aria-pressed={active}
+                      onClick={() => jumpToQuestion(g.questionId)}
+                    >
+                      {t("dictation.questionLabel")} {g.order}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <hr />
+          <div className="dict-nav__block">
+            <div className="dict-nav__row">
+              <span className="eyebrow">
+                {t("dictation.sentencesIn")} {questionLabel}
+              </span>
+              <span>
+                {questionCorrect} / {questionItems.length} {t("dictation.correctCount")}
+              </span>
+            </div>
+            <div className="pill-grid">
+              {questionItems.map(({ it, i }, n) => {
+                const status = progressMap[it.segment.id]?.status;
+                const isCurrent = i === index;
+                const cls = isCurrent
+                  ? "is-current"
+                  : status === "correct"
+                    ? "is-correct"
+                    : status === "incorrect"
+                      ? "is-incorrect"
+                      : "";
+                const word = isCurrent
+                  ? t("dictation.legendCurrent")
+                  : status === "correct"
+                    ? t("dictation.legendCorrect")
+                    : status === "incorrect"
+                      ? t("dictation.legendFix")
+                      : t("dictation.legendTodo");
                 return (
                   <button
                     key={it.key}
                     type="button"
+                    className={`seg-pill ${cls}`}
+                    aria-current={isCurrent ? "step" : undefined}
+                    aria-label={`${t("dictation.sentence")} ${n + 1}, ${word}`}
                     onClick={() => setIndex(i)}
-                    className={`pagination-pill ${i === index ? "active" : ""} ${statusClass} ${
-                      sameQuestion ? "segment-pill--current-q" : "segment-pill--other-q"
-                    }`}
-                    title={`${t("dictation.questionLabel")} ${it.question.order} - Câu ${i + 1} (${
-                      p?.status === "correct"
-                        ? "Đã chép đúng"
-                        : p?.status === "incorrect"
-                        ? "Chưa chuẩn / Cần luyện lại"
-                        : "Chưa làm"
-                    })`}
-                    style={
-                      sameQuestion && i !== index && !p
-                        ? { borderColor: "var(--primary-color)", opacity: 0.9 }
-                        : undefined
-                    }
                   >
-                    {p?.status === "correct" ? "✓ " : p?.status === "incorrect" ? "✗ " : ""}
-                    {i + 1}
+                    {n + 1}
                   </button>
                 );
               })}
             </div>
-
-            {/* Progress Legend & Summary */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 16,
-                marginTop: "0.85rem",
-                fontSize: "0.82rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#22c55e" }} />
-                <span>Đúng: <strong style={{ color: "#22c55e" }}>{progressStats.correctCount}</strong></span>
-              </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#ef4444" }} />
-                <span>Cần sửa: <strong style={{ color: "#ef4444" }}>{progressStats.incorrectCount}</strong></span>
-              </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "var(--border-color)" }} />
-                <span>Chưa làm: <strong>{progressStats.unattemptedCount}</strong></span>
-              </div>
+            <div className="seg-legend">
+              <span><i className="i-ok" />{t("dictation.legendCorrect")}</span>
+              <span><i className="i-bad" />{t("dictation.legendFix")}</span>
+              <span><i className="i-todo" />{t("dictation.legendTodo")}</span>
+              <span><i className="i-cur" />{t("dictation.legendCurrent")}</span>
             </div>
           </div>
-        </>
-      )}
+        </section>
+
+        <section className="panel dict-progress">
+          <span className="eyebrow">{t("dictation.examProgress")}</span>
+          <div className="dict-progress__num">
+            <strong>{progressStats.correctCount}</strong>
+            <span>
+              / {items.length} {t("dictation.sentencesDone")}
+            </span>
+          </div>
+          <div className="progress" role="progressbar" aria-valuenow={examPct} aria-valuemin={0} aria-valuemax={100}>
+            <span style={{ width: `${examPct}%` }} />
+          </div>
+          {lessonHref && <Link to={lessonHref}>{t("dictation.allParts")}</Link>}
+        </section>
+
+        <DictationMascot
+          mascot={mascot}
+          mood={mascotMood}
+          streakCount={streak}
+          score={result ? result.score : undefined}
+          onSelectMascot={(m) => setMascot(m)}
+          onPet={() => {
+            sfx.playVictory();
+            triggerConfetti({ particleCount: 35 });
+          }}
+        />
+      </aside>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TextChoiceList } from "./TextChoiceList";
+import { ChoiceCards } from "./ChoiceCards";
+import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { ImageChoiceGrid } from "./ImageChoiceGrid";
 
 afterEach(() => cleanup());
@@ -23,18 +24,68 @@ const imageChoices = [
   },
 ];
 
-describe("TextChoiceList", () => {
+describe("ChoiceCards", () => {
   it("renders choices and selects on click", () => {
     const onSelect = vi.fn();
     render(
-      <TextChoiceList
-        choices={textChoices}
-        selectedId={null}
-        onSelect={onSelect}
-      />,
+      <UiLanguageProvider>
+        <ChoiceCards
+          choices={textChoices}
+          mode="text"
+          selectedId={null}
+          onSelect={onSelect}
+          translationLang="vi"
+          label="Q"
+        />
+      </UiLanguageProvider>,
     );
     expect(screen.getByText(/選択肢1/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /選択肢2/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /選択肢2/ }));
+    expect(onSelect).toHaveBeenCalledWith("2");
+  });
+
+  it("marks the right answer and the wrong pick after reveal", () => {
+    render(
+      <UiLanguageProvider>
+        <ChoiceCards
+          choices={textChoices}
+          mode="text"
+          selectedId="1"
+          onSelect={() => undefined}
+          reveal={{
+            correctId: "2",
+            selectedId: "1",
+            choices: [
+              { id: "1", text: { ja: "選択肢1", vi: "Lựa chọn một" } },
+              { id: "2", text: { ja: "選択肢2", vi: "Lựa chọn hai" } },
+            ],
+          }}
+          translationLang="vi"
+          label="Q"
+        />
+      </UiLanguageProvider>,
+    );
+    expect(screen.getByRole("radio", { name: /Đáp án.*選択肢2/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Bạn chọn.*選択肢1/ })).toBeTruthy();
+    expect(screen.getByText("Lựa chọn hai")).toBeTruthy();
+  });
+
+  it("shows number buttons before reveal in numbers mode", () => {
+    const onSelect = vi.fn();
+    render(
+      <UiLanguageProvider>
+        <ChoiceCards
+          choices={textChoices}
+          mode="numbers"
+          selectedId={null}
+          onSelect={onSelect}
+          translationLang="vi"
+          label="Q"
+        />
+      </UiLanguageProvider>,
+    );
+    expect(screen.queryByText(/選択肢1/)).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "2" }));
     expect(onSelect).toHaveBeenCalledWith("2");
   });
 });

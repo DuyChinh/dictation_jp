@@ -2,9 +2,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
 import { HistoryPage } from "../pages/HistoryPage";
+import { LessonsPage } from "../pages/LessonsPage";
+import { PricingPage } from "../pages/PricingPage";
 import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
+import { ListeningResultPage } from "../pages/ListeningResultPage";
 import { AuthPage } from "../pages/AuthPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
@@ -24,7 +27,9 @@ export function AppRouter() {
               <BrowserRouter>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/lessons" element={<LessonsPage />} />
                 <Route path="/history" element={<HistoryPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
@@ -37,6 +42,10 @@ export function AppRouter() {
                 <Route
                   path="/lessons/:lessonId/listening"
                   element={<ListeningPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/listening/result"
+                  element={<ListeningResultPage />}
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
