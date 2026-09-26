@@ -2,6 +2,7 @@ import { apiUrl } from "../env";
 import { DICTATION_PROGRESS_KEY, getAllDictationProgress } from "./dictationProgressStore";
 import { LISTENING_KEY, getAllListeningAnswers } from "./listeningScoreStore";
 import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistoryStore";
+import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
 
 /**
@@ -14,7 +15,7 @@ const OWNER_KEY = "jd.data_owner.v1";
 /** Set to the user id when moving guest data onto that account failed and should be retried. */
 const PENDING_IMPORT_KEY = "jd.pending_import.v1";
 
-const PRACTICE_KEYS = [DICTATION_PROGRESS_KEY, STATS_KEY, HISTORY_KEY, LISTENING_KEY, RESUME_KEY];
+const PRACTICE_KEYS = [DICTATION_PROGRESS_KEY, STATS_KEY, HISTORY_KEY, LISTENING_KEY, RESUME_KEY, LESSON_ACTIVITY_KEY];
 
 /** Rows per import request, to stay well under the server's request size limit. */
 const CHUNK = 1000;
@@ -52,14 +53,19 @@ function collectGuestData() {
       answered_at: a.answeredAt,
     })),
   );
-  return { dictation, listening, sessions: getPracticeHistory() };
+  const activity = Object.entries(getLessonActivity()).map(([lessonId, at]) => ({
+    lesson_id: lessonId,
+    last_active_at: at,
+  }));
+  return { dictation, listening, activity, sessions: getPracticeHistory() };
 }
 
 async function importGuestData(token: string): Promise<boolean> {
-  const { dictation, listening, sessions } = collectGuestData();
+  const { dictation, listening, activity, sessions } = collectGuestData();
   const batches: Record<string, unknown>[] = [];
   for (let i = 0; i < dictation.length; i += CHUNK) batches.push({ dictation: dictation.slice(i, i + CHUNK) });
   for (let i = 0; i < listening.length; i += CHUNK) batches.push({ listening: listening.slice(i, i + CHUNK) });
+  if (activity.length) batches.push({ activity: activity.slice(0, 500) });
   if (sessions.length) batches.push({ sessions: sessions.slice(0, 50) });
 
   try {

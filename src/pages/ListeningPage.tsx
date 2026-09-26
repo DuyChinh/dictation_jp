@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ListeningWorkspace } from "../features/listening/ListeningWorkspace";
 import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
@@ -6,6 +6,7 @@ import { usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
+import { touchLesson } from "../shared/storage/lessonActivityStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
@@ -24,6 +25,8 @@ export function ListeningPage() {
   // The workspace reads saved answers once when it mounts, so wait for the account's.
   const { ready: answersReady } = useSyncedListeningAnswers(lessonId);
   const { t, uiLang } = useUiLanguage();
+
+  useEffect(() => touchLesson(lessonId), [lessonId]);
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
   const fallback = (practice && getLocalizedText(practice.title, uiLang)) || lessonId;

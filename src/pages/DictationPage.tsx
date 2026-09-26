@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { DictationWorkspace, type PartLink } from "../features/dictation/DictationWorkspace";
 import { useLesson, usePractice } from "../shared/content/hooks";
@@ -5,6 +6,7 @@ import type { LessonDetail } from "../shared/api/content";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonShortTitle, partLabel, partType } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
+import { touchLesson } from "../shared/storage/lessonActivityStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
@@ -42,6 +44,8 @@ function DictationContent({
   const questionId = params.get("question") ?? undefined;
   const { practice, error, loading } = usePractice(lessonId, sectionId);
   const { t, uiLang } = useUiLanguage();
+
+  useEffect(() => touchLesson(lessonId), [lessonId]);
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
   const source = practice?.source ?? lesson?.source;

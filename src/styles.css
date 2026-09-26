@@ -35,6 +35,9 @@
   --primary-color: #2a4b9b;
   --primary-hover: #213c7d;
   --primary-light: #eaeef8;
+  /* Filled surfaces (buttons, selected pills) with --primary-text on them. */
+  --primary-fill: #2a4b9b;
+  --primary-fill-hover: #213c7d;
   --primary-text: #ffffff;
   --ring: #c9d4ee;
 
@@ -69,60 +72,63 @@
   --diff-removed-text: #a8372b;
 }
 
+/* "Yoru" — indigo night. Light blue for text, focus and progress; deep indigo under white text. */
 [data-theme="dark"] {
-  --bg-color: #121417;
-  --bg-gradient: #121417;
-  --bg-card: #1a1d22;
-  --sidebar-bg: #16191d;
-  --header-bg: #121417;
-  --header-border: #2c3038;
-  --card-bg: #1a1d22;
-  --card-border: #2c3038;
+  --bg-color: #0d1220;
+  --bg-gradient: #0d1220;
+  --bg-card: #151c2d;
+  --sidebar-bg: #111727;
+  --header-bg: #0d1220;
+  --header-border: #28324b;
+  --card-bg: #151c2d;
+  --card-border: #28324b;
   --card-shadow: none;
-  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --surface-2: #1f2329;
-  --surface-3: #2a2e35;
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --surface-2: #1a2236;
+  --surface-3: #212a40;
 
-  --text-main: #ecedef;
-  --ink-2: #c9ccd2;
-  --text-muted: #a7acb5;
-  --text-subtle: #8f949d;
+  --text-main: #e9edf6;
+  --ink-2: #c4cbdc;
+  --text-muted: #98a3bb;
+  --text-subtle: #8792ab;
 
-  --primary-color: #93aaf0;
-  --primary-hover: #adbff5;
-  --primary-light: rgba(147, 170, 240, 0.14);
-  --primary-text: #0f1420;
-  --ring: rgba(147, 170, 240, 0.35);
+  --primary-color: #a3b8ff;
+  --primary-hover: #bccbff;
+  --primary-light: rgba(163, 184, 255, 0.13);
+  --primary-fill: #4466d6;
+  --primary-fill-hover: #3a5bc9;
+  --primary-text: #ffffff;
+  --ring: rgba(163, 184, 255, 0.35);
 
-  --accent-color: #ecedef;
-  --accent-light: #1f2329;
-  --inverse-bg: #ecedef;
-  --inverse-text: #121417;
+  --accent-color: #e9edf6;
+  --accent-light: #1a2236;
+  --inverse-bg: #e9edf6;
+  --inverse-text: #0d1220;
 
-  --ok: #62c496;
-  --ok-soft: rgba(98, 196, 150, 0.14);
-  --acc: #e2b75e;
-  --acc-soft: rgba(226, 183, 94, 0.14);
-  --bad: #f19283;
-  --bad-soft: rgba(241, 146, 131, 0.14);
+  --ok: #62d3a3;
+  --ok-soft: rgba(98, 211, 163, 0.14);
+  --acc: #f0c56c;
+  --acc-soft: rgba(240, 197, 108, 0.15);
+  --bad: #ff9a8a;
+  --bad-soft: rgba(255, 154, 138, 0.14);
 
-  --border-color: #2c3038;
-  --input-bg: #1a1d22;
-  --input-border: #3a3f48;
-  --input-focus: #93aaf0;
-  --input-text: #ecedef;
+  --border-color: #28324b;
+  --input-bg: #151c2d;
+  --input-border: #3a4665;
+  --input-focus: #a3b8ff;
+  --input-text: #e9edf6;
 
-  --page-btn-bg: #1a1d22;
-  --page-btn-border: #3a3f48;
-  --page-btn-text: #c9ccd2;
-  --page-btn-active-bg: #93aaf0;
-  --page-btn-active-text: #0f1420;
+  --page-btn-bg: #151c2d;
+  --page-btn-border: #3a4665;
+  --page-btn-text: #c4cbdc;
+  --page-btn-active-bg: #4466d6;
+  --page-btn-active-text: #ffffff;
 
-  --diff-equal: #ecedef;
-  --diff-added-bg: rgba(98, 196, 150, 0.14);
-  --diff-added-text: #62c496;
-  --diff-removed-bg: rgba(241, 146, 131, 0.14);
-  --diff-removed-text: #f19283;
+  --diff-equal: #e9edf6;
+  --diff-added-bg: rgba(98, 211, 163, 0.14);
+  --diff-added-text: #62d3a3;
+  --diff-removed-bg: rgba(255, 154, 138, 0.14);
+  --diff-removed-text: #ff9a8a;
 }
 
 * {
@@ -207,15 +213,15 @@ a {
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background: var(--primary-fill);
   color: var(--primary-text);
   border-color: var(--primary-color);
   font-weight: 600;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--primary-fill-hover);
+  border-color: var(--primary-fill-hover);
   color: var(--primary-text);
 }
 
@@ -275,7 +281,7 @@ a {
 
 .segmented-group button.active,
 .segmented-group button.btn-check-active {
-  background: var(--primary-color);
+  background: var(--primary-fill);
   color: var(--primary-text);
   font-weight: 600;
 }
@@ -529,7 +535,7 @@ a {
 
 .audio-bar__play {
   border: none;
-  background: var(--primary-color);
+  background: var(--primary-fill);
   color: #ffffff;
   width: var(--touch-min);
   height: var(--touch-min);
@@ -790,8 +796,8 @@ a {
 }
 
 .question-nav-btn.is-active {
-  border: 2px solid var(--primary-color);
-  background: var(--primary-color);
+  border: 2px solid var(--primary-fill);
+  background: var(--primary-fill);
   color: #fff;
   font-weight: 700;
 }
