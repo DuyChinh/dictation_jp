@@ -14,8 +14,29 @@ export function lessonSitting(source: Source): string {
   return month ? `${month}/${year}` : String(year);
 }
 
-/** Page title, e.g. "JLPT N2 — 7/2025". */
+/** Past JLPT sitting, original test in the JLPT format, or anything else (fixtures, podcasts). */
+export type LessonKind = "exam" | "practice" | "other";
+
+export function isPracticeLesson(source: Source): boolean {
+  return source?.type === "practice";
+}
+
+export function lessonKind(source: Source): LessonKind {
+  if (source?.type === "jlpt") return "exam";
+  return isPracticeLesson(source) ? "practice" : "other";
+}
+
+/** "JLPT N2 Practice 1", or "" when the source is not a numbered practice test. */
+function practiceTitle(source: Source): string {
+  const level = levelOf(source);
+  if (!isPracticeLesson(source) || !level || !source?.set) return "";
+  return `JLPT ${level} Practice ${source.set}`;
+}
+
+/** Page title, e.g. "JLPT N2 — 7/2025" or "JLPT N2 Practice 1". */
 export function lessonTitle(source: Source, fallback: string): string {
+  const practice = practiceTitle(source);
+  if (practice) return practice;
   const level = levelOf(source);
   const sitting = lessonSitting(source);
   if (!level || !sitting) return fallback;
@@ -24,6 +45,8 @@ export function lessonTitle(source: Source, fallback: string): string {
 
 /** Compact label for breadcrumbs and lists, e.g. "JLPT N2 · 7/2025". */
 export function lessonShortTitle(source: Source, fallback: string): string {
+  const practice = practiceTitle(source);
+  if (practice) return practice;
   const level = levelOf(source);
   const sitting = lessonSitting(source);
   if (!level || !sitting) return fallback;

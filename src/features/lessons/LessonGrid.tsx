@@ -11,7 +11,7 @@ import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import type { TranslationKey } from "../../shared/i18n/translations";
 import { useLevel, type JlptLevel } from "../../shared/context/LevelContext";
-import { lessonLevel, lessonTitle } from "../../shared/content/lessonLabels";
+import { isPracticeLesson, lessonKind, lessonLevel, lessonTitle, type LessonKind } from "../../shared/content/lessonLabels";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { Icon } from "../../shared/ui/Icon";
 import { lessonStatus, matchesLessonQuery, sortLessons, timeAgo, type LessonStatus } from "./lessonSearch";
@@ -107,11 +107,15 @@ function LessonCard({
   const ago = lastActiveAt ? (timeAgo(lastActiveAt, Date.now(), uiLang) ?? t("lessons.justNow")) : null;
   const statusLabel =
     status === "done" ? t("lessons.statusDone") : status === "doing" ? t("lessons.statusDoing") : t("lesson.notStarted");
+  const practice = isPracticeLesson(lesson.source);
 
   return (
     <article className="lesson-card">
       <div className="lesson-card__top">
-        <span className="badge">{lessonLevel(lesson.source)}</span>
+        <span className="lesson-card__badges">
+          <span className="badge">{lessonLevel(lesson.source)}</span>
+          {practice && <span className="badge badge--practice">{t("lessons.practiceBadge")}</span>}
+        </span>
         {ago && (
           <span className="lesson-card__recent" title={fmt(t("lessons.recentTitle"), { ago })}>
             <Icon name="clock" size={14} strokeWidth={2} />
@@ -125,6 +129,7 @@ function LessonCard({
             {lessonTitle(lesson.source, getLocalizedText(lesson.title, uiLang) || lesson.id)}
           </Link>
         </h3>
+        {practice && <p className="lesson-card__note">{t("lessons.practiceNote")}</p>}
         <p className="lesson-card__stats">
           {lesson.counts.sections} 問題 · {lesson.counts.questions} {t("lesson.statQuestions").toLowerCase()} ·{" "}
           {total} {t("lesson.statSegments").toLowerCase()}
@@ -164,6 +169,13 @@ function LessonCard({
 }
 
 export type StatusFilter = "all" | LessonStatus;
+export type KindFilter = "all" | Exclude<LessonKind, "other">;
+
+const KIND_FILTERS: { id: KindFilter; label: TranslationKey }[] = [
+  { id: "all", label: "lessons.kindAll" },
+  { id: "exam", label: "lessons.kindExam" },
+  { id: "practice", label: "lessons.kindPractice" },
+];
 
 const STATUS_FILTERS: { id: StatusFilter; label: TranslationKey }[] = [
   { id: "all", label: "lessons.statusAll" },
@@ -175,7 +187,8 @@ const STATUS_FILTERS: { id: StatusFilter; label: TranslationKey }[] = [
 /**
  * Level-filtered grid of lessons with loading, error and empty states.
  * Recently practised lessons come first, then the newest sittings. With
- * `onStatusChange` it also shows a toolbar: `search` and the status filter.
+ * `onStatusChange` it also shows a toolbar: `search` and the status filter;
+ * with `onKindChange`, tabs for past exams / practice tests above it.
  */
 export function LessonGrid({
   lessons,
@@ -185,6 +198,8 @@ export function LessonGrid({
   search,
   status = "all",
   onStatusChange,
+  kind = "all",
+  onKindChange,
 }: {
   lessons: LessonSummary[];
   loading: boolean;
@@ -195,6 +210,8 @@ export function LessonGrid({
   search?: ReactNode;
   status?: StatusFilter;
   onStatusChange?: (status: StatusFilter) => void;
+  kind?: KindFilter;
+  onKindChange?: (kind: KindFilter) => void;
 }) {
   const { t, uiLang } = useUiLanguage();
   const { level } = useLevel();
@@ -213,16 +230,33 @@ export function LessonGrid({
   }
 
   const searching = query.trim() !== "";
-  const matching = sorted.filter(
+  const searchText = (l: LessonSummary) => {
+    const title = lessonTitle(l.source, getLocalizedText(l.title, uiLang) || l.id);
+    return isPracticeLesson(l.source) ? `${title} ${t("lessons.practiceBadge")} ${t("lessons.kindPractice")}` : title;
+  };
+  const inLevel = sorted.filter(
     (l) =>
       (level === "ALL" || String(l.source?.level ?? "").toUpperCase() === level) &&
-      (!searching ||
-        matchesLessonQuery(l, query, lessonTitle(l.source, getLocalizedText(l.title, uiLang) || l.id))),
+      (!searching || matchesLessonQuery(l, query, searchText(l))),
   );
+  const kindCounts: Record<KindFilter | "other", number> = { all: inLevel.length, exam: 0, practice: 0, other: 0 };
+  for (const l of inLevel) kindCounts[lessonKind(l.source)] += 1;
+  const matching = kind === "all" ? inLevel : inLevel.filter((l) => lessonKind(l.source) === kind);
   const counts: Record<StatusFilter, number> = { all: matching.length, todo: 0, doing: 0, done: 0 };
   for (const l of matching) counts[progress[l.id]!.status] += 1;
   const shown = status === "all" ? matching : matching.filter((l) => progress[l.id]!.status === status);
-  const filtered = searching || status !== "all";
+  const filtered = searching || status !== "all" || kind !== "all";
+
+  const tabs = onKindChange && (
+    <div className="lesson-tabs" role="group" aria-label={t("lessons.kindFilter")}>
+      {KIND_FILTERS.map((f) => (
+        <button key={f.id} type="button" aria-pressed={kind === f.id} onClick={() => onKindChange(f.id)}>
+          {t(f.label)}
+          <span className="lesson-tabs__count">{kindCounts[f.id]}</span>
+        </button>
+      ))}
+    </div>
+  );
 
   const toolbar = onStatusChange && (
     <div className="lesson-toolbar">
@@ -246,6 +280,7 @@ export function LessonGrid({
 
   return (
     <>
+      {tabs}
       {toolbar}
       {filtered && shown.length === 0 ? (
         <div className="notice">

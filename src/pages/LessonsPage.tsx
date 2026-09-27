@@ -2,9 +2,16 @@ import { useSearchParams } from "react-router-dom";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
-import { LessonGrid, LevelFilter, useLessonList, type StatusFilter } from "../features/lessons/LessonGrid";
+import {
+  LessonGrid,
+  LevelFilter,
+  useLessonList,
+  type KindFilter,
+  type StatusFilter,
+} from "../features/lessons/LessonGrid";
 
 const STATUSES: StatusFilter[] = ["all", "todo", "doing", "done"];
+const KINDS: KindFilter[] = ["all", "exam", "practice"];
 
 export function LessonsPage() {
   const { t } = useUiLanguage();
@@ -14,6 +21,8 @@ export function LessonsPage() {
   const query = params.get("q") ?? "";
   const statusParam = params.get("status") as StatusFilter | null;
   const status = statusParam && STATUSES.includes(statusParam) ? statusParam : "all";
+  const kindParam = params.get("kind") as KindFilter | null;
+  const kind = kindParam && KINDS.includes(kindParam) ? kindParam : "all";
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -40,6 +49,8 @@ export function LessonsPage() {
         query={query}
         status={status}
         onStatusChange={(s) => setParam("status", s === "all" ? "" : s)}
+        kind={kind}
+        onKindChange={(k) => setParam("kind", k === "all" ? "" : k)}
         search={
           <label className="lesson-search">
             <Icon name="search" size={18} />

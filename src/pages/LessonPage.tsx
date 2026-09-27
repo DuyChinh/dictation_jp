@@ -6,6 +6,7 @@ import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import {
+  isPracticeLesson,
   lessonLevel,
   lessonShortTitle,
   lessonTitle,
@@ -101,9 +102,13 @@ export function LessonPage() {
         <div className="lesson-head__copy">
           <div className="lesson-head__meta">
             <span className="badge">{lessonLevel(lesson.source)}</span>
+            {isPracticeLesson(lesson.source) && (
+              <span className="badge badge--practice">{t("lessons.practiceBadge")}</span>
+            )}
             <span>{t("lesson.subtitle")}</span>
           </div>
           <h1>{lessonTitle(lesson.source, fallbackTitle)}</h1>
+          {isPracticeLesson(lesson.source) && <p className="lesson-head__note">{t("lessons.practiceNote")}</p>}
         </div>
         <dl className="stat-strip">
           <div>
