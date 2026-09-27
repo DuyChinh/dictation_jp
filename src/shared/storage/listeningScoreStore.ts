@@ -104,6 +104,15 @@ export function clearListeningAnswers(lessonId: string, questionIds?: string[]):
   }
 }
 
+/** Merges the account's answers for many lessons; the account wins where both have one. */
+export function mergeListeningAnswers(fromServer: Store): void {
+  const store = read();
+  for (const [lessonId, answers] of Object.entries(fromServer)) {
+    store[lessonId] = { ...(store[lessonId] ?? {}), ...answers };
+  }
+  write(store);
+}
+
 /** Fetches the account's answers for a lesson and merges them in; the account wins where both have one. */
 export async function syncListeningAnswersFromServer(lessonId: string): Promise<Record<string, ListeningAnswer>> {
   const token = localStorage.getItem("token");

@@ -178,6 +178,8 @@ type Props = {
   lessonHref?: string;
   /** Name of the current part's type (e.g. "Hiểu vấn đề"), shown under the title. */
   sectionTypeLabel?: string;
+  /** Dictation sentences in the whole lesson; the practice package may hold one part only. */
+  lessonTotal?: number;
 };
 
 export function DictationWorkspace({
@@ -189,6 +191,7 @@ export function DictationWorkspace({
   parts,
   lessonHref,
   sectionTypeLabel,
+  lessonTotal,
 }: Props) {
   const { t, uiLang } = useUiLanguage();
   const items = useMemo(
@@ -441,20 +444,21 @@ export function DictationWorkspace({
       }
 
       // Record session history entry if at least 1 correct or last segment
-      if (r.correct) {
-        const totalCorrectSoFar =
-          Object.values(progressMap).filter((p) => p.status === "correct").length + 1;
-        addPracticeSession({
-          lessonId,
-          lessonTitle: getLocalizedText(practice.title, "vi") || lessonId,
-          level: "JLPT",
-          score: Math.round((totalCorrectSoFar / items.length) * 100),
-          maxStreak: Math.max(streak, nextStreak),
-          correctCount: totalCorrectSoFar,
-          totalCount: items.length,
-          mascot,
-        });
-      }
+      // Every check updates today's session for this lesson, wrong answers included.
+      const lessonCorrect = Object.entries(progressMap).filter(
+        ([id, p]) => p.status === "correct" && id !== current.segment.id,
+      ).length + (r.correct ? 1 : 0);
+      const total = Math.max(lessonTotal ?? items.length, lessonCorrect, 1);
+      addPracticeSession({
+        lessonId,
+        lessonTitle: getLocalizedText(practice.title, "vi") || lessonId,
+        level: "JLPT",
+        score: Math.round((lessonCorrect / total) * 100),
+        maxStreak: Math.max(streak, nextStreak),
+        correctCount: lessonCorrect,
+        totalCount: total,
+        mascot,
+      });
     } catch (e) {
       setUiError(e instanceof Error ? e.message : "Không chấm được bài");
     } finally {

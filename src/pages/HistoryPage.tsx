@@ -4,7 +4,11 @@ import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import type { UiLang } from "../shared/i18n/translations";
-import { getAllDictationProgress } from "../shared/storage/dictationProgressStore";
+import { getAllDictationProgress, syncProgressOverviewFromServer } from "../shared/storage/dictationProgressStore";
+import { getAllListeningAnswers } from "../shared/storage/listeningScoreStore";
+import { getLessonActivity } from "../shared/storage/lessonActivityStore";
+import { sortLessons } from "../features/lessons/lessonSearch";
+import { fmt } from "../shared/i18n/format";
 import {
   getUserStats,
   getPracticeHistory,
@@ -32,13 +36,15 @@ function dayLabel(ts: number, lang: UiLang): string {
 
 type Badge = { id: string; name: Record<UiLang, string>; desc: Record<UiLang, string>; unlocked: boolean };
 
-function badgesFor(stats: UserOverallStats, accuracy: number): Badge[] {
+type Totals = { correct: number; attempts: number; bestStreak: number };
+
+function badgesFor(stats: Totals, accuracy: number): Badge[] {
   return [
     {
       id: "first_step",
       name: { vi: "Khởi đầu", ja: "最初の一歩", en: "First step" },
       desc: { vi: "Hoàn thành câu chép chính tả đầu tiên", ja: "ディクテーションを1問解く", en: "Complete your first sentence" },
-      unlocked: stats.totalAttempts >= 1,
+      unlocked: stats.attempts >= 1,
     },
     {
       id: "streak_5",
@@ -62,13 +68,13 @@ function badgesFor(stats: UserOverallStats, accuracy: number): Badge[] {
       id: "hard_worker",
       name: { vi: "Bền bỉ", ja: "継続は力なり", en: "Persistent" },
       desc: { vi: "Chép đúng từ 20 câu trở lên", ja: "20問以上正解", en: "Get 20 or more sentences right" },
-      unlocked: stats.totalCorrect >= 20,
+      unlocked: stats.correct >= 20,
     },
     {
       id: "perfectionist",
       name: { vi: "Chính xác cao", ja: "高い正答率", en: "Sharp ears" },
       desc: { vi: "Độ chính xác ≥ 90% sau ít nhất 10 lượt", ja: "10回以上で正答率90%以上", en: "90%+ accuracy over 10+ checks" },
-      unlocked: accuracy >= 90 && stats.totalAttempts >= 10,
+      unlocked: accuracy >= 90 && stats.attempts >= 10,
     },
   ];
 }
@@ -79,22 +85,47 @@ export function HistoryPage() {
   const [history, setHistory] = useState<PracticeSessionItem[]>(() => getPracticeHistory());
   const { lessons } = useLessonList();
 
+  // Bumped once the account's data is merged in, so the figures below are read again.
+  const [synced, setSynced] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
-    syncHistoryFromServer().then((res) => {
-      if (!cancelled) {
-        setStats(res.stats);
-        setHistory(res.history);
-      }
+    void Promise.all([syncHistoryFromServer(), syncProgressOverviewFromServer()]).then(([res]) => {
+      if (cancelled) return;
+      setStats(res.stats);
+      setHistory(res.history);
+      setSynced((n) => n + 1);
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const progress = useMemo(() => getAllDictationProgress(), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const progress = useMemo(() => getAllDictationProgress(), [synced]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const listening = useMemo(() => getAllListeningAnswers(), [synced]);
 
-  const accuracy = stats.totalAttempts > 0 ? Math.round((stats.totalCorrect / stats.totalAttempts) * 100) : 0;
+  /** Figures from the saved answers themselves, so every device and the server agree. */
+  const totals = useMemo(() => {
+    let correct = 0;
+    let attempts = 0;
+    const practiced = new Set<string>();
+    for (const [lessonId, segments] of Object.entries(progress)) {
+      for (const seg of Object.values(segments)) {
+        if (seg.status !== "correct" && seg.status !== "incorrect") continue;
+        attempts += seg.attempts || 1;
+        if (seg.status === "correct") correct += 1;
+        practiced.add(lessonId);
+      }
+    }
+    for (const [lessonId, answers] of Object.entries(listening)) {
+      if (Object.keys(answers).length > 0) practiced.add(lessonId);
+    }
+    return { correct, attempts, practiced: practiced.size, bestStreak: stats.bestStreak };
+  }, [progress, listening, stats.bestStreak]);
+
+  const accuracy = totals.attempts > 0 ? Math.round((totals.correct / totals.attempts) * 100) : 0;
 
   /** Correct sentences per day over the last 30 days (by the day each was last answered). */
   const days = useMemo(() => {
@@ -111,16 +142,30 @@ export function HistoryPage() {
   }, [progress]);
   const maxDay = Math.max(1, ...days.map((d) => d.count));
 
+  /** Every lesson with any practice, most recently practised first. */
   const byLesson = useMemo(
     () =>
-      lessons
+      sortLessons(lessons, getLessonActivity())
         .map((l) => {
-          const done = Object.values(progress[l.id] ?? {}).filter((p) => p.status === "correct").length;
+          const segs = Object.values(progress[l.id] ?? {});
+          const done = segs.filter((p) => p.status === "correct").length;
+          const review = segs.filter((p) => p.status === "incorrect").length;
+          const answers = Object.values(listening[l.id] ?? {});
+          const right = answers.filter((a) => a.correct).length;
           const total = l.counts.dictation_segments || 1;
-          return { id: l.id, label: lessonShortTitle(l.source, l.id), done, pct: Math.min(100, Math.round((done / total) * 100)) };
+          return {
+            id: l.id,
+            label: lessonShortTitle(l.source, l.id),
+            done,
+            total,
+            review,
+            answered: answers.length,
+            right,
+            pct: Math.min(100, Math.round((done / total) * 100)),
+          };
         })
-        .filter((l) => l.done > 0),
-    [lessons, progress],
+        .filter((l) => l.done > 0 || l.review > 0 || l.answered > 0),
+    [lessons, progress, listening],
   );
 
   /** One row per test per day: history stores an entry for every correct answer. */
@@ -141,12 +186,12 @@ export function HistoryPage() {
     return l ? lessonShortTitle(l.source, fallback) : fallback || id;
   };
 
-  const badges = badgesFor(stats, accuracy);
+  const badges = badgesFor(totals, accuracy);
   const kpis = [
-    { label: t("history.kpiCorrect"), value: String(stats.totalCorrect), note: `${stats.totalAttempts} ${t("history.kpiAttempts")}` },
+    { label: t("history.kpiCorrect"), value: String(totals.correct), note: `${totals.attempts} ${t("history.kpiAttempts")}` },
     { label: t("history.kpiAccuracy"), value: `${accuracy}%`, note: t("history.kpiAccuracyNote") },
     { label: t("history.kpiStreak"), value: String(stats.bestStreak), note: `${t("history.kpiStreakNow")}: ${stats.currentStreak}` },
-    { label: t("history.kpiLessons"), value: String(stats.lessonsPracticed.length), note: t("history.kpiLessonsNote") },
+    { label: t("history.kpiLessons"), value: String(totals.practiced), note: t("history.kpiLessonsNote") },
   ];
 
   return (
@@ -201,13 +246,26 @@ export function HistoryPage() {
             byLesson.map((l) => (
               <div key={l.id} className="meter">
                 <div className="meter__label">
-                  <span>{l.label}</span>
-                  <span>
-                    {l.done} {t("history.correctUnit")} · {l.pct}%
-                  </span>
+                  <Link to={`/lessons/${encodeURIComponent(l.id)}`}>{l.label}</Link>
+                  <span>{l.pct}%</span>
                 </div>
                 <div className="progress">
                   <span style={{ width: `${l.pct}%` }} />
+                </div>
+                <div className="meter__sub">
+                  <span>
+                    {t("lesson.dictationTitle")} {l.done}/{l.total}
+                  </span>
+                  {l.answered > 0 && (
+                    <span>
+                      {t("listening.title")} {fmt(t("history.listeningRight"), { right: l.right, answered: l.answered })}
+                    </span>
+                  )}
+                  {l.review > 0 && (
+                    <Link to={`/lessons/${encodeURIComponent(l.id)}/dictation`} className="meter__review">
+                      {fmt(t("history.toReview"), { n: l.review })}
+                    </Link>
+                  )}
                 </div>
               </div>
             ))

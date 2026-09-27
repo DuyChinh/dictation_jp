@@ -90,6 +90,7 @@ function DictationContent({
           parts={parts}
           lessonHref={lessonHref}
           sectionTypeLabel={sectionTypeLabel || undefined}
+          lessonTotal={lesson?.counts.dictation_segments}
         />
       )}
     </AppShell>

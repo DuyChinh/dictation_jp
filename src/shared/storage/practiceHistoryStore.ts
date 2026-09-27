@@ -99,20 +99,30 @@ export function recordAnswerAttempt(data: {
   return updated;
 }
 
+function dayKey(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /**
- * Add a completed practice session entry
+ * Record practice on a lesson. A session is one lesson on one day: later
+ * checks that day update it (and move it to the top) instead of adding rows.
  */
 export function addPracticeSession(
   session: Omit<PracticeSessionItem, "id" | "timestamp">
 ): PracticeSessionItem {
+  const now = Date.now();
+  const id = `sess_${session.lessonId}_${dayKey(now)}`;
   const history = getPracticeHistory();
+  const existing = history.find((h) => h.id === id);
   const newItem: PracticeSessionItem = {
     ...session,
-    id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    timestamp: Date.now(),
+    id,
+    maxStreak: Math.max(session.maxStreak, existing?.maxStreak ?? 0),
+    timestamp: now,
   };
 
-  const nextHistory = [newItem, ...history].slice(0, 50); // keep last 50 sessions
+  const nextHistory = [newItem, ...history.filter((h) => h.id !== id)].slice(0, 50); // keep last 50 sessions
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
   } catch {
@@ -158,7 +168,12 @@ export async function syncHistoryFromServer(): Promise<{
     if (res.ok) {
       const data = await res.json();
       if (data.stats) {
-        saveUserStats(data.stats);
+        // The server knows the best streak across devices but not the streak running in this browser.
+        saveUserStats({
+          ...data.stats,
+          bestStreak: Math.max(localStats.bestStreak, data.stats.bestStreak ?? 0),
+          currentStreak: localStats.currentStreak,
+        });
       }
       if (Array.isArray(data.history) && data.history.length > 0) {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history));

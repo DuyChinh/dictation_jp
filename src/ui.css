@@ -54,6 +54,7 @@
   gap: 28px;
   overflow-y: auto;
   z-index: 120;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .shell-sidebar__top {
@@ -104,6 +105,7 @@
 }
 
 .shell-nav__item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -163,12 +165,14 @@
   cursor: pointer;
 }
 
-.shell-lang svg {
+.shell-lang__flag {
   position: absolute;
-  left: 12px;
-  top: 13px;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(127, 127, 127, 0.35);
   pointer-events: none;
-  color: var(--ink-2);
 }
 
 .icon-btn {
@@ -211,7 +215,7 @@
   background: var(--bg-color);
 }
 
-.shell-header .shell-header__menu { display: none; }
+.shell-header .shell-header__menu { display: inline-flex; margin-left: -8px; }
 .shell-header__title { font-size: 14px; font-weight: 600; white-space: nowrap; }
 
 .shell-header__actions {
@@ -230,6 +234,45 @@
 }
 
 .shell-backdrop { display: none; }
+
+/* Collapsed on desktop: an icon rail; each item's name shows beside it on hover or keyboard focus. */
+@media (min-width: 1024px) {
+  .shell.is-collapsed .shell-sidebar { width: 76px; overflow: visible; }
+  .shell.is-collapsed .shell-brand { padding: 4px; }
+  .shell.is-collapsed .shell-brand__text,
+  .shell.is-collapsed .shell-nav__group,
+  .shell.is-collapsed .upsell { display: none; }
+  .shell.is-collapsed .shell-nav__item { width: 44px; padding: 0; justify-content: center; }
+  .shell.is-collapsed .shell-prefs { flex-direction: column; }
+  .shell.is-collapsed .shell-lang { flex: none; width: 44px; }
+  .shell.is-collapsed .shell-lang select { padding: 0; color: transparent; }
+  .shell.is-collapsed .shell-lang option { color: var(--text-main); }
+
+  .shell.is-collapsed .shell-nav__label {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translate(-4px, -50%);
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--inverse-bg);
+    color: var(--inverse-text);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 300;
+  }
+
+  .shell.is-collapsed .shell-nav__item:hover .shell-nav__label,
+  .shell.is-collapsed .shell-nav__item:focus-visible .shell-nav__label {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
 
 .breadcrumb { min-width: 0; }
 
@@ -323,7 +366,6 @@
     z-index: 990;
   }
 
-  .shell-header .shell-header__menu { display: inline-flex; }
   .shell-header { height: 64px; padding: 0 16px; gap: 8px; }
   .shell-content { padding: 24px 16px 48px; }
 }
@@ -1254,6 +1296,11 @@
 .meter__label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
 .meter__label span:last-child { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .meter .progress { height: 8px; border-radius: 4px; }
+.meter__label a { color: inherit; font-weight: 600; }
+.meter__label a:hover { color: var(--primary-color); }
+.meter__sub { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.meter__review { color: var(--acc); font-weight: 600; }
+.meter__review:hover { text-decoration: underline; }
 
 .achievements { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .achievement { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; border: 1px solid var(--card-border); }

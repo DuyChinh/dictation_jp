@@ -5,9 +5,34 @@ import { LoginButton } from "../../features/auth/LoginButton";
 import { useUiLanguage } from "../i18n/UiLanguageContext";
 import type { TranslationKey, UiLang } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeProvider";
+import { Flag } from "./Flag";
 import { Icon, type IconName } from "./Icon";
 
 export type Crumb = { label: string; to?: string };
+
+/** Below this width the sidebar is a drawer over the page; above it, a column that can shrink to icons. */
+const DRAWER_QUERY = "(max-width: 1023px)";
+const COLLAPSED_KEY = "jd.sidebar_collapsed.v1";
+
+function useIsDrawer(): boolean {
+  const [drawer, setDrawer] = useState(() => window.matchMedia?.(DRAWER_QUERY).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(DRAWER_QUERY);
+    if (!mq) return;
+    const onChange = () => setDrawer(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return drawer;
+}
+
+function loadCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 const NAV: Array<{ to: string; label: TranslationKey; icon: IconName; end?: boolean }> = [
   { to: "/", label: "nav.home", icon: "home", end: true },
@@ -79,6 +104,9 @@ export function AppShell({
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const isDrawer = useIsDrawer();
+  const expanded = isDrawer ? menuOpen : !collapsed;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -99,11 +127,30 @@ export function AppShell({
 
   const closeMenu = () => setMenuOpen(false);
 
+  const toggleMenu = () => {
+    if (isDrawer) {
+      setMenuOpen((open) => !open);
+      return;
+    }
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      // storage blocked: the choice lasts until reload
+    }
+  };
+
   return (
-    <div className="shell">
+    <div className={`shell${collapsed ? " is-collapsed" : ""}`}>
       {menuOpen && <div className="shell-backdrop" onClick={closeMenu} aria-hidden="true" />}
 
-      <aside id="app-sidebar" className={`shell-sidebar${menuOpen ? " is-open" : ""}`}>
+      {/* A closed drawer is off screen, so it leaves the tab order; the icon rail stays usable. */}
+      <aside
+        id="app-sidebar"
+        className={`shell-sidebar${menuOpen ? " is-open" : ""}`}
+        inert={isDrawer && !menuOpen}
+      >
         <div className="shell-sidebar__top">
           <Brand onClick={closeMenu} />
           <button
@@ -127,7 +174,7 @@ export function AppShell({
               onClick={closeMenu}
             >
               <Icon name={item.icon} />
-              {t(item.label)}
+              <span className="shell-nav__label">{t(item.label)}</span>
             </NavLink>
           ))}
         </nav>
@@ -143,9 +190,9 @@ export function AppShell({
             </div>
           )}
           <div className="shell-prefs">
-            <label className="shell-lang">
+            <label className="shell-lang" title={t("ui.language")}>
               <span className="visually-hidden">{t("ui.language")}</span>
-              <Icon name="globe" size={18} />
+              <Flag lang={uiLang} className="shell-lang__flag" />
               <select value={uiLang} onChange={(e) => setUiLang(e.target.value as UiLang)}>
                 {LANGS.map((l) => (
                   <option key={l.value} value={l.value}>
@@ -172,10 +219,11 @@ export function AppShell({
           <button
             type="button"
             className="icon-btn icon-btn--ghost shell-header__menu"
-            onClick={() => setMenuOpen(true)}
-            aria-label={t("nav.openMenu")}
+            onClick={toggleMenu}
+            aria-label={expanded ? t("nav.closeMenu") : t("nav.openMenu")}
+            title={expanded ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-controls="app-sidebar"
-            aria-expanded={menuOpen}
+            aria-expanded={expanded}
           >
             <Icon name="menu" size={22} />
           </button>

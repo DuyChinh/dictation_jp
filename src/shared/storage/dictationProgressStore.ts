@@ -1,4 +1,5 @@
 import { apiUrl } from "../env";
+import { mergeListeningAnswers } from "./listeningScoreStore";
 
 export type SegmentStatus = "correct" | "incorrect" | "unattempted";
 
@@ -124,4 +125,38 @@ export async function syncLessonProgressFromServer(
   }
 
   return getLessonProgress(lessonId);
+}
+
+/**
+ * Fetch dictation progress and listening answers for every lesson on the
+ * account and merge them in (the account wins per sentence / question), so
+ * the progress page is complete on a device that hasn't opened each lesson.
+ */
+export async function syncProgressOverviewFromServer(): Promise<void> {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await fetch(apiUrl("/api/progress/overview"), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.dictation && typeof data.dictation === "object") {
+      const all = getAllDictationProgress();
+      for (const [lessonId, segments] of Object.entries(data.dictation as Record<string, Record<string, SegmentProgressData>>)) {
+        all[lessonId] = { ...(all[lessonId] || {}), ...segments };
+      }
+      try {
+        localStorage.setItem(DICTATION_PROGRESS_KEY, JSON.stringify(all));
+      } catch {
+        // ignore
+      }
+    }
+    if (data.listening && typeof data.listening === "object") {
+      mergeListeningAnswers(data.listening);
+    }
+  } catch {
+    // offline: the page shows what this browser has
+  }
 }
