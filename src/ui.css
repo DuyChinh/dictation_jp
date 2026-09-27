@@ -75,17 +75,10 @@
 }
 
 .shell-brand__logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--primary-fill);
-  color: var(--primary-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-brand);
-  font-size: 20px;
-  font-weight: 700;
+  width: 40px;
+  height: 40px;
+  display: block;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -1187,9 +1180,10 @@
   flex-shrink: 0;
 }
 
-.auth__hero .shell-brand { color: #ffffff; padding: 0; }
-.auth__hero .shell-brand__logo { background: #ffffff; color: #1e3470; }
-.auth__hero .shell-brand__tag { color: #c4cde6; }
+.auth__hero .shell-brand { color: #ffffff; padding: 0; gap: 18px; }
+.auth__hero .shell-brand__logo { width: 72px; height: 72px; }
+.auth__hero .shell-brand__name { font-size: 28px; line-height: 1.2; }
+.auth__hero .shell-brand__tag { color: #c4cde6; font-size: 16px; margin-top: 2px; }
 .auth__hero-body { margin-top: auto; display: flex; flex-direction: column; gap: 28px; }
 .auth__motto { font-family: var(--font-brand); font-size: clamp(44px, 4.4vw, 64px); line-height: 1.25; font-weight: 700; letter-spacing: 0.04em; }
 .auth__line { margin: 0; font-size: 17px; line-height: 1.65; color: #d6ddf0; max-width: 440px; }

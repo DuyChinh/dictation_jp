@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
@@ -16,6 +17,8 @@ import { AuthProvider } from "../features/auth/AuthContext";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
 import { LevelProvider } from "../shared/context/LevelContext";
+
+const AdminApp = lazy(() => import("../admin/AdminApp"));
 
 export function AppRouter() {
   return (
@@ -46,6 +49,14 @@ export function AppRouter() {
                 <Route
                   path="/lessons/:lessonId/listening/result"
                   element={<ListeningResultPage />}
+                />
+                <Route
+                  path="/admin/*"
+                  element={
+                    <Suspense fallback={null}>
+                      <AdminApp />
+                    </Suspense>
+                  }
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

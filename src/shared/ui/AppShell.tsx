@@ -51,11 +51,9 @@ export function Brand({ onClick }: { onClick?: () => void }) {
   const { t } = useUiLanguage();
   return (
     <Link to="/" className="shell-brand" onClick={onClick}>
-      <span className="shell-brand__logo" aria-hidden="true">
-        聴
-      </span>
+      <img className="shell-brand__logo" src="/logo.png" alt="" aria-hidden="true" />
       <span className="shell-brand__text">
-        <span className="shell-brand__name">Japanese Dictation</span>
+        <span className="shell-brand__name">Motto</span>
         <span className="shell-brand__tag">{t("brand.tagline")}</span>
       </span>
     </Link>
