@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useAdminAuth } from "../AdminAuth";
 import { NoAccess, PageHead } from "../AdminLayout";
@@ -25,6 +25,15 @@ import { useFeedback } from "../components/Feedback";
 import { Field, FormDialog } from "../components/Modal";
 import { useAsync, useDebounced } from "../hooks";
 import { dateTimeText, initials, num, relativeText } from "../format";
+import { AttachmentStrip, ComposerTools, insertAtCaret, VideoLinksEditor } from "../../features/feedback/FeedbackParts";
+import { useAttachments } from "../../features/feedback/useAttachments";
+import { useVideoLinks } from "../../features/feedback/useVideoLinks";
+
+const MAX_IMAGES = 4;
+
+function uploadTeamImage(image: string) {
+  return adminFetch<{ url: string }>("/feedback/images", { method: "POST", body: { image } });
+}
 
 type FeedbackResponse = Paged<FeedbackRow> & {
   summary: { total: number; open: number; unanswered: number; hidden: number };
@@ -153,9 +162,14 @@ function FeedbackDialog({
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const attachments = useAttachments(MAX_IMAGES, [], uploadTeamImage);
+  const video = useVideoLinks();
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!open) return;
+    attachments.reset(item?.images ?? []);
+    video.reset(item?.videos ?? []);
     setForm(
       item
         ? {
@@ -179,12 +193,17 @@ function FeedbackDialog({
     setForm((f) => ({ ...f, [k]: e.target.checked }));
 
   const submit = async () => {
+    if (attachments.uploading) {
+      setError("Ảnh vẫn đang tải lên, chờ một chút rồi lưu lại.");
+      return;
+    }
     setBusy(true);
     try {
+      const body = { ...form, images: attachments.urls, videos: video.videos };
       if (item) {
-        await adminFetch(`/feedback/${item.id}`, { method: "PATCH", body: form });
+        await adminFetch(`/feedback/${item.id}`, { method: "PATCH", body });
       } else {
-        await adminFetch("/feedback", { method: "POST", body: form });
+        await adminFetch("/feedback", { method: "POST", body });
       }
       onSaved(!item);
     } catch (err) {
@@ -238,14 +257,37 @@ function FeedbackDialog({
         htmlFor="fb-body"
         hint={fromUser ? "Chỉ sửa khi cần, ví dụ để xoá thông tin cá nhân hoặc lời lẽ không phù hợp." : undefined}
       >
-        <textarea id="fb-body" rows={5} required maxLength={1000} value={form.body} onChange={set("body")} />
+        <textarea
+          ref={bodyRef}
+          id="fb-body"
+          rows={5}
+          required
+          maxLength={1000}
+          value={form.body}
+          onChange={set("body")}
+        />
       </Field>
-      {item && item.images.length > 0 && (
-        <div className="adm-field">
-          <span className="adm-field__label">Ảnh đính kèm</span>
-          <ImageThumbs images={item.images} />
+      <div className="adm-field">
+        <span className="adm-field__label">
+          Ảnh & video <span className="muted">({attachments.items.length}/{MAX_IMAGES} ảnh · {video.videos.length}/2 video)</span>
+        </span>
+        <AttachmentStrip attachments={attachments} />
+        <VideoLinksEditor video={video} />
+        <div className="adm-fb-tools">
+          <ComposerTools
+            attachments={attachments}
+            video={video}
+            onEmoji={(emoji) =>
+              insertAtCaret(bodyRef.current, form.body, emoji, (v) => setForm((f) => ({ ...f, body: v })), 1000)
+            }
+          />
+          <span className="adm-field__hint">
+            {fromUser
+              ? "Gỡ ảnh hoặc video không phù hợp bằng dấu ✕. Ảnh bị gỡ sẽ bị xoá khi lưu."
+              : "Tối đa 4 ảnh (tự thu nhỏ) và 2 video YouTube / Google Drive."}
+          </span>
         </div>
-      )}
+      </div>
       <Field label="Phản hồi từ Motto" htmlFor="fb-reply" hint="Hiện ngay dưới góp ý. Để trống nếu chưa phản hồi.">
         <textarea
           id="fb-reply"
@@ -296,7 +338,13 @@ export function FeedbackAdminPage() {
         (d) => ({
           ...d,
           // An older server doesn't send these yet.
-          items: d.items.map((f) => ({ ...f, images: f.images ?? [], reactions: f.reactions ?? [], replyCount: f.replyCount ?? 0 })),
+          items: d.items.map((f) => ({
+            ...f,
+            images: f.images ?? [],
+            videos: f.videos ?? [],
+            reactions: f.reactions ?? [],
+            replyCount: f.replyCount ?? 0,
+          })),
         }),
       ),
     [query, status, category, visibility, page],
@@ -390,11 +438,16 @@ export function FeedbackAdminPage() {
             {CATEGORY_LABEL[f.category]}
           </span>
           <p title={f.body}>{f.body}</p>
-          {(f.images.length > 0 || f.reactions.length > 0) && (
+          {(f.images.length > 0 || f.videos.length > 0 || f.reactions.length > 0) && (
             <span className="adm-fb-extras">
               {f.images.length > 0 && (
                 <span>
                   <Icon name="image" size={13} /> {f.images.length} ảnh
+                </span>
+              )}
+              {f.videos.length > 0 && (
+                <span>
+                  <Icon name="video" size={13} /> {f.videos.length} video
                 </span>
               )}
               {f.reactions.length > 0 && <span>{f.reactions.map((x) => `${x.emoji}${x.count}`).join(" ")}</span>}

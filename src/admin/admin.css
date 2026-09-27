@@ -649,3 +649,4 @@ button.adm-user:hover strong { color: var(--primary-color); text-decoration: und
 .adm-fb-replies__who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 13px; }
 .adm-fb-replies__main p { margin: 0; font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .adm-fb-reacts { font-size: 12px; color: var(--text-muted); }
+.adm-fb-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

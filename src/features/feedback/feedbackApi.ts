@@ -1,4 +1,5 @@
 import { apiFetch } from "../../shared/api/client";
+import type { FeedbackVideo } from "./videoLinks";
 
 export const FEEDBACK_CATEGORIES = ["idea", "bug", "content", "other"] as const;
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
@@ -22,6 +23,7 @@ export type FeedbackItem = {
   category: FeedbackCategory;
   body: string;
   images: string[];
+  videos: FeedbackVideo[];
   status: FeedbackStatus;
   pinned: boolean;
   adminReply: string | null;
@@ -71,6 +73,7 @@ function normalizePost(p: FeedbackItem): FeedbackItem {
   return {
     ...p,
     images: p.images ?? [],
+    videos: p.videos ?? [],
     reactions: p.reactions ?? [],
     myReaction: p.myReaction ?? null,
     replyCount: p.replyCount ?? 0,
@@ -101,7 +104,7 @@ export function listFeedback(q: { sort: FeedbackSort; category: FeedbackCategory
   }));
 }
 
-export function postFeedback(post: { category: FeedbackCategory; body: string; images: string[] }) {
+export function postFeedback(post: { category: FeedbackCategory; body: string; images: string[]; videos: FeedbackVideo[] }) {
   return apiFetch<{ item: FeedbackItem }>("/api/feedback", {
     method: "POST",
     headers: authHeaders(),
@@ -168,7 +171,10 @@ export function reactToReply(id: string, emoji: Reaction) {
   }).then(normalizeReactions);
 }
 
-export function updateFeedback(id: string, patch: { category: FeedbackCategory; body: string; images: string[] }) {
+export function updateFeedback(
+  id: string,
+  patch: { category: FeedbackCategory; body: string; images: string[]; videos: FeedbackVideo[] },
+) {
   return apiFetch<{ item: FeedbackItem }>(`/api/feedback/${id}`, {
     method: "PATCH",
     headers: authHeaders(),

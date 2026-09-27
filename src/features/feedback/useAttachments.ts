@@ -41,8 +41,13 @@ export type Attachment = {
 
 let nextKey = 0;
 
-/** Pictures picked for a post or reply, uploaded as soon as they are picked. */
-export function useAttachments(max: number, initial: string[] = []) {
+export type UploadImage = (dataUrl: string) => Promise<{ url: string }>;
+
+/**
+ * Pictures picked for a post or reply, uploaded as soon as they are picked.
+ * `upload` defaults to the learner endpoint; the admin area passes its own.
+ */
+export function useAttachments(max: number, initial: string[] = [], upload: UploadImage = uploadFeedbackImage) {
   const [items, setItems] = useState<Attachment[]>(() =>
     initial.map((url) => ({ key: `a${nextKey++}`, preview: url, url, status: "done" as const })),
   );
@@ -66,7 +71,7 @@ export function useAttachments(max: number, initial: string[] = []) {
       const preview = URL.createObjectURL(file);
       setItems((prev) => [...prev, { key, preview, url: null, status: "uploading" }]);
       shrink(file)
-        .then((dataUrl) => uploadFeedbackImage(dataUrl))
+        .then((dataUrl) => upload(dataUrl))
         .then(({ url }) => {
           if (!live.current) return;
           setItems((prev) => prev.map((a) => (a.key === key ? { ...a, url, status: "done" } : a)));

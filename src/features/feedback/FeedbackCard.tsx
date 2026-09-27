@@ -17,7 +17,16 @@ import {
   type FeedbackItem,
   type Reaction,
 } from "./feedbackApi";
-import { AttachmentStrip, ComposerTools, ImageGallery, insertAtCaret, ReactionBar } from "./FeedbackParts";
+import {
+  AttachmentStrip,
+  ComposerTools,
+  ImageGallery,
+  insertAtCaret,
+  ReactionBar,
+  VideoGallery,
+  VideoLinksEditor,
+} from "./FeedbackParts";
+import { useVideoLinks } from "./useVideoLinks";
 import { applyReaction, CATEGORY, LOCALE, MAX_LEN, MIN_LEN, STATUS, timeAgo } from "./feedbackMeta";
 import { ReplyThread } from "./ReplyThread";
 import { useAttachments } from "./useAttachments";
@@ -44,6 +53,7 @@ export function FeedbackCard({
   const [threadOpen, setThreadOpen] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
   const attachments = useAttachments(MAX_POST_IMAGES, item.images);
+  const video = useVideoLinks(item.videos);
   const editRef = useRef<HTMLTextAreaElement>(null);
   // Replies and reactions answer after a delay; build on the item as it is by then.
   const latest = useRef(item);
@@ -84,6 +94,7 @@ export function FeedbackCard({
     setDraft(item.body);
     setDraftCategory(item.category);
     attachments.reset(item.images);
+    video.reset(item.videos);
     setEditError(false);
     setEditing(true);
   };
@@ -101,6 +112,7 @@ export function FeedbackCard({
         category: draftCategory,
         body: draft.trim(),
         images: attachments.urls,
+        videos: video.videos,
       });
       onChange(next);
       setEditing(false);
@@ -199,6 +211,7 @@ export function FeedbackCard({
             />
           </div>
           <AttachmentStrip attachments={attachments} />
+          <VideoLinksEditor video={video} />
           {editError && (
             <div className="alert" role="alert">
               {t("auth.error")}
@@ -208,6 +221,7 @@ export function FeedbackCard({
           <div className="fb-form__foot">
             <ComposerTools
               attachments={attachments}
+              video={video}
               onEmoji={(emoji) => insertAtCaret(editRef.current, draft, emoji, setDraft, MAX_LEN)}
             />
             <div className="fb-edit__actions">
@@ -227,6 +241,7 @@ export function FeedbackCard({
         <>
           <p className="fb-card__body">{item.body}</p>
           <ImageGallery images={item.images} />
+          <VideoGallery videos={item.videos} />
         </>
       )}
 

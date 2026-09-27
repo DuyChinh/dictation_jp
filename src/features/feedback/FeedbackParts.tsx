@@ -6,6 +6,8 @@ import type { TranslationKey } from "../../shared/i18n/translations";
 import { fmt } from "../../shared/i18n/format";
 import { REACTIONS, type Reaction, type ReactionCount, type Reactors } from "./feedbackApi";
 import type { Attachments } from "./useAttachments";
+import { MAX_POST_VIDEOS, type VideoLinks, type VideoProblem } from "./useVideoLinks";
+import { videoEmbedUrl, videoThumbUrl, type FeedbackVideo } from "./videoLinks";
 
 const EMOJI_GROUPS: Array<{ label: TranslationKey; emojis: string[] }> = [
   {
@@ -107,15 +109,17 @@ export function EmojiPicker({ onPick, disabled }: { onPick: (emoji: string) => v
   );
 }
 
-/** Emoji and picture buttons under a text box. */
+/** Emoji, picture and (for posts) video buttons under a text box. */
 export function ComposerTools({
   attachments,
   onEmoji,
   disabled,
+  video,
 }: {
   attachments: Attachments;
   onEmoji: (emoji: string) => void;
   disabled?: boolean;
+  video?: VideoLinks;
 }) {
   const { t } = useUiLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -132,6 +136,19 @@ export function ComposerTools({
       >
         <Icon name="image" size={19} />
       </button>
+      {video && (
+        <button
+          type="button"
+          className="fb-tool"
+          onClick={() => video.setOpen(!video.open)}
+          disabled={disabled || (video.full && !video.open)}
+          aria-expanded={video.open}
+          aria-label={t("feedback.addVideo")}
+          title={video.full ? t("feedback.videosFull") : t("feedback.addVideo")}
+        >
+          <Icon name="video" size={19} />
+        </button>
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -179,6 +196,123 @@ export function AttachmentStrip({ attachments }: { attachments: Attachments }) {
         </div>
       )}
       {attachments.problem && <span className="fb-attach__problem">{t(PROBLEM_TEXT[attachments.problem])}</span>}
+    </div>
+  );
+}
+
+const VIDEO_PROBLEM: Record<VideoProblem, TranslationKey> = {
+  bad: "feedback.videoBad",
+  full: "feedback.videosFull",
+  dup: "feedback.videoDup",
+};
+
+/** The link box and the videos attached so far, above a composer's tools. */
+export function VideoLinksEditor({ video }: { video: VideoLinks }) {
+  const { t } = useUiLanguage();
+  const [link, setLink] = useState("");
+  const [problem, setProblem] = useState<VideoProblem | null>(null);
+
+  const submit = () => {
+    const p = video.add(link);
+    setProblem(p);
+    if (!p) {
+      setLink("");
+      // The one just added fills the last slot: nothing more to paste.
+      if (video.videos.length + 1 >= MAX_POST_VIDEOS) video.setOpen(false);
+    }
+  };
+
+  if (!video.open && video.videos.length === 0) return null;
+  return (
+    <div className="fb-videos-edit">
+      {video.videos.length > 0 && (
+        <div className="fb-videos-edit__list">
+          {video.videos.map((v) => (
+            <span key={`${v.provider}:${v.id}`} className="fb-video-chip">
+              <img src={videoThumbUrl(v)} alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+              <span>{v.provider === "youtube" ? "YouTube" : "Google Drive"}</span>
+              <button type="button" onClick={() => video.remove(v)} aria-label={t("feedback.removeVideo")}>
+                <Icon name="close" size={13} strokeWidth={2.4} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {video.open && !video.full && (
+        <div className="fb-videos-edit__input">
+          <input
+            type="url"
+            value={link}
+            autoFocus
+            placeholder={t("feedback.videoPh")}
+            aria-label={t("feedback.videoPh")}
+            onChange={(e) => {
+              setLink(e.target.value);
+              setProblem(null);
+            }}
+            onKeyDown={(e) => {
+              // Enter would submit the surrounding form.
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              }
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                video.setOpen(false);
+              }
+            }}
+          />
+          <button type="button" className="btn btn--outline btn--sm" onClick={submit} disabled={!link.trim()}>
+            {t("feedback.videoAdd")}
+          </button>
+        </div>
+      )}
+      {problem ? (
+        <span className="fb-attach__problem">{t(VIDEO_PROBLEM[problem])}</span>
+      ) : (
+        video.open && <span className="fb-videos-edit__hint">{t("feedback.driveHint")}</span>
+      )}
+    </div>
+  );
+}
+
+/** One video as a still with a play button; the player only loads once clicked. */
+function VideoEmbed({ video }: { video: FeedbackVideo }) {
+  const { t } = useUiLanguage();
+  const [playing, setPlaying] = useState(false);
+  const [noThumb, setNoThumb] = useState(false);
+  const label = video.provider === "youtube" ? "YouTube" : t("feedback.driveVideo");
+
+  return (
+    <div className={`fb-video fb-video--${video.provider}`}>
+      {playing ? (
+        <iframe
+          src={videoEmbedUrl(video)}
+          title={label}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      ) : (
+        <button type="button" className="fb-video__facade" onClick={() => setPlaying(true)} aria-label={`${t("feedback.playVideo")}: ${label}`}>
+          {!noThumb && <img src={videoThumbUrl(video)} alt="" loading="lazy" onError={() => setNoThumb(true)} />}
+          <span className="fb-video__play" aria-hidden="true">
+            <Icon name="play" size={26} />
+          </span>
+          <span className="fb-video__label">{label}</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function VideoGallery({ videos }: { videos: FeedbackVideo[] }) {
+  if (!videos.length) return null;
+  return (
+    <div className={`fb-videos${videos.length > 1 ? " is-pair" : ""}`}>
+      {videos.map((v) => (
+        <VideoEmbed key={`${v.provider}:${v.id}`} video={v} />
+      ))}
     </div>
   );
 }

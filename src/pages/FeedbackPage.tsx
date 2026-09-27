@@ -17,7 +17,8 @@ import {
   type FeedbackSort,
 } from "../features/feedback/feedbackApi";
 import { FeedbackCard } from "../features/feedback/FeedbackCard";
-import { AttachmentStrip, ComposerTools, insertAtCaret } from "../features/feedback/FeedbackParts";
+import { AttachmentStrip, ComposerTools, insertAtCaret, VideoLinksEditor } from "../features/feedback/FeedbackParts";
+import { useVideoLinks } from "../features/feedback/useVideoLinks";
 import { CATEGORY, MAX_LEN, MIN_LEN } from "../features/feedback/feedbackMeta";
 import { useAttachments } from "../features/feedback/useAttachments";
 
@@ -64,6 +65,7 @@ function Composer({ onPosted }: { onPosted: (item: FeedbackItem) => void }) {
   const submitRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const attachments = useAttachments(MAX_POST_IMAGES);
+  const video = useVideoLinks();
 
   const len = body.trim().length;
   const ready = len >= MIN_LEN && len <= MAX_LEN && !attachments.uploading;
@@ -74,9 +76,15 @@ function Composer({ onPosted }: { onPosted: (item: FeedbackItem) => void }) {
     setBusy(true);
     setError(null);
     try {
-      const { item } = await postFeedback({ category, body: body.trim(), images: attachments.urls });
+      const { item } = await postFeedback({
+        category,
+        body: body.trim(),
+        images: attachments.urls,
+        videos: video.videos,
+      });
       setBody("");
       attachments.reset();
+      video.reset();
       setThanked(true);
       onPosted(item);
       const rect = submitRef.current?.getBoundingClientRect();
@@ -146,6 +154,7 @@ function Composer({ onPosted }: { onPosted: (item: FeedbackItem) => void }) {
         </div>
 
         {user && <AttachmentStrip attachments={attachments} />}
+        {user && <VideoLinksEditor video={video} />}
 
         {error && (
           <div className="alert" role="alert">
@@ -163,6 +172,7 @@ function Composer({ onPosted }: { onPosted: (item: FeedbackItem) => void }) {
           <ComposerTools
             attachments={attachments}
             disabled={!user}
+            video={video}
             onEmoji={(emoji) => insertAtCaret(bodyRef.current, body, emoji, setBody, MAX_LEN)}
           />
           <span className={`fb-count${len > MAX_LEN * 0.9 ? " is-near" : ""}`}>

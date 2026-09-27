@@ -237,6 +237,7 @@ export type FeedbackRow = {
   category: FeedbackCategory;
   body: string;
   images: string[];
+  videos: Array<{ provider: "youtube" | "drive"; id: string }>;
   status: FeedbackStatus;
   pinned: boolean;
   hidden: boolean;
