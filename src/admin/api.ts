@@ -254,6 +254,8 @@ export type FeedbackRow = {
 
 export type FeedbackReplyRow = {
   id: string;
+  /** Set when the reply sits under another reply. */
+  parentId: string | null;
   authorName: string;
   authorEmail: string;
   authorAvatar: string | null;

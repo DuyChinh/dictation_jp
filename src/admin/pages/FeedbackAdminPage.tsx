@@ -27,12 +27,128 @@ import { useAsync, useDebounced } from "../hooks";
 import { dateTimeText, initials, num, relativeText } from "../format";
 import { AttachmentStrip, ComposerTools, insertAtCaret, VideoLinksEditor } from "../../features/feedback/FeedbackParts";
 import { useAttachments } from "../../features/feedback/useAttachments";
-import { useVideoLinks } from "../../features/feedback/useVideoLinks";
+import { useVideoLinks, type VideoLinks } from "../../features/feedback/useVideoLinks";
+import type { FeedbackVideo } from "../../features/feedback/videoLinks";
 
 const MAX_IMAGES = 4;
 
 function uploadTeamImage(image: string) {
   return adminFetch<{ url: string }>("/feedback/images", { method: "POST", body: { image } });
+}
+
+/** Cloudinary's per-file cap for videos on the free plan. */
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+type SignedUpload = {
+  uploadUrl: string;
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  publicId: string;
+};
+
+/** Sends the file straight from the browser to Cloudinary with a signature from our server. */
+async function uploadTeamVideo(file: File, onProgress: (share: number) => void): Promise<FeedbackVideo> {
+  const s = await adminFetch<SignedUpload>("/feedback/video-upload", { method: "POST" });
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", s.uploadUrl);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      let body: { public_id?: string; error?: { message?: string } } = {};
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        /* not JSON */
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body.public_id) {
+        const base = `https://res.cloudinary.com/${s.cloudName}/video/upload`;
+        resolve({
+          provider: "cloudinary",
+          id: body.public_id,
+          url: `${base}/q_auto/${body.public_id}.mp4`,
+          poster: `${base}/so_1,q_auto/${body.public_id}.jpg`,
+        });
+      } else {
+        reject(new Error(body.error?.message || `HTTP ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Không kết nối được Cloudinary."));
+    const form = new FormData();
+    form.append("file", file);
+    form.append("api_key", s.apiKey);
+    form.append("timestamp", String(s.timestamp));
+    form.append("signature", s.signature);
+    form.append("folder", s.folder);
+    form.append("public_id", s.publicId);
+    xhr.send(form);
+  });
+}
+
+/** "Upload a video" with a progress bar; the finished video joins the post's list. */
+function VideoUploadButton({ video, onBusy }: { video: VideoLinks; onBusy: (busy: boolean) => void }) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  const pick = async (file: File) => {
+    setError(null);
+    if (!file.type.startsWith("video/")) {
+      setError("Hãy chọn một tệp video (mp4, mov, webm…).");
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setError(`Video nặng ${(file.size / 1048576).toFixed(0)}MB, vượt giới hạn 100MB. Hãy cắt ngắn hoặc dùng link YouTube.`);
+      return;
+    }
+    setProgress(0);
+    onBusy(true);
+    try {
+      const v = await uploadTeamVideo(file, setProgress);
+      if (video.push(v)) setError("Bài đã đủ 2 video.");
+    } catch (err) {
+      setError(`Tải video lên thất bại: ${err instanceof Error ? err.message : "lỗi không rõ"}`);
+    } finally {
+      setProgress(null);
+      onBusy(false);
+    }
+  };
+
+  return (
+    <div className="adm-fb-upload">
+      <button
+        type="button"
+        className="btn btn--outline btn--sm"
+        onClick={() => input.current?.click()}
+        disabled={progress !== null || video.full}
+        title={video.full ? "Bài đã đủ 2 video" : undefined}
+      >
+        <Icon name="video" size={16} />
+        {progress !== null ? `Đang tải lên ${Math.round(progress * 100)}%` : "Tải video từ máy"}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept="video/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) void pick(file);
+        }}
+      />
+      {progress !== null && (
+        <div className="progress adm-fb-upload__bar">
+          <span style={{ width: `${Math.round(progress * 100)}%` }} />
+        </div>
+      )}
+      {error && <span className="adm-fb-upload__error">{error}</span>}
+    </div>
+  );
 }
 
 type FeedbackResponse = Paged<FeedbackRow> & {
@@ -83,7 +199,12 @@ function RepliesPanel({ feedbackId, canWrite, onRemoved }: { feedbackId: string;
   const remove = async (r: FeedbackReplyRow) => {
     const ok = await confirm({
       title: "Xoá câu trả lời?",
-      body: <p>Câu trả lời của <strong>{r.authorName || "người dùng đã xoá"}</strong> sẽ bị xoá vĩnh viễn.</p>,
+      body: (
+        <p>
+          Câu trả lời của <strong>{r.authorName || "người dùng đã xoá"}</strong>
+          {r.parentId ? "" : " cùng các câu trả lời bên dưới nó"} sẽ bị xoá vĩnh viễn.
+        </p>
+      ),
       confirmLabel: "Xoá câu trả lời",
       danger: true,
     });
@@ -100,13 +221,17 @@ function RepliesPanel({ feedbackId, canWrite, onRemoved }: { feedbackId: string;
 
   if (error) return <div className="alert">{error}</div>;
   if (loading && !data) return <p className="muted">Đang tải…</p>;
-  const items = data?.items ?? [];
-  if (!items.length) return <p className="muted">Chưa có câu trả lời nào.</p>;
+  const all = data?.items ?? [];
+  if (!all.length) return <p className="muted">Chưa có câu trả lời nào.</p>;
+  // Each top-level reply followed by the replies under it, as learners see them.
+  const ids = new Set(all.map((r) => r.id));
+  const roots = all.filter((r) => !r.parentId || !ids.has(r.parentId));
+  const items = roots.flatMap((root) => [root, ...all.filter((r) => r.parentId === root.id)]);
 
   return (
     <ul className="adm-fb-replies">
       {items.map((r) => (
-        <li key={r.id}>
+        <li key={r.id} className={r.parentId && ids.has(r.parentId) ? "is-nested" : undefined}>
           <span className="adm-avatar" aria-hidden="true">
             {r.authorAvatar ? <img src={r.authorAvatar} alt="" /> : initials(r.authorName || "?")}
           </span>
@@ -164,6 +289,7 @@ function FeedbackDialog({
   const [error, setError] = useState<string | null>(null);
   const attachments = useAttachments(MAX_IMAGES, [], uploadTeamImage);
   const video = useVideoLinks();
+  const [videoUploading, setVideoUploading] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -193,8 +319,8 @@ function FeedbackDialog({
     setForm((f) => ({ ...f, [k]: e.target.checked }));
 
   const submit = async () => {
-    if (attachments.uploading) {
-      setError("Ảnh vẫn đang tải lên, chờ một chút rồi lưu lại.");
+    if (attachments.uploading || videoUploading) {
+      setError("Ảnh hoặc video vẫn đang tải lên, chờ một chút rồi lưu lại.");
       return;
     }
     setBusy(true);
@@ -273,6 +399,7 @@ function FeedbackDialog({
         </span>
         <AttachmentStrip attachments={attachments} />
         <VideoLinksEditor video={video} />
+        <VideoUploadButton video={video} onBusy={setVideoUploading} />
         <div className="adm-fb-tools">
           <ComposerTools
             attachments={attachments}
@@ -284,7 +411,7 @@ function FeedbackDialog({
           <span className="adm-field__hint">
             {fromUser
               ? "Gỡ ảnh hoặc video không phù hợp bằng dấu ✕. Ảnh bị gỡ sẽ bị xoá khi lưu."
-              : "Tối đa 4 ảnh (tự thu nhỏ) và 2 video YouTube / Google Drive."}
+              : "Tối đa 4 ảnh (tự thu nhỏ) và 2 video: tải từ máy (≤ 100MB) hoặc dán link YouTube / Google Drive."}
           </span>
         </div>
       </div>

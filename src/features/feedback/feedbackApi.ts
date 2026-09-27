@@ -42,6 +42,8 @@ export type FeedbackItem = {
 export type FeedbackReply = {
   id: string;
   feedbackId: string;
+  /** Set on a reply shown under another reply (two levels, like Facebook). */
+  parentId: string | null;
   author: FeedbackAuthor;
   body: string;
   images: string[];
@@ -82,7 +84,13 @@ function normalizePost(p: FeedbackItem): FeedbackItem {
 }
 
 function normalizeReply(r: FeedbackReply): FeedbackReply {
-  return { ...r, images: r.images ?? [], reactions: r.reactions ?? [], myReaction: r.myReaction ?? null };
+  return {
+    ...r,
+    parentId: r.parentId ?? null,
+    images: r.images ?? [],
+    reactions: r.reactions ?? [],
+    myReaction: r.myReaction ?? null,
+  };
 }
 
 function normalizeReactions(r: ReactionResult): ReactionResult {
@@ -143,7 +151,7 @@ export function listReplies(feedbackId: string) {
   );
 }
 
-export function postReply(feedbackId: string, reply: { body: string; images: string[] }) {
+export function postReply(feedbackId: string, reply: { body: string; images: string[]; parentId?: string | null }) {
   return apiFetch<{ item: FeedbackReply }>(`/api/feedback/${feedbackId}/replies`, {
     method: "POST",
     headers: authHeaders(),

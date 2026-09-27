@@ -7,7 +7,12 @@ import { fmt } from "../../shared/i18n/format";
 import { REACTIONS, type Reaction, type ReactionCount, type Reactors } from "./feedbackApi";
 import type { Attachments } from "./useAttachments";
 import { MAX_POST_VIDEOS, type VideoLinks, type VideoProblem } from "./useVideoLinks";
-import { videoEmbedUrl, videoThumbUrl, type FeedbackVideo } from "./videoLinks";
+import { parseVideoUrl, videoEmbedUrl, videoThumbUrl, type FeedbackVideo } from "./videoLinks";
+
+function videoLabel(v: FeedbackVideo, t: (k: TranslationKey) => string): string {
+  if (v.provider === "youtube") return "YouTube";
+  return v.provider === "drive" ? t("feedback.driveVideo") : t("feedback.uploadedVideo");
+}
 
 const EMOJI_GROUPS: Array<{ label: TranslationKey; emojis: string[] }> = [
   {
@@ -212,8 +217,8 @@ export function VideoLinksEditor({ video }: { video: VideoLinks }) {
   const [link, setLink] = useState("");
   const [problem, setProblem] = useState<VideoProblem | null>(null);
 
-  const submit = () => {
-    const p = video.add(link);
+  const submit = (value = link) => {
+    const p = video.add(value);
     setProblem(p);
     if (!p) {
       setLink("");
@@ -230,7 +235,7 @@ export function VideoLinksEditor({ video }: { video: VideoLinks }) {
           {video.videos.map((v) => (
             <span key={`${v.provider}:${v.id}`} className="fb-video-chip">
               <img src={videoThumbUrl(v)} alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-              <span>{v.provider === "youtube" ? "YouTube" : "Google Drive"}</span>
+              <span>{videoLabel(v, t)}</span>
               <button type="button" onClick={() => video.remove(v)} aria-label={t("feedback.removeVideo")}>
                 <Icon name="close" size={13} strokeWidth={2.4} />
               </button>
@@ -247,8 +252,11 @@ export function VideoLinksEditor({ video }: { video: VideoLinks }) {
             placeholder={t("feedback.videoPh")}
             aria-label={t("feedback.videoPh")}
             onChange={(e) => {
-              setLink(e.target.value);
+              const value = e.target.value;
               setProblem(null);
+              setLink(value);
+              // A pasted link that is already valid goes straight in: no need to press Add.
+              if (parseVideoUrl(value)) submit(value);
             }}
             onKeyDown={(e) => {
               // Enter would submit the surrounding form.
@@ -262,7 +270,7 @@ export function VideoLinksEditor({ video }: { video: VideoLinks }) {
               }
             }}
           />
-          <button type="button" className="btn btn--outline btn--sm" onClick={submit} disabled={!link.trim()}>
+          <button type="button" className="btn btn--outline btn--sm" onClick={() => submit()} disabled={!link.trim()}>
             {t("feedback.videoAdd")}
           </button>
         </div>
@@ -281,11 +289,13 @@ function VideoEmbed({ video }: { video: FeedbackVideo }) {
   const { t } = useUiLanguage();
   const [playing, setPlaying] = useState(false);
   const [noThumb, setNoThumb] = useState(false);
-  const label = video.provider === "youtube" ? "YouTube" : t("feedback.driveVideo");
+  const label = videoLabel(video, t);
 
   return (
     <div className={`fb-video fb-video--${video.provider}`}>
-      {playing ? (
+      {playing && video.provider === "cloudinary" ? (
+        <video src={video.url} poster={video.poster} controls autoPlay playsInline preload="metadata" />
+      ) : playing ? (
         <iframe
           src={videoEmbedUrl(video)}
           title={label}

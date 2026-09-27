@@ -650,3 +650,7 @@ button.adm-user:hover strong { color: var(--primary-color); text-decoration: und
 .adm-fb-replies__main p { margin: 0; font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .adm-fb-reacts { font-size: 12px; color: var(--text-muted); }
 .adm-fb-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adm-fb-upload { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.adm-fb-upload__bar { width: 100%; max-width: 320px; }
+.adm-fb-upload__error { font-size: 13px; color: var(--bad); }
+.adm-fb-replies li.is-nested { margin-left: 36px; padding-left: 12px; border-left: 2px solid var(--card-border); }

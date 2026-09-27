@@ -20,6 +20,14 @@ export function useVideoLinks(initial: FeedbackVideo[] = []) {
     return null;
   };
 
+  /** Adds an already-made video, e.g. one the admin just uploaded. */
+  const push = (video: FeedbackVideo): VideoProblem | null => {
+    if (videos.some((v) => sameVideo(v, video))) return "dup";
+    if (videos.length >= MAX_POST_VIDEOS) return "full";
+    setVideos((prev) => [...prev, video]);
+    return null;
+  };
+
   const remove = (video: FeedbackVideo) => setVideos((prev) => prev.filter((v) => !sameVideo(v, video)));
 
   const reset = (next: FeedbackVideo[] = []) => {
@@ -27,7 +35,7 @@ export function useVideoLinks(initial: FeedbackVideo[] = []) {
     setOpen(false);
   };
 
-  return { videos, open, setOpen, add, remove, reset, full: videos.length >= MAX_POST_VIDEOS };
+  return { videos, open, setOpen, add, push, remove, reset, full: videos.length >= MAX_POST_VIDEOS };
 }
 
 export type VideoLinks = ReturnType<typeof useVideoLinks>;

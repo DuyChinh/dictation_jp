@@ -1,6 +1,7 @@
 /** Same shape and id rules as backend/src/shared/videoLinks.ts. */
-export type VideoProvider = "youtube" | "drive";
-export type FeedbackVideo = { provider: VideoProvider; id: string };
+export type VideoProvider = "youtube" | "drive" | "cloudinary";
+/** "cloudinary" is a file the team uploaded; the server sends its `url` and `poster`. */
+export type FeedbackVideo = { provider: VideoProvider; id: string; url?: string; poster?: string };
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const DRIVE_ID = /^[A-Za-z0-9_-]{20,120}$/;
@@ -35,6 +36,7 @@ function youtube(id: string | null | undefined): FeedbackVideo | null {
 }
 
 export function videoEmbedUrl(v: FeedbackVideo): string {
+  if (v.provider === "cloudinary") return v.url ?? "";
   return v.provider === "youtube"
     ? `https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&rel=0`
     : `https://drive.google.com/file/d/${v.id}/preview`;
@@ -42,6 +44,7 @@ export function videoEmbedUrl(v: FeedbackVideo): string {
 
 /** A still for the play facade; Drive only has one for files shared publicly. */
 export function videoThumbUrl(v: FeedbackVideo): string {
+  if (v.provider === "cloudinary") return v.poster ?? "";
   return v.provider === "youtube"
     ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`
     : `https://drive.google.com/thumbnail?id=${v.id}&sz=w640`;
