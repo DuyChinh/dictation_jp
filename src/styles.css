@@ -35,6 +35,10 @@
   --primary-color: #2a4b9b;
   --primary-hover: #213c7d;
   --primary-light: #eaeef8;
+  --navy: #1e3a8a;
+  --heart: #d6336c;
+  --heart-soft: #fcebf1;
+  --petal: #f6b8cb;
   /* Filled surfaces (buttons, selected pills) with --primary-text on them. */
   --primary-fill: #2a4b9b;
   --primary-fill-hover: #213c7d;
@@ -95,6 +99,11 @@
   --primary-color: #a3b8ff;
   --primary-hover: #bccbff;
   --primary-light: rgba(163, 184, 255, 0.13);
+  /* Lifted from true navy so it still reads on the dark background. */
+  --navy: #5b7ae0;
+  --heart: #ff7aa2;
+  --heart-soft: rgba(255, 122, 162, 0.14);
+  --petal: rgba(255, 170, 196, 0.55);
   --primary-fill: #4466d6;
   --primary-fill-hover: #3a5bc9;
   --primary-text: #ffffff;

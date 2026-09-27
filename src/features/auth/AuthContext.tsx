@@ -7,6 +7,10 @@ export interface User {
   email: string;
   displayName: string;
   avatar?: string;
+  authProvider?: "local" | "google";
+  hasPassword?: boolean;
+  plan?: string;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -16,6 +20,11 @@ interface AuthContextType {
   loginWithToken: (token: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (displayName: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  /** Takes a data URL of the already-resized picture. */
+  updateAvatar: (image: string) => Promise<void>;
+  removeAvatar: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,6 +116,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /** Sends a signed-in request and takes the returned user as the current one. */
+  const sendAccountUpdate = async (path: string, method: string, body?: unknown) => {
+    const res = await fetch(apiUrl(path), {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    // A proxy or an outdated server can answer with an HTML error page.
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.user) {
+      // No server message: the page shows its own generic error.
+      throw new Error(data?.error?.message || "");
+    }
+    setUser(data.user);
+  };
+
+  const updateProfile = (displayName: string) =>
+    sendAccountUpdate("/api/auth/me", "PATCH", { displayName });
+
+  const changePassword = (currentPassword: string, newPassword: string) =>
+    sendAccountUpdate("/api/auth/change-password", "POST", { currentPassword, newPassword });
+
+  const updateAvatar = (image: string) => sendAccountUpdate("/api/auth/avatar", "POST", { image });
+
+  const removeAvatar = () => sendAccountUpdate("/api/auth/avatar", "DELETE");
+
   const logout = () => {
     localStorage.removeItem("token");
     clearAccountData();
@@ -116,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithToken, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithToken, register, logout, updateProfile, changePassword, updateAvatar, removeAvatar }}>
       {children}
     </AuthContext.Provider>
   );

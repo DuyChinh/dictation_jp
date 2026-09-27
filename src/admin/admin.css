@@ -606,3 +606,46 @@ button.adm-user:hover strong { color: var(--primary-color); text-decoration: und
   .adm-toasts { left: 16px; right: 16px; bottom: 16px; }
   .adm-stats { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Feedback ---------- */
+.adm-fb-body { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 460px; min-width: 220px; }
+
+.adm-fb-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.adm-fb-cat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.adm-fb-cat--idea { color: var(--acc); }
+.adm-fb-cat--bug { color: var(--bad); }
+.adm-fb-cat--content { color: var(--primary-color); }
+.adm-fb-cat--other { color: var(--ok); }
+
+.adm-fb-replied { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ok); }
+.adm-fb-waiting { font-size: 12px; font-weight: 600; color: var(--acc); }
+
+.adm-fb-from { margin: 0; font-size: 14px; }
+
+.adm-fb-extras { display: inline-flex; gap: 10px; font-size: 12px; color: var(--text-muted); }
+.adm-fb-extras span { display: inline-flex; align-items: center; gap: 4px; }
+.adm-field__label { font-size: 13px; font-weight: 600; }
+
+.adm-fb-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.adm-fb-thumbs a { display: block; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 1px solid var(--card-border); }
+.adm-fb-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.adm-fb-thread { padding-top: 14px; border-top: 1px solid var(--card-border); }
+.adm-fb-replies { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; max-height: 360px; overflow-y: auto; }
+.adm-fb-replies li { display: flex; gap: 10px; align-items: flex-start; }
+.adm-fb-replies__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.adm-fb-replies__who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 13px; }
+.adm-fb-replies__main p { margin: 0; font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.adm-fb-reacts { font-size: 12px; color: var(--text-muted); }

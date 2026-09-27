@@ -12,7 +12,13 @@ type NavItem = { to: string; label: string; icon: IconName; area?: AdminArea; en
 
 const NAV: Array<{ group: string; items: NavItem[] }> = [
   { group: "Chung", items: [{ to: "/admin", label: "Tổng quan", icon: "grid", end: true }] },
-  { group: "Người học", items: [{ to: "/admin/users", label: "Người dùng", icon: "users", area: "users" }] },
+  {
+    group: "Người học",
+    items: [
+      { to: "/admin/users", label: "Người dùng", icon: "users", area: "users" },
+      { to: "/admin/feedback", label: "Góp ý", icon: "message", area: "feedback" },
+    ],
+  },
   { group: "Doanh thu", items: [{ to: "/admin/payments", label: "Thanh toán", icon: "card" }] },
   { group: "Nội dung", items: [{ to: "/admin/content", label: "Đề thi & script", icon: "headphones", area: "content" }] },
   { group: "Hệ thống", items: [{ to: "/admin/admins", label: "Quản trị viên", icon: "shield", area: "admins" }] },

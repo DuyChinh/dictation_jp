@@ -121,7 +121,7 @@ export function errorText(err: unknown): string {
 
 // ---- Types (mirror backend/src/modules/admin) ----
 
-export type AdminArea = "users" | "payments" | "catalog" | "content" | "admins";
+export type AdminArea = "users" | "payments" | "catalog" | "content" | "feedback" | "admins";
 export type AccessLevel = "none" | "read" | "write";
 export type AdminRole = "super_admin" | "content" | "support" | "accountant";
 
@@ -221,6 +221,46 @@ export type LessonRow = {
   hidden: boolean;
   durationMs: number | null;
   counts: { sections: number; questions: number; dictation_segments: number };
+};
+
+export type FeedbackCategory = "idea" | "bug" | "content" | "other";
+export type FeedbackStatus = "open" | "planned" | "done";
+
+export type FeedbackRow = {
+  id: string;
+  userId: string | null;
+  authorName: string;
+  authorEmail: string;
+  authorAvatar: string | null;
+  /** Written by the team from the admin area. */
+  fromTeam: boolean;
+  category: FeedbackCategory;
+  body: string;
+  images: string[];
+  status: FeedbackStatus;
+  pinned: boolean;
+  hidden: boolean;
+  adminReply: string;
+  repliedAt: string | null;
+  likes: number;
+  reactions: Array<{ emoji: string; count: number }>;
+  replyCount: number;
+  /** When the author last changed it themselves. */
+  editedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FeedbackReplyRow = {
+  id: string;
+  authorName: string;
+  authorEmail: string;
+  authorAvatar: string | null;
+  body: string;
+  images: string[];
+  reactions: Array<{ emoji: string; count: number }>;
+  editedAt: string | null;
+  createdAt: string;
 };
 
 export type AuditEntry = {

@@ -34,11 +34,13 @@ function loadCollapsed(): boolean {
   }
 }
 
-const NAV: Array<{ to: string; label: TranslationKey; icon: IconName; end?: boolean }> = [
+const NAV: Array<{ to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean }> = [
   { to: "/", label: "nav.home", icon: "home", end: true },
   { to: "/lessons", label: "nav.practice", icon: "book" },
   { to: "/history", label: "nav.progress", icon: "chart" },
   { to: "/pricing", label: "nav.pro", icon: "crown" },
+  { to: "/feedback", label: "nav.feedback", icon: "message" },
+  { to: "/donate", label: "nav.donate", icon: "heart", heart: true },
 ];
 
 const LANGS: Array<{ value: UiLang; label: string }> = [
@@ -168,7 +170,9 @@ export function AppShell({
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) => `shell-nav__item${isActive ? " active" : ""}`}
+              className={({ isActive }) =>
+                `shell-nav__item${item.heart ? " shell-nav__item--heart" : ""}${isActive ? " active" : ""}`
+              }
               onClick={closeMenu}
             >
               <Icon name={item.icon} />

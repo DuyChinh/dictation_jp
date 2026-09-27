@@ -12,6 +12,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    // Only lazy pages import these, so pre-bundle them at startup instead of mid-session.
+    optimizeDeps: {
+      include: ["qrcode"],
+    },
     server: {
       port: Number(env.VITE_DEV_PORT || 5173),
       proxy: {

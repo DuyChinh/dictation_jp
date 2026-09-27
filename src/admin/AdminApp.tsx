@@ -4,6 +4,7 @@ import { AdminLayout } from "./AdminLayout";
 import { FeedbackProvider } from "./components/Feedback";
 import { AdminsPage } from "./pages/AdminsPage";
 import { ContentPage } from "./pages/ContentPage";
+import { FeedbackAdminPage } from "./pages/FeedbackAdminPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
@@ -22,6 +23,7 @@ export default function AdminApp() {
             <Route path="users" element={<UsersPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="content" element={<ContentPage />} />
+            <Route path="feedback" element={<FeedbackAdminPage />} />
             <Route path="admins" element={<AdminsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/admin" replace />} />

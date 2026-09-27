@@ -32,15 +32,16 @@ const AREAS: Array<{ id: AdminArea; label: string }> = [
   { id: "payments", label: "Thanh toán & hoàn tiền" },
   { id: "catalog", label: "Gói & mã giảm giá" },
   { id: "content", label: "Đề thi & script" },
+  { id: "feedback", label: "Góp ý của người dùng" },
   { id: "admins", label: "Quản trị viên & nhật ký" },
 ];
 
 /** Same table as backend/src/modules/admin/permissions.ts; the server enforces it. */
 const ROLE_ACCESS: Record<AdminRole, Record<AdminArea, AccessLevel>> = {
-  super_admin: { users: "write", payments: "write", catalog: "write", content: "write", admins: "write" },
-  content: { users: "none", payments: "none", catalog: "none", content: "write", admins: "none" },
-  support: { users: "write", payments: "read", catalog: "none", content: "read", admins: "none" },
-  accountant: { users: "read", payments: "write", catalog: "write", content: "none", admins: "none" },
+  super_admin: { users: "write", payments: "write", catalog: "write", content: "write", feedback: "write", admins: "write" },
+  content: { users: "none", payments: "none", catalog: "none", content: "write", feedback: "read", admins: "none" },
+  support: { users: "write", payments: "read", catalog: "none", content: "read", feedback: "write", admins: "none" },
+  accountant: { users: "read", payments: "write", catalog: "write", content: "none", feedback: "none", admins: "none" },
 };
 
 const LEVEL_TEXT: Record<AccessLevel, string> = { write: "Toàn quyền", read: "Chỉ xem", none: "Không" };

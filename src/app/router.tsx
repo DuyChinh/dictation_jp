@@ -1,10 +1,12 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
 import { HistoryPage } from "../pages/HistoryPage";
 import { LessonsPage } from "../pages/LessonsPage";
 import { PricingPage } from "../pages/PricingPage";
+import { ProfilePage } from "../pages/ProfilePage";
+import { FeedbackPage } from "../pages/FeedbackPage";
 import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
@@ -18,7 +20,32 @@ import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
 import { LevelProvider } from "../shared/context/LevelContext";
 
-const AdminApp = lazy(() => import("../admin/AdminApp"));
+const RELOADED_KEY = "jd.chunk_reload";
+
+/**
+ * A lazy page whose file can't be fetched (a deploy replaced it, or the dev server re-bundled)
+ * reloads the app once to pick up the current files instead of crashing.
+ */
+function lazyPage<T extends ComponentType>(load: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    load().then(
+      (mod) => {
+        sessionStorage.removeItem(RELOADED_KEY);
+        return mod;
+      },
+      (error) => {
+        if (sessionStorage.getItem(RELOADED_KEY)) throw error;
+        sessionStorage.setItem(RELOADED_KEY, "1");
+        window.location.reload();
+        return new Promise<never>(() => {});
+      },
+    ),
+  );
+}
+
+const AdminApp = lazyPage(() => import("../admin/AdminApp"));
+// The QR library is only needed here, so it stays out of the main bundle.
+const DonatePage = lazyPage(() => import("../pages/DonatePage").then((m) => ({ default: m.DonatePage })));
 
 export function AppRouter() {
   return (
@@ -33,6 +60,16 @@ export function AppRouter() {
                 <Route path="/lessons" element={<LessonsPage />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
+                <Route
+                  path="/donate"
+                  element={
+                    <Suspense fallback={null}>
+                      <DonatePage />
+                    </Suspense>
+                  }
+                />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
