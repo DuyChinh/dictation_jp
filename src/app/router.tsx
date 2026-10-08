@@ -11,6 +11,10 @@ import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
 import { PaperPage } from "../pages/PaperPage";
+import { PaperOverviewPage } from "../pages/PaperOverviewPage";
+import { PaperExamPage } from "../pages/PaperExamPage";
+import { PaperExamSetupPage } from "../pages/PaperExamSetupPage";
+import { PaperExamReviewPage } from "../pages/PaperExamReviewPage";
 import { ListeningResultPage } from "../pages/ListeningResultPage";
 import { AuthPage } from "../pages/AuthPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
@@ -79,6 +83,22 @@ export function AppRouter() {
                 <Route
                   path="/lessons/:lessonId/dictation"
                   element={<DictationPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper"
+                  element={<PaperOverviewPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper/exam/setup"
+                  element={<PaperExamSetupPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper/exam/review"
+                  element={<PaperExamReviewPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper/exam"
+                  element={<PaperExamPage />}
                 />
                 <Route
                   path="/lessons/:lessonId/paper/:part"

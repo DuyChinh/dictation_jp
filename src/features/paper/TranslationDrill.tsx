@@ -153,7 +153,7 @@ export function TranslationDrill({ lessonId, sentences, statuses, onStatus, onCl
           <div className="paper-feedback__ref">
             <strong>{t("paper.reference")}</strong>
             <p>{result.reference.vi}</p>
-            {result.reference.notes && <small>{result.reference.notes}</small>}
+            {result.reference.notes_vi && <small>{result.reference.notes_vi}</small>}
           </div>
           <p className="paper-feedback__caveat">{t("paper.drillCaveat")}</p>
           <div className="paper-drill__actions">

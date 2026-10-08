@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PaperItem, PaperItemResult, PaperPart, PaperPractice } from "../../shared/api/paper";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import {
@@ -10,19 +10,20 @@ import {
   type PaperProgress,
   type SentenceStatus,
 } from "../../shared/storage/paperProgressStore";
-import { PassageView } from "./PassageView";
+import { PassageStage } from "./PassageStage";
 import { PaperItemCard } from "./PaperItemCard";
 import { mondaiLabel } from "./paperLabels";
 
 type Props = { lessonId: string; paper: PaperPractice; part: PaperPart };
 
-/** One part of the written paper: tabs per 問題, questions (with their passages) of the open tab. */
+/** One part of the written paper: steps per 問題, a dot per question, and one question at a time. */
 export function PaperWorkspace({ lessonId, paper, part }: Props) {
   const { t, uiLang } = useUiLanguage();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [progress, setProgress] = useState<PaperProgress>(() => getPaperProgress(lessonId));
   const [evidence, setEvidence] = useState<Record<string, string[]>>({});
-  // Bumped to remount the cards when the part is redone.
+  // Bumped to remount the cards when the whole part is redone.
   const [round, setRound] = useState(0);
 
   const items = useMemo(() => paper.items.filter((i) => i.part === part), [paper, part]);
@@ -37,124 +38,172 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
   const requested = Number(params.get("mondai"));
   const active = groups.some(([m]) => m === requested) ? requested : firstOpen;
   const activeIndex = groups.findIndex(([m]) => m === active);
-  const activeItems = groups[activeIndex]?.[1] ?? [];
+  const groupItems = groups[activeIndex]?.[1] ?? [];
+  const requestedNo = Number(params.get("q"));
+  const item =
+    groupItems.find((i) => i.no === requestedNo) ??
+    groupItems.find((i) => !progress.answers[i.id]) ??
+    groupItems[0];
+  const itemIndex = item ? groupItems.indexOf(item) : -1;
 
   const total = items.length;
   const done = answered(items);
   const right = items.filter((i) => progress.answers[i.id]?.correct).length;
 
-  function onAnswered(item: PaperItem, result: PaperItemResult) {
-    setProgress(saveAnswer(lessonId, item.id, { choiceId: result.selected_choice_id, correct: result.correct, at: Date.now(), part: item.part }));
-    setEvidence((prev) => ({ ...prev, [item.id]: result.evidence_sentence_ids }));
+  function go(mondai: number, no?: number) {
+    const next = new URLSearchParams(params);
+    next.set("mondai", String(mondai));
+    if (no) next.set("q", String(no));
+    else next.delete("q");
+    setParams(next, { replace: true });
+    window.scrollTo({ top: 0 });
+  }
+
+  function onAnswered(it: PaperItem, result: PaperItemResult) {
+    setProgress(saveAnswer(lessonId, it.id, { choiceId: result.selected_choice_id, correct: result.correct, at: Date.now(), part: it.part }));
+    setEvidence((prev) => ({ ...prev, [it.id]: result.evidence_sentence_ids }));
+  }
+
+  function onRetry(it: PaperItem) {
+    setProgress(clearAnswers(lessonId, [it.id]));
+    setEvidence((prev) => {
+      const { [it.id]: _gone, ...rest } = prev;
+      return rest;
+    });
   }
 
   function onSentenceStatus(sentenceId: string, status: SentenceStatus) {
     setProgress(saveSentence(lessonId, sentenceId, status));
   }
 
-  function redo() {
+  function redoPart() {
     setProgress(clearAnswers(lessonId, items.map((i) => i.id)));
     setEvidence({});
     setRound((r) => r + 1);
+    if (groups[0]) go(groups[0][0]);
   }
 
-  function open(mondai: number) {
+  // Pin the question we are on in the URL. Without this, "the first unanswered question" is a moving
+  // target: answering the current one would make the page jump to the next one before it can be read.
+  const itemNo = item?.no;
+  useEffect(() => {
+    if (itemNo === undefined || active === undefined) return;
+    if (Number(params.get("mondai")) === active && Number(params.get("q")) === itemNo) return;
     const next = new URLSearchParams(params);
-    next.set("mondai", String(mondai));
+    next.set("mondai", String(active));
+    next.set("q", String(itemNo));
     setParams(next, { replace: true });
-    window.scrollTo({ top: 0 });
-  }
+  }, [active, itemNo, params, setParams]);
 
-  // Questions of the open tab grouped by passage (reading) or listed plainly (vocab / grammar).
-  const blocks = useMemo(() => {
-    const withPassage = activeItems.filter((i) => i.passage_id);
-    if (withPassage.length === 0) return [{ passage: null, items: activeItems }];
-    const order = paper.passages.filter((p) => p.mondai === active).map((p) => p.id);
-    return order
-      .map((id) => ({ passage: paper.passages.find((p) => p.id === id)!, items: activeItems.filter((i) => i.passage_id === id) }))
-      .filter((b) => b.items.length > 0);
-  }, [activeItems, paper.passages, active]);
+  if (!item || active === undefined) return null;
 
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  const nextInGroup = groupItems[itemIndex + 1];
+  const nextGroup = groups[activeIndex + 1];
+  const onNext = nextInGroup
+    ? { label: "paper.nextQuestion" as const, run: () => go(active, nextInGroup.no) }
+    : nextGroup
+      ? { label: "paper.nextType" as const, run: () => go(nextGroup[0]) }
+      : { label: "paper.finishPart" as const, run: () => navigate(`/lessons/${encodeURIComponent(lessonId)}/paper`) };
+
+  const passage = item.passage_id ? paper.passages.find((p) => p.id === item.passage_id) : undefined;
+  const passageItems = passage ? items.filter((i) => i.passage_id === passage.id) : [];
+  const evidenceIds = new Set(passageItems.flatMap((i) => evidence[i.id] ?? []));
+
+  const card = (
+    <PaperItemCard
+      key={`${round}-${item.id}`}
+      lessonId={lessonId}
+      item={item}
+      saved={progress.answers[item.id]}
+      onAnswered={onAnswered}
+      onRetry={onRetry}
+      onNext={onNext}
+    />
+  );
 
   return (
     <div className="paper-ws">
-      <header className="paper-ws__head">
-        <div>
-          <h1>{t(`paper.title.${part}` as const)}</h1>
-          <p>{t(`paper.desc.${part}` as const)}</p>
-        </div>
-        <div className="paper-ws__score">
+      <div className="paper-score" aria-live="polite">
+        <span>
           <strong>
             {right}/{done}
-          </strong>
-          <span>{t("paper.rightOfDone")}</span>
-          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-            <span style={{ width: `${pct}%` }} />
-          </div>
-          <small>
-            {done}/{total} {t("paper.questionsUnit")}
-          </small>
-        </div>
-      </header>
+          </strong>{" "}
+          {t("paper.rightLabel")}
+        </span>
+        <i aria-hidden="true" />
+        <span>
+          <strong>
+            {done}/{total}
+          </strong>{" "}
+          {t("paper.doneLabel")}
+        </span>
+      </div>
 
-      <nav className="paper-tabs" aria-label={t("paper.group")}>
+      <nav className="paper-steps" aria-label={t("paper.group")}>
         {groups.map(([m, list]) => (
           <button
             key={m}
             type="button"
-            className={`paper-tab${m === active ? " is-active" : ""}${answered(list) === list.length ? " is-done" : ""}`}
+            className={`paper-step${m === active ? " is-active" : ""}${answered(list) === list.length ? " is-done" : ""}`}
             aria-current={m === active ? "true" : undefined}
-            onClick={() => open(m)}
+            onClick={() => go(m)}
           >
-            <span className="paper-tab__no jp">問題{m}</span>
-            <span className="paper-tab__name">{mondaiLabel(m, uiLang)}</span>
-            <span className="paper-tab__count">
-              {answered(list)}/{list.length}
+            <span className="paper-step__top">
+              <strong className="jp">問題{m}</strong>
+              <span>
+                {answered(list)}/{list.length}
+              </span>
             </span>
+            <span className="paper-step__name">{mondaiLabel(m, uiLang)}</span>
           </button>
         ))}
       </nav>
 
-      {blocks.map((b, bi) => {
-        const ready = b.items.every((i) => progress.answers[i.id]);
-        const evidenceIds = new Set(b.items.flatMap((i) => evidence[i.id] ?? []));
-        return (
-          <div key={`${round}-${b.passage?.id ?? bi}`} className="paper-block">
-            {b.passage && (
-              <PassageView
-                lessonId={lessonId}
-                passage={b.passage}
-                evidenceIds={evidenceIds}
-                drillReady={b.passage.kind !== "cloze" || ready}
-                statuses={progress.sentences}
-                onSentenceStatus={onSentenceStatus}
-              />
-            )}
-            <div className="paper-items">
-              {b.items.map((item) => (
-                <PaperItemCard
-                  key={`${round}-${item.id}`}
-                  lessonId={lessonId}
-                  item={item}
-                  saved={progress.answers[item.id]}
-                  onAnswered={onAnswered}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <div className="paper-dotsbar">
+        <span className="paper-dotsbar__label">
+          <strong className="jp">問題{active}</strong>
+          <span>· {mondaiLabel(active, uiLang)}</span>
+        </span>
+        <div className="paper-dots" role="group" aria-label={`問題${active}`}>
+          {groupItems.map((i) => {
+            const a = progress.answers[i.id];
+            const state = a ? (a.correct ? " is-right" : " is-wrong") : "";
+            return (
+              <button
+                key={i.id}
+                type="button"
+                className={`paper-dot${state}${i.id === item.id ? " is-current" : ""}`}
+                aria-label={`${t("paper.question")} ${i.no}`}
+                aria-current={i.id === item.id ? "true" : undefined}
+                onClick={() => go(active, i.no)}
+              >
+                {i.no}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {passage ? (
+        <PassageStage
+          key={`${round}-${passage.id}`}
+          lessonId={lessonId}
+          passage={passage}
+          evidenceIds={evidenceIds}
+          drillReady={passage.kind !== "cloze" || passageItems.every((i) => progress.answers[i.id])}
+          statuses={progress.sentences}
+          onSentenceStatus={onSentenceStatus}
+        >
+          {card}
+        </PassageStage>
+      ) : (
+        <div className="paper-solo">{card}</div>
+      )}
 
       <footer className="paper-ws__foot">
-        <button type="button" className="btn btn--ghost btn--sm" onClick={redo} disabled={done === 0}>
+        <button type="button" className="paper-ghost" onClick={redoPart} disabled={done === 0}>
           {t("paper.redo")}
         </button>
-        {activeIndex < groups.length - 1 && (
-          <button type="button" className="btn btn--primary" onClick={() => open(groups[activeIndex + 1]![0])}>
-            {t("paper.nextGroup")}
-          </button>
-        )}
       </footer>
     </div>
   );

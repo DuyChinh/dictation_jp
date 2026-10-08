@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { isPaperPart, PARTS } from "../features/paper/paperLabels";
+import { isPaperPart, PARTS, PART_KANJI } from "../features/paper/paperLabels";
 import { PaperWorkspace } from "../features/paper/PaperWorkspace";
 import { usePaperPractice } from "../features/paper/usePaperPractice";
 import { useLesson } from "../shared/content/hooks";
@@ -46,6 +46,12 @@ export function PaperPage() {
 
       {paper && (
         <>
+          <div className="paper-topbar">
+            <Link to={`${lessonHref}/paper`} className="paper-back">
+              <span aria-hidden="true">‹</span>
+              {t("paper.sectionTitle")}
+            </Link>
+          </div>
           <div className="paper-parts" role="tablist" aria-label={t("paper.sectionTitle")}>
             {PARTS.map((p) => (
               <Link
@@ -55,8 +61,11 @@ export function PaperPage() {
                 to={`${lessonHref}/paper/${p}`}
                 className={`paper-parts__tab${p === part ? " is-active" : ""}`}
               >
+                <span className="paper-parts__kanji" aria-hidden="true">
+                  {PART_KANJI[p]}
+                </span>
                 {t(`paper.title.${p}` as const)}
-                <span>{paper.counts[p]}</span>
+                <small>{paper.counts[p]}</small>
               </Link>
             ))}
           </div>

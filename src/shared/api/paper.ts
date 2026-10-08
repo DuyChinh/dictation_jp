@@ -74,12 +74,12 @@ export type TranslationAnalysis = {
 
 export type TranslationResult = {
   analysis: TranslationAnalysis;
-  reference: { ja: string; vi: string; notes?: string };
+  reference: { ja: string; vi: string; notes_vi?: string };
 };
 
 export type PassageTranslation = {
   passage_id: string;
-  sentences: Array<{ id: string; ja: string; vi: string; notes?: string }>;
+  sentences: Array<{ id: string; ja: string; vi: string; notes_vi?: string }>;
   full_translation_vi: string;
 };
 
@@ -104,6 +104,37 @@ export function evaluatePaperItem(body: { lesson_id: string; item_id: string; ch
 
 export function evaluateTranslation(body: { lesson_id: string; sentence_id: string; text: string }) {
   return apiFetch<{ result: TranslationResult }>("/api/evaluate/translation", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export type ExamScope = PaperPart | "all";
+
+export type ExamItemResult = {
+  item_id: string;
+  no: number;
+  part: PaperPart;
+  mondai: number;
+  selected: string | null;
+  correct_choice_id: string | null;
+  correct: boolean;
+};
+
+export type ExamResult = {
+  scope: ExamScope;
+  total: number;
+  answered: number;
+  correct: number;
+  items: ExamItemResult[];
+};
+
+export function submitPaperExam(body: {
+  lesson_id: string;
+  scope: ExamScope;
+  answers: Array<{ item_id: string; choice_id: string }>;
+}) {
+  return apiFetch<{ result: ExamResult }>("/api/evaluate/paper-exam", {
     method: "POST",
     body: JSON.stringify(body),
   });

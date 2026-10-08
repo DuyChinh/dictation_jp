@@ -29,6 +29,9 @@ export function mondaiLabel(mondai: number, lang: UiLang): string {
 
 export const PARTS: PaperPart[] = ["vocab", "grammar", "reading"];
 
+/** One big kanji marks each part wherever it is listed. */
+export const PART_KANJI: Record<PaperPart, string> = { vocab: "語", grammar: "文", reading: "読" };
+
 export function isPaperPart(v: string | undefined): v is PaperPart {
   return v === "vocab" || v === "grammar" || v === "reading";
 }
@@ -61,4 +64,11 @@ export function segmentSentence<T extends { ja: string }>(
   }
   if (cursor < sentence.length) out.push({ text: sentence.slice(cursor) });
   return out;
+}
+
+import type { ExamScope } from "../../shared/api/paper";
+
+/** Display name of the part (or the whole written part) an exam sitting covers. */
+export function scopeTitle(scope: ExamScope, t: (key: never) => string): string {
+  return scope === "all" ? t("exam.scope.all" as never) : t(`paper.title.${scope}` as never);
 }

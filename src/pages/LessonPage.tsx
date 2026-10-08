@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLesson, usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
@@ -21,7 +21,9 @@ import {
 import { loadResume } from "../shared/storage/resumeStore";
 import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { scoreBySection } from "../features/listening/listeningUnits";
-import { PARTS } from "../features/paper/paperLabels";
+import { ExamEntry } from "../features/paper/ExamEntry";
+import { PART_KANJI } from "../features/paper/paperLabels";
+import type { PaperPart } from "../shared/api/paper";
 import { getPaperProgress } from "../shared/storage/paperProgressStore";
 
 export function LessonPage() {
@@ -63,6 +65,7 @@ export function LessonPage() {
 
   const crumbsBase = [{ label: t("nav.practice"), to: "/lessons" }];
   const paperAnswers = Object.values(getPaperProgress(lessonId).answers);
+  const paperDone = (part: PaperPart) => paperAnswers.filter((a) => a.part === part).length;
 
   if (loading) {
     return (
@@ -89,13 +92,50 @@ export function LessonPage() {
   const fallbackTitle = getLocalizedText(lesson.title, uiLang) || lesson.id;
   const total = lesson.counts.dictation_segments;
   const correct = Object.values(progressMap).filter((p) => p.status === "correct").length;
-  const pct = total ? Math.min(100, Math.round((correct / total) * 100)) : 0;
   const base = `/lessons/${encodeURIComponent(lesson.id)}`;
   const resume = loadResume();
   const hasResume = resume?.lesson_id === lesson.id;
   const resumeHref = `${base}/dictation${
     hasResume && resume?.section_id ? `?section=${encodeURIComponent(resume.section_id)}` : ""
   }`;
+
+  const paperCounts = lesson.paper?.counts;
+  const cards: PartCardProps[] = [
+    {
+      key: "listening",
+      kanji: "聴",
+      title: t("lesson.listeningPart"),
+      desc: t("lesson.listeningPartDesc"),
+      done: listeningDone,
+      total: lesson.counts.questions,
+      href: `${base}/listening`,
+      extra: (
+        <div className="part-card__extra">
+          <Link to={resumeHref} className="btn btn--outline btn--sm">
+            <Icon name="pencil" size={16} />
+            {t("lesson.dictationTitle")}
+          </Link>
+          <span className="tabular">
+            {correct} / {total} {t("lesson.sentencesUnit")}
+          </span>
+        </div>
+      ),
+    },
+    ...(paperCounts
+      ? (["vocab", "grammar", "reading"] as const).map((part) => ({
+          key: part,
+          kanji: PART_KANJI[part],
+          title: t(`paper.title.${part}` as const),
+          desc: t(`paper.desc.${part}` as const),
+          done: paperDone(part),
+          total: paperCounts[part],
+          href: `${base}/paper/${part}`,
+        }))
+      : []),
+  ];
+  const allTotal = cards.reduce((n, c) => n + c.total, 0);
+  const allDone = cards.reduce((n, c) => n + Math.min(c.done, c.total), 0);
+  const pct = allTotal ? Math.min(100, Math.round((allDone / allTotal) * 100)) : 0;
 
   return (
     <AppShell
@@ -115,16 +155,12 @@ export function LessonPage() {
         </div>
         <dl className="stat-strip">
           <div>
-            <dt>{t("lesson.statSections")}</dt>
-            <dd>{lesson.counts.sections}</dd>
+            <dt>{t("lesson.statTotal")}</dt>
+            <dd>{allTotal}</dd>
           </div>
           <div>
-            <dt>{t("lesson.statQuestions")}</dt>
-            <dd>{lesson.counts.questions}</dd>
-          </div>
-          <div>
-            <dt>{t("lesson.statSegments")}</dt>
-            <dd>{total}</dd>
+            <dt>{t("lesson.statDone")}</dt>
+            <dd>{allDone}</dd>
           </div>
           <div>
             <dt>{t("lesson.progress")}</dt>
@@ -133,95 +169,21 @@ export function LessonPage() {
         </dl>
       </section>
 
-      <section className="mode-grid" aria-label={t("dictation.selectMode")}>
-        <article className="mode-card is-featured">
-          <span className="mode-card__icon">
-            <Icon name="pencil" size={24} />
-          </span>
-          <div className="mode-card__body">
-            <div className="mode-card__title">
-              <h2>{t("lesson.dictationTitle")}</h2>
-              <span className="badge badge--sm">{t("lesson.recommended")}</span>
-            </div>
-            <p>{t("lesson.dictationDesc")}</p>
-            <div className="mode-card__cta">
-              <Link to={resumeHref} className="btn btn--primary">
-                {hasResume ? t("lesson.continueCta") : t("lesson.startDictationCta")}
-              </Link>
-              <span>
-                {correct} / {total} {t("lesson.sentencesUnit")}
-              </span>
-            </div>
-          </div>
-        </article>
-        <article className="mode-card">
-          <span className="mode-card__icon">
-            <Icon name="headphones" size={24} />
-          </span>
-          <div className="mode-card__body">
-            <div className="mode-card__title">
-              <h2>{t("lesson.listeningTitle")}</h2>
-            </div>
-            <p>{t("lesson.listeningDesc")}</p>
-            <div className="mode-card__cta">
-              <Link to={`${base}/listening`} className="btn btn--outline">
-                {t("lesson.startListeningCta")}
-              </Link>
-              {listeningScore && listeningDone > 0 ? (
-                <Link to={`${base}/listening/result`}>
-                  {listeningScore.right} / {listeningDone} {t("lesson.listeningScore")}
-                </Link>
-              ) : (
-                <span>
-                  {lesson.counts.questions} {t("lesson.statQuestions").toLowerCase()}
-                </span>
-              )}
-            </div>
-          </div>
-        </article>
-      </section>
+      {lesson.paper && <ExamEntry lessonId={lesson.id} />}
 
-      {lesson.paper && (
-        <section aria-label={t("paper.sectionTitle")}>
-          <div className="section-head">
-            <div>
-              <h2>{t("paper.sectionTitle")}</h2>
-              <p>{t("paper.sectionSub")}</p>
-            </div>
+      <section aria-labelledby="lesson-parts-title">
+        <div className="section-head">
+          <div>
+            <h2 id="lesson-parts-title">{t("lesson.partsTitle")}</h2>
+            <p>{t("lesson.partsSub")}</p>
           </div>
-          <div className="paper-cards">
-            {PARTS.map((part) => {
-              const count = lesson.paper!.counts[part];
-              const answered = paperAnswers.filter((a) => a.part === part).length;
-              const pPct = count ? Math.min(100, Math.round((answered / count) * 100)) : 0;
-              return (
-                <article key={part} className="mode-card paper-card">
-                  <span className="mode-card__icon">
-                    <Icon name={part === "vocab" ? "pencil" : part === "grammar" ? "grid" : "book"} size={24} />
-                  </span>
-                  <div className="mode-card__body">
-                    <div className="mode-card__title">
-                      <h2>{t(`paper.title.${part}` as const)}</h2>
-                    </div>
-                    <p>{t(`paper.desc.${part}` as const)}</p>
-                    <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pPct}>
-                      <span style={{ width: `${pPct}%` }} />
-                    </div>
-                    <div className="mode-card__cta">
-                      <Link to={`${base}/paper/${part}`} className="btn btn--outline">
-                        {answered > 0 ? t("paper.continue") : t("paper.start")}
-                      </Link>
-                      <span>
-                        {answered} / {count} {t("paper.questionsUnit")}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
+        </div>
+        <div className="part-grid">
+          {cards.map(({ key, ...card }) => (
+            <PartCard key={key} {...card} />
+          ))}
+        </div>
+      </section>
 
       <section>
         <div className="section-head">
@@ -293,5 +255,47 @@ export function LessonPage() {
         </div>
       </section>
     </AppShell>
+  );
+}
+
+type PartCardProps = {
+  key: string;
+  kanji: string;
+  title: string;
+  desc: string;
+  done: number;
+  total: number;
+  href: string;
+  extra?: ReactNode;
+};
+
+function PartCard({ kanji, title, desc, done, total, href, extra }: Omit<PartCardProps, "key">) {
+  const { t } = useUiLanguage();
+  const shown = Math.min(done, total);
+  const pct = total ? Math.round((shown / total) * 100) : 0;
+  return (
+    <article className="part-card">
+      <div className="part-card__head">
+        <span className="part-card__kanji jp" aria-hidden="true">
+          {kanji}
+        </span>
+        <h3>{title}</h3>
+      </div>
+      <p>{desc}</p>
+      <div className="part-card__progress">
+        <div className="progress" role="progressbar" aria-label={title} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+        <span className="tabular">
+          {shown} / {total} {t("paper.questionsUnit")}
+        </span>
+      </div>
+      <div className="part-card__cta">
+        <Link to={href} className={`btn ${shown > 0 ? "btn--primary" : "btn--outline"}`}>
+          {shown > 0 && shown < total ? t("paper.continue") : t("paper.start")}
+        </Link>
+        {extra}
+      </div>
+    </article>
   );
 }
