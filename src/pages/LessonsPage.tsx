@@ -5,6 +5,7 @@ import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import {
   LessonGrid,
   LevelFilter,
+  ViewToggle,
   useLessonList,
   type KindFilter,
   type StatusFilter,
@@ -40,6 +41,7 @@ export function LessonsPage() {
         </div>
         <div className="page-head__aside">
           <LevelFilter />
+          <ViewToggle />
         </div>
       </div>
       <LessonGrid

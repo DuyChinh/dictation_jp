@@ -427,7 +427,7 @@ export function ListeningWorkspace({
                   result={r}
                   questionStartMs={part.question.audio.start_ms}
                   lang={translationLang}
-                  onPlay={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
+                  onPlay={(clips) => void audio.playSequence(clips).catch(() => undefined)}
                 />
               );
             })}
@@ -455,6 +455,11 @@ export function ListeningWorkspace({
                 evidenceIds={current.parts.flatMap((p) =>
                   (resultsByPart[p.question.id]?.evidence_segments ?? []).map((e) => e.id),
                 )}
+                wrongIds={current.parts.flatMap((p) => {
+                  const r = resultsByPart[p.question.id];
+                  if (!r || r.correct) return [];
+                  return r.choices.find((c) => c.id === r.selected_choice_id)?.evidence_segment_ids ?? [];
+                })}
                 onPlayLine={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
               />
             )}
@@ -610,6 +615,29 @@ function Verdict({ result, lang }: { result: ListeningEvalResult; lang: SupportL
   );
 }
 
+/**
+ * The audio of the answer, as clips in playing order: neighbouring evidence lines join into one
+ * clip, so lines far apart are played one after another and nothing in between is heard.
+ */
+function evidenceClips(result: ListeningEvalResult): Array<{ startMs: number; endMs: number }> {
+  const position = new Map(result.segments.map((s, i) => [s.id, i]));
+  const timed = result.evidence_segments
+    .filter((s) => s.start_ms != null && s.end_ms != null)
+    .sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0));
+  const clips: Array<{ startMs: number; endMs: number; last: number }> = [];
+  for (const s of timed) {
+    const at = position.get(s.id) ?? 0;
+    const open = clips[clips.length - 1];
+    if (open && at === open.last + 1) {
+      open.endMs = Math.max(open.endMs, s.end_ms!);
+      open.last = at;
+    } else {
+      clips.push({ startMs: s.start_ms!, endMs: s.end_ms!, last: at });
+    }
+  }
+  return clips.map(({ startMs, endMs }) => ({ startMs, endMs }));
+}
+
 function WhyBlock({
   result,
   questionStartMs,
@@ -619,12 +647,12 @@ function WhyBlock({
   result: ListeningEvalResult;
   questionStartMs: number;
   lang: SupportLang;
-  onPlay: (fromMs: number, toMs: number) => void;
+  onPlay: (clips: Array<{ startMs: number; endMs: number }>) => void;
 }) {
   const { t } = useUiLanguage();
-  const timed = result.evidence_segments.filter((s) => s.start_ms != null && s.end_ms != null);
-  const from = timed.length ? Math.min(...timed.map((s) => s.start_ms!)) : null;
-  const to = timed.length ? Math.max(...timed.map((s) => s.end_ms!)) : null;
+  const clips = evidenceClips(result);
+  const from = clips.length ? clips[0]!.startMs : null;
+  const to = clips.length ? clips[clips.length - 1]!.endMs : null;
   const ja = result.evidence_segments.map((s) => getLocalizedText(s.text, "ja")).join("");
   const tr = result.evidence_segments
     .map((s) => s.text[lang] ?? "")
@@ -645,7 +673,7 @@ function WhyBlock({
           <div className="listen-why__head">
             <h3>{t("listening.why")}</h3>
             {from != null && to != null && (
-              <button type="button" className="btn btn--soft btn--sm" onClick={() => onPlay(from, to)}>
+              <button type="button" className="btn btn--soft btn--sm" onClick={() => onPlay(clips)}>
                 <Icon name="play" size={16} />
                 {t("listening.playPart")}
                 <span className="tabular listen-why__time">

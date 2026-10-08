@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { listLessons, type LessonSummary } from "../../shared/api/content";
-import { getAllDictationProgress, getLessonProgress } from "../../shared/storage/dictationProgressStore";
+import { getLessonProgress } from "../../shared/storage/dictationProgressStore";
+import { getAllListeningAnswers } from "../../shared/storage/listeningScoreStore";
+import { getPaperProgress } from "../../shared/storage/paperProgressStore";
 import {
   getLessonActivity,
   syncLessonActivityFromServer,
@@ -62,6 +64,63 @@ export function correctCountFor(lessonId: string): number {
   return Object.values(getLessonProgress(lessonId)).filter((p) => p.status === "correct").length;
 }
 
+export type LessonView = "grid" | "list";
+const VIEW_KEY = "jd.lesson_view.v1";
+const viewListeners = new Set<() => void>();
+
+function readView(): LessonView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
+  } catch {
+    return "grid";
+  }
+}
+
+let currentView = readView();
+
+function setLessonView(view: LessonView) {
+  currentView = view;
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    /* blocked storage: the choice just won't be remembered */
+  }
+  viewListeners.forEach((fn) => fn());
+}
+
+/** Cards or a compact list; shared by every lesson listing and remembered in this browser. */
+export function useLessonView(): LessonView {
+  return useSyncExternalStore(
+    (fn) => {
+      viewListeners.add(fn);
+      return () => viewListeners.delete(fn);
+    },
+    () => currentView,
+    () => "grid",
+  );
+}
+
+export function ViewToggle() {
+  const { t } = useUiLanguage();
+  const view = useLessonView();
+  return (
+    <div className="view-toggle" role="group" aria-label={t("lessons.viewLabel")}>
+      {(["grid", "list"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={view === v}
+          title={t(v === "grid" ? "lessons.viewGrid" : "lessons.viewList")}
+          aria-label={t(v === "grid" ? "lessons.viewGrid" : "lessons.viewList")}
+          onClick={() => setLessonView(v)}
+        >
+          <Icon name={v} size={18} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function LevelFilter() {
   const { t } = useUiLanguage();
   const { level, setLevel } = useLevel();
@@ -76,18 +135,30 @@ export function LevelFilter() {
   );
 }
 
-type CardProgress = { correct: number; attempted: number; status: LessonStatus };
+type CardProgress = { done: number; total: number; status: LessonStatus };
 
+/** Questions answered across the listening and written parts of each lesson, in this browser. */
 function progressFor(lessons: LessonSummary[]): Record<string, CardProgress> {
-  const all = getAllDictationProgress();
+  const listening = getAllListeningAnswers();
   const out: Record<string, CardProgress> = {};
   for (const l of lessons) {
-    const entries = Object.values(all[l.id] ?? {});
-    const correct = entries.filter((p) => p.status === "correct").length;
-    const attempted = entries.filter((p) => p.status === "correct" || p.status === "incorrect").length;
-    out[l.id] = { correct, attempted, status: lessonStatus(attempted, l.counts.dictation_segments) };
+    const c = l.paper?.counts;
+    const total = l.counts.questions + (c ? c.vocab + c.grammar + c.reading : 0);
+    const done = Math.min(
+      total,
+      Object.keys(listening[l.id] ?? {}).length + Object.keys(getPaperProgress(l.id).answers).length,
+    );
+    out[l.id] = { done, total, status: lessonStatus(done, total) };
   }
   return out;
+}
+
+function statusLabelOf(status: LessonStatus, t: (k: TranslationKey) => string): string {
+  return status === "done" ? t("lessons.statusDone") : status === "doing" ? t("lessons.statusDoing") : t("lesson.notStarted");
+}
+
+function lessonParts(lesson: LessonSummary): number {
+  return lesson.paper ? 4 : 1;
 }
 
 function LessonCard({
@@ -100,13 +171,10 @@ function LessonCard({
   lastActiveAt: number | undefined;
 }) {
   const { t, uiLang } = useUiLanguage();
-  const total = lesson.counts.dictation_segments;
-  const { correct, status } = progress;
-  const pct = total ? Math.min(100, Math.round((correct / total) * 100)) : 0;
+  const { done, total, status } = progress;
+  const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
   const detail = `/lessons/${encodeURIComponent(lesson.id)}`;
   const ago = lastActiveAt ? (timeAgo(lastActiveAt, Date.now(), uiLang) ?? t("lessons.justNow")) : null;
-  const statusLabel =
-    status === "done" ? t("lessons.statusDone") : status === "doing" ? t("lessons.statusDoing") : t("lesson.notStarted");
   const practice = isPracticeLesson(lesson.source);
 
   return (
@@ -131,18 +199,17 @@ function LessonCard({
         </h3>
         {practice && <p className="lesson-card__note">{t("lessons.practiceNote")}</p>}
         <p className="lesson-card__stats">
-          {lesson.counts.sections} 問題 · {lesson.counts.questions} {t("lesson.statQuestions").toLowerCase()} ·{" "}
-          {total} {t("lesson.statSegments").toLowerCase()}
+          {fmt(t("lessons.cardStats"), { total: String(total), parts: String(lessonParts(lesson)) })}
         </p>
       </div>
       <div className="lesson-card__progress">
         <div className="lesson-card__progress-label">
           <span className={`lesson-card__status is-${status}`}>
             {status === "done" && <Icon name="check" size={14} strokeWidth={2.4} />}
-            {statusLabel}
+            {statusLabelOf(status, t)}
           </span>
           <span className="tabular">
-            {correct} / {total}
+            {done} / {total}
           </span>
         </div>
         <div
@@ -157,13 +224,67 @@ function LessonCard({
         </div>
       </div>
       <div className="lesson-card__actions">
-        <Link to={`${detail}/dictation`} className="btn btn--primary">
-          {t("lesson.dictationTitle")}
-        </Link>
-        <Link to={detail} className="btn btn--outline">
+        <Link to={detail} className="btn btn--primary">
           {t("lesson.viewDetail")}
         </Link>
       </div>
+    </article>
+  );
+}
+
+/** The compact form of a lesson card: one line with the text laid out across. */
+function LessonRow({
+  lesson,
+  progress,
+  lastActiveAt,
+}: {
+  lesson: LessonSummary;
+  progress: CardProgress;
+  lastActiveAt: number | undefined;
+}) {
+  const { t, uiLang } = useUiLanguage();
+  const { done, total, status } = progress;
+  const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  const detail = `/lessons/${encodeURIComponent(lesson.id)}`;
+  const ago = lastActiveAt ? (timeAgo(lastActiveAt, Date.now(), uiLang) ?? t("lessons.justNow")) : null;
+  const practice = isPracticeLesson(lesson.source);
+
+  return (
+    <article className="lesson-row">
+      <span className="lesson-row__badges">
+        <span className="badge">{lessonLevel(lesson.source)}</span>
+        {practice && <span className="badge badge--practice">{t("lessons.practiceBadge")}</span>}
+      </span>
+      <div className="lesson-row__main">
+        <h3 className="lesson-row__title">
+          <Link to={detail}>{lessonTitle(lesson.source, getLocalizedText(lesson.title, uiLang) || lesson.id)}</Link>
+        </h3>
+        <span className="lesson-row__meta">
+          {fmt(t("lessons.cardStats"), { total: String(total), parts: String(lessonParts(lesson)) })}
+          {ago && ` · ${fmt(t("lessons.recent"), { ago })}`}
+        </span>
+      </div>
+      <span className={`lesson-card__status lesson-row__status is-${status}`}>
+        {status === "done" && <Icon name="check" size={14} strokeWidth={2.4} />}
+        {statusLabelOf(status, t)}
+      </span>
+      <div className="lesson-row__progress">
+        <div
+          className={`progress${status === "done" ? " progress--ok" : ""}`}
+          role="progressbar"
+          aria-label={t("lesson.progress")}
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <span style={{ width: `${pct}%` }} />
+        </div>
+        <span className="tabular">{fmt(t("lessons.listDone"), { done: String(done), total: String(total) })}</span>
+      </div>
+      <Link to={detail} className="btn btn--soft btn--sm lesson-row__cta">
+        {t("lesson.viewDetail")}
+        <Icon name="chevronRight" size={16} strokeWidth={2} />
+      </Link>
     </article>
   );
 }
@@ -216,6 +337,7 @@ export function LessonGrid({
   const { t, uiLang } = useUiLanguage();
   const { level } = useLevel();
   const activity = useLessonActivity();
+  const view = useLessonView();
   const sorted = useMemo(() => sortLessons(lessons, activity), [lessons, activity]);
   const progress = useMemo(() => progressFor(lessons), [lessons]);
 
@@ -287,10 +409,23 @@ export function LessonGrid({
           {searching ? fmt(t("lessons.noMatch"), { q: query.trim() }) : t("lessons.noStatusMatch")}
         </div>
       ) : (
-        <div className="lesson-grid">
-          {shown.map((l) => (
-            <LessonCard key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
-          ))}
+        <div className={view === "list" ? "lesson-list" : "lesson-grid"}>
+          {view === "list" && (
+            <div className="lesson-row lesson-row--head" aria-hidden="true">
+              <span />
+              <span>{t("lessons.colExam")}</span>
+              <span>{t("lessons.colStatus")}</span>
+              <span>{t("lesson.progress")}</span>
+              <span />
+            </div>
+          )}
+          {shown.map((l) =>
+            view === "list" ? (
+              <LessonRow key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
+            ) : (
+              <LessonCard key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
+            ),
+          )}
           {!filtered && (
             <div className="coming-card">
               <strong>{shown.length === 0 ? t("home.empty") : t("home.comingTitle")}</strong>

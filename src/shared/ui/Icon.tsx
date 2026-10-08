@@ -212,6 +212,7 @@ const paths = {
       <path d="M20 3.5v5h-5" />
     </>
   ),
+  list: <path d="M8.5 6H20M8.5 12H20M8.5 18H20M4 6h.01M4 12h.01M4 18h.01" />,
   grid: (
     <>
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />

@@ -7,43 +7,50 @@ import { lessonShortTitle } from "../shared/content/lessonLabels";
 import {
   LessonGrid,
   LevelFilter,
+  ViewToggle,
   correctCountFor,
   useLessonList,
 } from "../features/lessons/LessonGrid";
 
-/** Static sample shown in the hero: how a checked sentence looks. */
-function PracticePreview() {
+/** Static sample shown in the hero: the four parts of an exam and the 問題 each one covers. */
+function ExamPreview() {
   const { t } = useUiLanguage();
+  const parts = [
+    { kanji: "聴", name: t("lesson.listeningPart"), range: "問題1 – 5" },
+    { kanji: "語", name: t("paper.title.vocab"), range: "問題1 – 6" },
+    { kanji: "文", name: t("paper.title.grammar"), range: "問題7 – 9" },
+    { kanji: "読", name: t("paper.title.reading"), range: "問題10 – 14" },
+  ];
   return (
     <div className="preview" aria-hidden="true">
-      <div className="preview__player">
-        <span className="preview__play">
-          <Icon name="play" size={18} />
-        </span>
-        <div style={{ flex: 1 }}>
-          <div className="preview__meta">
-            <span>問題1 · {t("dictation.questionLabel")} 1</span>
-            <span className="tabular">00:30.6 – 00:33.5</span>
-          </div>
-          <div className="progress">
-            <span style={{ width: "58%" }} />
-          </div>
-        </div>
+      <div className="preview__head">
+        <strong>JLPT N2</strong>
+        <span className="tabular">12/2023</span>
       </div>
-      <div className="preview__sentence">
-        <span className="tok-ok">本に</span>
-        <span className="tok-ok">カバーを</span>
-        <span className="tok-acc">つける</span>
-        <span className="tok-ok">のは</span>
-        <span className="tok-ok">私が</span>
-        <span className="tok-bad">担当</span>
-        <span className="tok-ok">するね。</span>
+      <ul className="preview__parts">
+        {parts.map((p) => (
+          <li key={p.kanji}>
+            <span className="preview__kanji">{p.kanji}</span>
+            <span className="preview__name">{p.name}</span>
+            <span className="preview__range">{p.range}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="preview__question">
+        <p className="preview__stem">
+          <span className="preview__stem-no">1</span>
+          私が<u>担当</u>します。
+        </p>
+        <ol className="preview__choices">
+          {["たんとう", "たんどう", "だんとう", "だんどう"].map((c, i) => (
+            <li key={c} className={i === 0 ? "is-right" : undefined}>
+              <span>{i + 1}</span>
+              {c}
+              {i === 0 && <Icon name="check" size={16} strokeWidth={2.4} />}
+            </li>
+          ))}
+        </ol>
       </div>
-      <div className="preview__translation">
-        <strong style={{ color: "var(--text-main)" }}>{t("dictation.translation")} · </strong>
-        Việc bọc bìa cho sách thì anh sẽ phụ trách nhé.
-      </div>
-      <ResultLegend />
     </div>
   );
 }
@@ -116,7 +123,7 @@ export function HomePage() {
             ))}
           </ul>
         </div>
-        <PracticePreview />
+        <ExamPreview />
       </section>
 
       {resume && (
@@ -160,6 +167,7 @@ export function HomePage() {
           </div>
           <div className="section-head__aside">
             <LevelFilter />
+            <ViewToggle />
           </div>
         </div>
         <LessonGrid lessons={lessons} loading={loading} error={error} />
