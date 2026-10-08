@@ -217,6 +217,63 @@ export class AudioEngine {
     this.endMonitor = setInterval(() => this.checkSegmentEnd(), 15);
   }
 
+  /**
+   * Plays `range` from where it was paused. Starts over only when this range isn't the one
+   * paused, or playback already reached its end.
+   */
+  async resumeSegment(range: SegmentRange): Promise<void> {
+    this.ensureNotDisposed();
+    const active = this.activeRange;
+    const now = this.getCurrentTimeMs();
+    const sameRange = !!active && active.startMs === Math.max(0, range.startMs) && this.sameEnd(active, range);
+    const inside = sameRange && now >= active!.startMs && now < active!.endMs - this.endEpsilonMs - 50;
+    if (!inside || this.state === "ended") {
+      await this.playSegment(range);
+      return;
+    }
+    const gen = ++this.playGeneration;
+    this.stopEndMonitor();
+    this.segmentMode = "playing_segment";
+    await this.media.play();
+    if (gen !== this.playGeneration) return;
+    this.setState("playing");
+    this.endMonitor = setInterval(() => this.checkSegmentEnd(), 15);
+  }
+
+  /**
+   * Moves to `ms` inside `range` (clamped short of its end), keeping play or pause as it is.
+   * Before the first play this also makes `range` the active one, so play resumes from there.
+   */
+  seekInSegment(range: SegmentRange, ms: number): void {
+    this.ensureNotDisposed();
+    const durationMs = this.getDurationMs() ?? Number.POSITIVE_INFINITY;
+    const startMs = Math.max(0, range.startMs);
+    const endMs = Math.min(Math.max(startMs + 1, range.endMs), durationMs);
+    const active = this.activeRange;
+    if (!active || active.startMs !== startMs || !this.sameEnd(active, { startMs, endMs })) {
+      if (this.state === "playing") {
+        // Seeking into another question: stop the old one first.
+        this.stopEndMonitor();
+        this.media.pause();
+        this.segmentMode = "none";
+        this.setState("paused");
+      }
+      this.activeRange = { startMs, endMs };
+    }
+    const target = Math.min(Math.max(ms, startMs), Math.max(startMs, endMs - 200));
+    this.media.currentTime = target / 1000;
+    const fake = this.media as MediaAdapter & { forceSeek?: (s: number) => void };
+    if (typeof fake.forceSeek === "function") fake.forceSeek(target / 1000);
+    if (this.state === "ended") this.setState("paused");
+    this.emit({ type: "timeupdate", currentTimeMs: target });
+  }
+
+  /** Whether the active range ends where `range` does, after clamping to the file's length. */
+  private sameEnd(active: SegmentRange, range: SegmentRange): boolean {
+    const durationMs = this.getDurationMs() ?? Number.POSITIVE_INFINITY;
+    return active.endMs === Math.min(Math.max(active.startMs + 1, range.endMs), durationMs);
+  }
+
   async replaySegment(): Promise<void> {
     if (!this.activeRange) {
       throw new Error("No active segment to replay");

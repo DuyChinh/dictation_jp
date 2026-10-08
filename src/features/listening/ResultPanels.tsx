@@ -1,6 +1,8 @@
 import type { LocalizedText } from "../../shared/content/getLocalizedText";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import type { SupportLang } from "../../shared/content/languageSettings";
+import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { Icon } from "../../shared/ui/Icon";
 
 export function ExplanationPanel({
   text,
@@ -26,42 +28,89 @@ function usable(text: string): boolean {
   return s !== "" && s !== "—";
 }
 
+type DialogueSegment = {
+  id?: string;
+  speaker_id: string;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  text: LocalizedText;
+};
+
+/** Colour group of a speaker: men blue, women pink, narrator grey, anyone else by first appearance. */
+function speakerTone(id: string, label: string, order: string[]): string {
+  const key = `${id} ${label}`.toLowerCase();
+  if (/narrator|announcer|ナレーション|アナウンサー/.test(key)) return "narrator";
+  if (/female|woman|女/.test(key)) return "female";
+  if (/male|man|男/.test(key)) return "male";
+  const i = order.indexOf(id);
+  return i % 2 === 0 ? "other1" : "other2";
+}
+
 /**
- * Whole dialogue: each line in Japanese with its translation under it.
- * When lines have no translation, the question-level translation is shown after the dialogue.
+ * Whole dialogue: each line in Japanese with its translation under it, coloured by speaker.
+ * Lines in `evidenceIds` carry the answer and are highlighted; `onPlayLine` adds a play button
+ * to every timed line. When lines have no translation, the question-level translation is shown
+ * after the dialogue.
  */
 export function DialoguePanel({
   segments,
   speakers,
   dialogue,
   lang,
+  evidenceIds,
+  onPlayLine,
 }: {
-  segments: Array<{ speaker_id: string; text: LocalizedText }>;
+  segments: DialogueSegment[];
   speakers: Array<{ id: string; label: LocalizedText }>;
   dialogue?: LocalizedText | null;
   lang: SupportLang;
+  evidenceIds?: readonly string[];
+  onPlayLine?: (fromMs: number, toMs: number) => void;
 }) {
+  const { t } = useUiLanguage();
   const labelOf = (id: string) => {
     const s = speakers.find((x) => x.id === id);
     return getLocalizedText(s?.label, "ja") || id;
   };
   // Only the requested language: getLocalizedText would fall back to Japanese or "—".
-  const lineTr = (t: LocalizedText) => (usable(t[lang] ?? "") ? t[lang]!.trim() : "");
+  const lineTr = (text: LocalizedText) => (usable(text[lang] ?? "") ? text[lang]!.trim() : "");
   const hasLineTr = segments.some((s) => lineTr(s.text));
   const full = dialogue && usable(dialogue[lang] ?? "") ? dialogue[lang]!.trim() : "";
+  const evidence = new Set(evidenceIds ?? []);
+  const order = [...new Set(segments.map((s) => s.speaker_id))];
 
   return (
     <section className="dialogue" aria-label="Transcript">
       <ol className="dialogue__lines">
         {segments.map((s, i) => {
           const tr = lineTr(s.text);
+          const who = labelOf(s.speaker_id);
+          const isAnswer = !!s.id && evidence.has(s.id);
+          const timed = s.start_ms != null && s.end_ms != null;
           return (
-            <li key={i} className="dialogue__line">
-              <strong className="dialogue__who jp">{labelOf(s.speaker_id)}</strong>
+            <li
+              key={s.id ?? i}
+              className={`dialogue__line${isAnswer ? " is-answer" : ""}`}
+              data-tone={speakerTone(s.speaker_id, who, order)}
+            >
+              <strong className="dialogue__who jp">{who}</strong>
               <div className="dialogue__text">
+                {isAnswer && <span className="dialogue__badge">{t("listening.answerHere")}</span>}
                 <span className="jp">{getLocalizedText(s.text, "ja")}</span>
                 {tr && <span className="dialogue__tr">{tr}</span>}
               </div>
+              {onPlayLine && timed && (
+                <button
+                  type="button"
+                  className="icon-btn icon-btn--round dialogue__play"
+                  style={{ width: 34, height: 34 }}
+                  aria-label={t("listening.playLine")}
+                  title={t("listening.playLine")}
+                  onClick={() => onPlayLine(s.start_ms!, s.end_ms!)}
+                >
+                  <Icon name="play" size={14} />
+                </button>
+              )}
             </li>
           );
         })}

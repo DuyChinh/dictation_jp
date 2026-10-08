@@ -630,6 +630,7 @@ export function DictationWorkspace({
               speakers={practice.speakers}
               dialogue={current.question.dialogue_translation}
               lang="vi"
+              onPlayLine={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
             />
           </section>
         ) : (

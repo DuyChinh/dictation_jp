@@ -118,4 +118,45 @@ describe("Spike A — AudioEngine segment playback", () => {
     await engine.play();
     expect(engine.getState()).toBe("playing");
   });
+
+  it("resumes a paused segment from where it stopped", async () => {
+    setup();
+    await engine.load("fake://long");
+    const range = { startMs: 60_000, endMs: 70_000 };
+    await engine.playSegment(range);
+    await vi.waitFor(() => expect(engine.getCurrentTimeMs()).toBeGreaterThan(61_000), { timeout: 3000 });
+    engine.pause();
+    const pausedAt = engine.getCurrentTimeMs();
+
+    await engine.resumeSegment(range);
+    expect(engine.getState()).toBe("playing");
+    expect(engine.getCurrentTimeMs()).toBeGreaterThanOrEqual(pausedAt);
+    expect(engine.getCurrentTimeMs()).toBeLessThan(pausedAt + 500);
+  });
+
+  it("starts over when resuming a different segment", async () => {
+    setup();
+    await engine.load("fake://long");
+    await engine.playSegment({ startMs: 60_000, endMs: 70_000 });
+    engine.pause();
+    await engine.resumeSegment({ startMs: 100_000, endMs: 110_000 });
+    expect(Math.round(engine.getCurrentTimeMs())).toBe(100_000);
+  });
+
+  it("seeks inside a segment, clamped to its bounds, before and during playback", async () => {
+    setup();
+    await engine.load("fake://long");
+    const range = { startMs: 60_000, endMs: 70_000 };
+
+    engine.seekInSegment(range, 65_000);
+    expect(Math.round(engine.getCurrentTimeMs())).toBe(65_000);
+    await engine.resumeSegment(range);
+    expect(Math.round(engine.getCurrentTimeMs())).toBeGreaterThanOrEqual(65_000);
+
+    engine.seekInSegment(range, 10_000);
+    expect(Math.round(engine.getCurrentTimeMs())).toBe(60_000);
+    engine.seekInSegment(range, 99_000);
+    expect(engine.getCurrentTimeMs()).toBeLessThan(70_000);
+    expect(engine.getState()).toBe("playing");
+  });
 });

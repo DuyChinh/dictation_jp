@@ -3,6 +3,13 @@ import type { LocalizedText } from "../content/getLocalizedText";
 
 export type LocaleText = LocalizedText;
 
+/** The written part of a lesson (文字・語彙 / 文法 / 読解), when it has one. */
+export type PaperInfo = {
+  status: string;
+  content_version: number;
+  counts: { vocab: number; grammar: number; reading: number };
+} | null;
+
 export type LessonSummary = {
   id: string;
   title: LocaleText;
@@ -14,6 +21,7 @@ export type LessonSummary = {
     questions: number;
     dictation_segments: number;
   };
+  paper?: PaperInfo;
 };
 
 export type LessonDetail = {
@@ -31,6 +39,7 @@ export type LessonDetail = {
     dictation_segment_count: number;
   }>;
   counts: LessonSummary["counts"];
+  paper?: PaperInfo;
 };
 
 export type PracticeSegment = {

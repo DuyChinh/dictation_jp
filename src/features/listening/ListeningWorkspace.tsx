@@ -10,10 +10,14 @@ import type { SupportLang } from "../../shared/content/languageSettings";
 import { partLabel, partType } from "../../shared/content/lessonLabels";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import {
+  clearListeningAnswers,
   getListeningAnswers,
   recordListeningAnswer,
   type ListeningAnswer,
 } from "../../shared/storage/listeningScoreStore";
+import { saveListeningAttempt } from "../../shared/storage/listeningAttemptStore";
+import { fmt } from "../../shared/i18n/format";
+import { buildAttempt } from "./attempts";
 import { Icon } from "../../shared/ui/Icon";
 import { ChoiceCards } from "./ChoiceCards";
 import { ImageChoiceGrid } from "./ImageChoiceGrid";
@@ -181,12 +185,32 @@ export function ListeningWorkspace({
   const resultHref = `${basePath}/result`;
   const nextKind: "unit" | "section" | "result" =
     index < units.length - 1 ? "unit" : nextSection ? "section" : "result";
+  /**
+   * Hands the test in: the answers become an attempt in the history, and the test starts
+   * over as if never taken. Asks first when questions are still open.
+   */
+  const finish = useCallback(() => {
+    const attempt = buildAttempt(lessonId, practice, getListeningAnswers(lessonId), { onlyQuestionIds });
+    const answered = attempt.right + attempt.wrong;
+    if (answered === 0) {
+      navigate(resultHref);
+      return;
+    }
+    const open = attempt.total - answered;
+    if (open > 0 && !window.confirm(fmt(t("listening.confirmFinish"), { n: open }))) return;
+    audio.pause();
+    saveListeningAttempt(attempt);
+    clearListeningAnswers(lessonId);
+    navigate(`${resultHref}?attempt=${encodeURIComponent(attempt.id)}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId, navigate, onlyQuestionIds, practice, resultHref, t]);
+
   const goNext = useCallback(() => {
     if (nextKind === "unit") setIndex((i) => i + 1);
     else if (nextKind === "section" && nextSection)
       navigate(`${basePath}?section=${encodeURIComponent(nextSection.id)}`);
-    else navigate(resultHref);
-  }, [basePath, navigate, nextKind, nextSection, resultHref]);
+    else finish();
+  }, [basePath, finish, navigate, nextKind, nextSection]);
   const goPrev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
   const pickForFirstOpenPart = useCallback(
@@ -222,7 +246,7 @@ export function ListeningWorkspace({
       if (e.key === " " && !onControl) {
         e.preventDefault();
         if (audio.state === "playing") audio.pause();
-        else if (range) void audio.playSegment(range).catch(() => undefined);
+        else if (range) void audio.resume(range).catch(() => undefined);
         return;
       }
       if (e.altKey && (e.key === "r" || e.key === "R")) {
@@ -303,7 +327,7 @@ export function ListeningWorkspace({
           </div>
         </div>
 
-        <SegmentPlayer audio={audio} range={range} onReplay={onReplay} clock="relative" />
+        <SegmentPlayer audio={audio} range={range} onReplay={onReplay} clock="relative" seekKeys />
 
         <section className="panel listen-q" aria-label={t("listening.question")}>
           {!submitted && resolveListeningUi(primary, current.section.id).hidePromptUntilSubmit && (
@@ -428,6 +452,10 @@ export function ListeningWorkspace({
                 speakers={practice.speakers}
                 dialogue={primary.dialogue_translation}
                 lang={translationLang}
+                evidenceIds={current.parts.flatMap((p) =>
+                  (resultsByPart[p.question.id]?.evidence_segments ?? []).map((e) => e.id),
+                )}
+                onPlayLine={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
               />
             )}
           </section>
@@ -441,7 +469,7 @@ export function ListeningWorkspace({
           <span className="dict-foot__keys listen-keys">
             {t("dictation.shortcuts")}: <kbd className="kbd">1–4</kbd> {t("listening.kbPick")} ·{" "}
             <kbd className="kbd">Enter</kbd> {t("listening.kbSubmit")} · <kbd className="kbd">Space</kbd>{" "}
-            {t("listening.kbPlay")}
+            {t("listening.kbPlay")} · <kbd className="kbd">← →</kbd> {t("listening.kbSeek")}
           </span>
           <button type="button" className="btn btn--dark dict-foot__next" onClick={goNext}>
             {nextLabel}
@@ -541,8 +569,13 @@ export function ListeningWorkspace({
             </div>
           </div>
           <hr />
-          <Link to={resultHref} className="btn btn--outline btn--block">
+          <button type="button" className="btn btn--primary btn--block" onClick={finish} disabled={answeredCount === 0}>
+            <Icon name="check" size={18} strokeWidth={2.2} />
             {t("listening.finish")}
+          </button>
+          <Link to={resultHref} className="lscore__history">
+            <Icon name="clock" size={15} />
+            {t("listening.history")}
           </Link>
           <p className="lscore__note">{t("listening.firstTry")}</p>
         </section>

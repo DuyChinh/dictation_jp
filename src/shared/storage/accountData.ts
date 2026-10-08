@@ -4,6 +4,7 @@ import { LISTENING_KEY, getAllListeningAnswers } from "./listeningScoreStore";
 import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistoryStore";
 import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
+import { LISTENING_ATTEMPTS_KEY, getAllListeningAttempts, uploadListeningAttempt } from "./listeningAttemptStore";
 
 /**
  * Practice data in this browser belongs either to a guest or to one account.
@@ -15,7 +16,15 @@ const OWNER_KEY = "jd.data_owner.v1";
 /** Set to the user id when moving guest data onto that account failed and should be retried. */
 const PENDING_IMPORT_KEY = "jd.pending_import.v1";
 
-const PRACTICE_KEYS = [DICTATION_PROGRESS_KEY, STATS_KEY, HISTORY_KEY, LISTENING_KEY, RESUME_KEY, LESSON_ACTIVITY_KEY];
+const PRACTICE_KEYS = [
+  DICTATION_PROGRESS_KEY,
+  STATS_KEY,
+  HISTORY_KEY,
+  LISTENING_KEY,
+  LISTENING_ATTEMPTS_KEY,
+  RESUME_KEY,
+  LESSON_ACTIVITY_KEY,
+];
 
 /** Rows per import request, to stay well under the server's request size limit. */
 const CHUNK = 1000;
@@ -79,6 +88,11 @@ async function importGuestData(token: string): Promise<boolean> {
         body: JSON.stringify(batch),
       });
       if (!res.ok) return false;
+    }
+    // Submitted listening attempts go one by one; the server ignores ones it already has.
+    const attempts = Object.values(getAllListeningAttempts()).flat().slice(0, 200);
+    for (const attempt of attempts) {
+      if (!(await uploadListeningAttempt(attempt))) return false;
     }
     return true;
   } catch {

@@ -10,6 +10,7 @@ import { FeedbackPage } from "../pages/FeedbackPage";
 import { LessonPage } from "../pages/LessonPage";
 import { DictationPage } from "../pages/DictationPage";
 import { ListeningPage } from "../pages/ListeningPage";
+import { PaperPage } from "../pages/PaperPage";
 import { ListeningResultPage } from "../pages/ListeningResultPage";
 import { AuthPage } from "../pages/AuthPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
@@ -78,6 +79,10 @@ export function AppRouter() {
                 <Route
                   path="/lessons/:lessonId/dictation"
                   element={<DictationPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper/:part"
+                  element={<PaperPage />}
                 />
                 <Route
                   path="/lessons/:lessonId/listening"

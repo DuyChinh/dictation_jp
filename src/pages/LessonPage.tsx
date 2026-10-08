@@ -21,6 +21,8 @@ import {
 import { loadResume } from "../shared/storage/resumeStore";
 import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { scoreBySection } from "../features/listening/listeningUnits";
+import { PARTS } from "../features/paper/paperLabels";
+import { getPaperProgress } from "../shared/storage/paperProgressStore";
 
 export function LessonPage() {
   const { lessonId = "" } = useParams();
@@ -60,6 +62,7 @@ export function LessonPage() {
   const listeningDone = listeningScore ? listeningScore.right + listeningScore.wrong : 0;
 
   const crumbsBase = [{ label: t("nav.practice"), to: "/lessons" }];
+  const paperAnswers = Object.values(getPaperProgress(lessonId).answers);
 
   if (loading) {
     return (
@@ -177,6 +180,48 @@ export function LessonPage() {
           </div>
         </article>
       </section>
+
+      {lesson.paper && (
+        <section aria-label={t("paper.sectionTitle")}>
+          <div className="section-head">
+            <div>
+              <h2>{t("paper.sectionTitle")}</h2>
+              <p>{t("paper.sectionSub")}</p>
+            </div>
+          </div>
+          <div className="paper-cards">
+            {PARTS.map((part) => {
+              const count = lesson.paper!.counts[part];
+              const answered = paperAnswers.filter((a) => a.part === part).length;
+              const pPct = count ? Math.min(100, Math.round((answered / count) * 100)) : 0;
+              return (
+                <article key={part} className="mode-card paper-card">
+                  <span className="mode-card__icon">
+                    <Icon name={part === "vocab" ? "pencil" : part === "grammar" ? "grid" : "book"} size={24} />
+                  </span>
+                  <div className="mode-card__body">
+                    <div className="mode-card__title">
+                      <h2>{t(`paper.title.${part}` as const)}</h2>
+                    </div>
+                    <p>{t(`paper.desc.${part}` as const)}</p>
+                    <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pPct}>
+                      <span style={{ width: `${pPct}%` }} />
+                    </div>
+                    <div className="mode-card__cta">
+                      <Link to={`${base}/paper/${part}`} className="btn btn--outline">
+                        {answered > 0 ? t("paper.continue") : t("paper.start")}
+                      </Link>
+                      <span>
+                        {answered} / {count} {t("paper.questionsUnit")}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="section-head">

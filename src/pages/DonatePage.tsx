@@ -173,6 +173,10 @@ export function DonatePage() {
 
               <dl className="donate-account">
                 <div>
+                  <dt>{t("donate.bank")}</dt>
+                  <dd>{DONATE.bankName}</dd>
+                </div>
+                <div>
                   <dt>{t("donate.accountName")}</dt>
                   <dd>{DONATE.accountName}</dd>
                 </div>
