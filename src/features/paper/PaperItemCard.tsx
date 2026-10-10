@@ -124,6 +124,11 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
                 <span className="paper-tile__text jp" lang="ja">
                   {c.text}
                 </span>
+                {r?.sino_vi && (
+                  <span className="paper-sino">
+                    {t("paper.sino")}: <b>{r.sino_vi}</b>
+                  </span>
+                )}
                 {r?.meaning_vi && <span className="paper-tile__meaning">{r.meaning_vi}</span>}
                 {r && <span className="paper-tile__why">{r.explanation_vi}</span>}
               </span>
@@ -187,6 +192,11 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
                   <strong className="jp">{v.word}</strong>
                   {v.reading && <span className="paper-words__read jp">{v.reading}</span>}
                   <span>{v.meaning_vi}</span>
+                  {v.sino_vi && (
+                    <span className="paper-sino">
+                      {t("paper.sino")}: <b>{v.sino_vi}</b>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

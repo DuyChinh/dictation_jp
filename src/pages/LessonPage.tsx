@@ -104,27 +104,29 @@ export function LessonPage() {
     {
       key: "listening",
       kanji: "聴",
+      tone: "listening",
       title: t("lesson.listeningPart"),
       desc: t("lesson.listeningPartDesc"),
       done: listeningDone,
       total: lesson.counts.questions,
       href: `${base}/listening`,
-      extra: (
-        <div className="part-card__extra">
-          <Link to={resumeHref} className="btn btn--outline btn--sm">
-            <Icon name="pencil" size={16} />
-            {t("lesson.dictationTitle")}
-          </Link>
-          <span className="tabular">
-            {correct} / {total} {t("lesson.sentencesUnit")}
-          </span>
-        </div>
-      ),
+    },
+    {
+      key: "dictation",
+      kanji: "書",
+      tone: "dictation",
+      title: t("lesson.dictationTitle"),
+      desc: t("lesson.dictationDesc"),
+      done: correct,
+      total,
+      unit: t("lesson.sentencesUnit"),
+      href: resumeHref,
     },
     ...(paperCounts
       ? (["vocab", "grammar", "reading"] as const).map((part) => ({
           key: part,
           kanji: PART_KANJI[part],
+          tone: part,
           title: t(`paper.title.${part}` as const),
           desc: t(`paper.desc.${part}` as const),
           done: paperDone(part),
@@ -133,8 +135,10 @@ export function LessonPage() {
         }))
       : []),
   ];
-  const allTotal = cards.reduce((n, c) => n + c.total, 0);
-  const allDone = cards.reduce((n, c) => n + Math.min(c.done, c.total), 0);
+  // Dictation counts sentences, not questions, so it stays out of the exam-level totals.
+  const examCards = cards.filter((c) => c.key !== "dictation");
+  const allTotal = examCards.reduce((n, c) => n + c.total, 0);
+  const allDone = examCards.reduce((n, c) => n + Math.min(c.done, c.total), 0);
   const pct = allTotal ? Math.min(100, Math.round((allDone / allTotal) * 100)) : 0;
 
   return (
@@ -169,7 +173,9 @@ export function LessonPage() {
         </dl>
       </section>
 
-      {lesson.paper && <ExamEntry lessonId={lesson.id} />}
+      {(lesson.paper || lesson.counts.questions > 0) && (
+        <ExamEntry lessonId={lesson.id} hasWritten={!!lesson.paper} hasListening={lesson.counts.questions > 0} />
+      )}
 
       <section aria-labelledby="lesson-parts-title">
         <div className="section-head">
@@ -185,13 +191,14 @@ export function LessonPage() {
         </div>
       </section>
 
-      <section>
-        <div className="section-head">
-          <div>
-            <h2>{t("lesson.sectionsTitle")}</h2>
-            <p>{t("lesson.sectionsSub")}</p>
-          </div>
-        </div>
+      <details className="parts-fold">
+        <summary>
+          <span>
+            <strong>{t("lesson.sectionsTitle")}</strong>
+            <small>{t("lesson.sectionsSub")}</small>
+          </span>
+          <Icon name="chevronRight" size={18} strokeWidth={2} />
+        </summary>
         <div className="parts">
           <div className="parts__row parts__row--head" aria-hidden="true">
             <span>{t("lesson.colPart")}</span>
@@ -253,7 +260,7 @@ export function LessonPage() {
             );
           })}
         </div>
-      </section>
+      </details>
     </AppShell>
   );
 }
@@ -261,6 +268,10 @@ export function LessonPage() {
 type PartCardProps = {
   key: string;
   kanji: string;
+  /** Picks the part's colour. */
+  tone?: string;
+  /** What `total` counts; questions unless said otherwise. */
+  unit?: string;
   title: string;
   desc: string;
   done: number;
@@ -269,14 +280,14 @@ type PartCardProps = {
   extra?: ReactNode;
 };
 
-function PartCard({ kanji, title, desc, done, total, href, extra }: Omit<PartCardProps, "key">) {
+function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra }: Omit<PartCardProps, "key">) {
   const { t } = useUiLanguage();
   const shown = Math.min(done, total);
   const pct = total ? Math.round((shown / total) * 100) : 0;
   return (
     <article className="part-card">
       <div className="part-card__head">
-        <span className="part-card__kanji jp" aria-hidden="true">
+        <span className="part-card__kanji jp" data-tone={tone} aria-hidden="true">
           {kanji}
         </span>
         <h3>{title}</h3>
@@ -287,7 +298,7 @@ function PartCard({ kanji, title, desc, done, total, href, extra }: Omit<PartCar
           <span style={{ width: `${pct}%` }} />
         </div>
         <span className="tabular">
-          {shown} / {total} {t("paper.questionsUnit")}
+          {shown} / {total} {unit ?? t("paper.questionsUnit")}
         </span>
       </div>
       <div className="part-card__cta">

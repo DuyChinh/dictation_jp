@@ -197,6 +197,8 @@
 }
 .paper-tile__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .paper-tile__text { font-size: 17px; font-weight: 500; line-height: 1.5; }
+.paper-sino { font-size: 12.5px; color: var(--text-muted); }
+.paper-sino b { color: var(--primary-color); font-weight: 700; letter-spacing: 0.04em; }
 .paper-tile__meaning { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .paper-tile__why { font-size: 13px; line-height: 1.55; color: var(--ink-2); white-space: pre-wrap; }
 .paper-tile.is-selected { border: 2px solid var(--primary-color); background: var(--primary-light); box-shadow: 0 0 0 3px var(--ring); }
@@ -225,8 +227,9 @@
 .paper-sort__slots li { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--surface-2); }
 .paper-sort__slots li.is-star { border-color: var(--acc); background: var(--acc-soft); font-weight: 700; }
 .paper-words { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
-.paper-words li { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--bg-color); border: 1px solid var(--card-border); font-size: 13px; }
+.paper-words li { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--bg-color); border: 1px solid var(--card-border); font-size: 13px; }
 .paper-words li strong { font-size: 17px; }
+.paper-words li .paper-sino { flex: 1 1 100%; }
 .paper-words__read { color: var(--text-muted); }
 .paper-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; border-top: 1px dashed var(--card-border); }
 
@@ -372,11 +375,11 @@
 .exam-scope.is-on .exam-scope__kanji { background: var(--primary-fill); color: var(--primary-text); }
 .exam-options { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .exam-preset {
-  min-width: 88px; display: inline-flex; align-items: baseline; justify-content: center; gap: 6px; min-height: 52px; padding: 0 18px; border-radius: 14px; cursor: pointer;
+  min-width: 88px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 52px; padding: 0 18px; border-radius: 14px; cursor: pointer;
   border: 1.5px solid var(--card-border); background: var(--card-bg); color: var(--text-main); font: inherit;
 }
-.exam-preset strong { font-size: 22px; font-variant-numeric: tabular-nums; }
-.exam-preset span { font-size: 13px; color: var(--text-muted); }
+.exam-preset strong { font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.exam-preset span { font-size: 13px; line-height: 1; color: var(--text-muted); }
 .exam-preset:hover { border-color: var(--input-border); }
 .exam-preset.is-on { border: 2px solid var(--primary-color); background: var(--primary-light); color: var(--primary-color); }
 .exam-custom {
@@ -389,6 +392,7 @@
   width: 76px; min-height: 40px; box-sizing: border-box; padding: 0 8px; border: 0; border-radius: 8px; background: var(--bg-color);
   color: var(--text-main); font: inherit; font-size: 18px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums;
 }
+.exam-custom input::placeholder { font-size: 13px; font-weight: 500; }
 .exam-custom input:focus { outline: 2px solid var(--primary-color); outline-offset: 1px; }
 .exam-custom.is-on { border: 2px solid var(--primary-color); background: var(--primary-light); }
 .exam-custom.is-bad { border: 2px solid var(--bad); background: var(--bad-soft); }
@@ -468,20 +472,23 @@
 .exam-palette__dots { display: flex; flex-wrap: wrap; gap: 6px; }
 .exam-palette .paper-dot { width: 32px; height: 32px; }
 .paper-dot.is-answered { background: var(--primary-fill); border-color: var(--primary-fill); color: var(--primary-text); }
-.paper-dot.is-flagged { border-color: var(--acc); }
+.paper-dot.is-flagged { background: var(--flag-fill); border-color: var(--flag-fill); color: var(--flag-text); }
 .exam-palette .paper-dot.is-current { box-shadow: 0 0 0 3px var(--ring); }
+/* The current dot keeps its fill; only the ring marks it. */
+.exam-palette .paper-dot.is-current.is-answered { border-color: var(--primary-fill); color: var(--primary-text); }
+.exam-palette .paper-dot.is-current.is-flagged { border-color: var(--flag-fill); color: var(--flag-text); }
 .exam-palette__legend { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px dashed var(--card-border); display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
 .exam-palette__legend li { display: flex; align-items: center; gap: 8px; }
 .exam-palette__legend i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--card-border); display: inline-block; box-sizing: border-box; }
 .exam-palette__legend i.is-answered { background: var(--primary-fill); border-color: var(--primary-fill); }
-.exam-palette__legend i.is-flagged { border-color: var(--acc); }
+.exam-palette__legend i.is-flagged { background: var(--flag-fill); border-color: var(--flag-fill); }
 .exam-main { flex: 1 1 520px; min-width: 0; }
 .exam-card .paper-qhead { justify-content: space-between; }
 .exam-flag {
   display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--card-border);
   background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
-.exam-flag.is-on { border-color: var(--acc); background: var(--acc-soft); color: var(--acc); }
+.exam-flag.is-on { border-color: var(--flag-fill); background: var(--flag-fill); color: var(--flag-text); }
 .exam-nav { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- exam room: result ---------- */

@@ -8,6 +8,8 @@ const LEVEL_STORAGE_KEY = "jd.selected_level";
 interface LevelContextType {
   level: JlptLevel;
   setLevel: (level: JlptLevel) => void;
+  /** Whether the learner has picked a level yet (the home page asks once). */
+  chosen: boolean;
   getLevelLabel: (lvl: JlptLevel) => string;
 }
 
@@ -27,8 +29,17 @@ export function LevelProvider({ children }: { children: ReactNode }) {
     return "ALL";
   });
 
+  const [chosen, setChosen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LEVEL_STORAGE_KEY) !== null;
+    } catch {
+      return true;
+    }
+  });
+
   const setLevel = (newLevel: JlptLevel) => {
     setLevelState(newLevel);
+    setChosen(true);
     try {
       localStorage.setItem(LEVEL_STORAGE_KEY, newLevel);
     } catch {
@@ -46,7 +57,7 @@ export function LevelProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <LevelContext.Provider value={{ level, setLevel, getLevelLabel }}>
+    <LevelContext.Provider value={{ level, setLevel, chosen, getLevelLabel }}>
       {children}
     </LevelContext.Provider>
   );

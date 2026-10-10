@@ -6,6 +6,11 @@ import type { ExamResult, ExamScope } from "../api/paper";
  */
 export const PAPER_EXAM_KEY = "jd.paper_exam.v1";
 const LAST_MINUTES_KEY = "jd.paper_exam_minutes.v1";
+/** One line per submitted sitting, kept after the lesson's current session is replaced by a new one. */
+export const PAPER_EXAM_HISTORY_KEY = "jd.paper_exam_history.v1";
+const HISTORY_LIMIT = 200;
+/** Only the newest sittings keep their per-question result (to open them again); older ones keep the score line. */
+const DETAIL_LIMIT = 30;
 
 export const PRESET_MINUTES = [20, 25, 35, 40, 60] as const;
 export const MIN_MINUTES = 1;
@@ -18,8 +23,13 @@ export type ExamSession = {
   minutes: number;
   startedAt: number;
   endsAt: number;
+  /** Written part: item id → choice. Listening: question id → choice. */
   answers: Record<string, string>;
   flagged: Record<string, true>;
+  /** Listening: whether a question's audio may be played again (off, as in the real exam). */
+  allowReplay?: boolean;
+  /** Listening: units whose audio has already started, so reopening one does not play it again. */
+  played?: Record<string, true>;
   submittedAt?: number;
   result?: ExamResult;
 };
@@ -65,7 +75,13 @@ export function getExam(lessonId: string): ExamSession | null {
   return read()[lessonId] ?? null;
 }
 
-export function startExam(lessonId: string, scope: ExamScope, minutes: number, now = Date.now()): ExamSession {
+export function startExam(
+  lessonId: string,
+  scope: ExamScope,
+  minutes: number,
+  now = Date.now(),
+  opts: { allowReplay?: boolean } = {},
+): ExamSession {
   const session: ExamSession = {
     lessonId,
     scope,
@@ -74,6 +90,7 @@ export function startExam(lessonId: string, scope: ExamScope, minutes: number, n
     endsAt: now + minutes * 60_000,
     answers: {},
     flagged: {},
+    ...(scope === "listening" ? { allowReplay: opts.allowReplay === true, played: {} } : {}),
   };
   const store = read();
   store[lessonId] = session;
@@ -103,6 +120,12 @@ export function clearExamAnswer(lessonId: string, itemId: string): ExamSession |
   });
 }
 
+export function markExamPlayed(lessonId: string, unitId: string): ExamSession | null {
+  return update(lessonId, (s) => {
+    s.played = { ...(s.played ?? {}), [unitId]: true };
+  });
+}
+
 export function toggleExamFlag(lessonId: string, itemId: string): ExamSession | null {
   return update(lessonId, (s) => {
     if (s.flagged[itemId]) delete s.flagged[itemId];
@@ -110,11 +133,108 @@ export function toggleExamFlag(lessonId: string, itemId: string): ExamSession | 
   });
 }
 
+export type ExamHistoryEntry = {
+  lessonId: string;
+  scope: ExamScope;
+  minutes: number;
+  startedAt: number;
+  submittedAt: number;
+  total: number;
+  answered: number;
+  correct: number;
+  /** Every question with the pick and the right answer, so the sitting can be reviewed later. */
+  result?: ExamResult;
+};
+
+export const sittingKey = (e: { lessonId: string; startedAt: number }) => `${e.lessonId}:${e.startedAt}`;
+
+export function getExamHistory(): ExamHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(PAPER_EXAM_HISTORY_KEY);
+    const list = raw ? (JSON.parse(raw) as ExamHistoryEntry[]) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordExamHistory(entry: ExamHistoryEntry): void {
+  const list = getExamHistory().filter((e) => !(e.lessonId === entry.lessonId && e.startedAt === entry.startedAt));
+  list.unshift(entry);
+  const kept = list.slice(0, HISTORY_LIMIT).map((e, i) => (i < DETAIL_LIMIT || !e.result ? e : { ...e, result: undefined }));
+  try {
+    localStorage.setItem(PAPER_EXAM_HISTORY_KEY, JSON.stringify(kept));
+  } catch {
+    // Storage full: keep the score lines (and this sitting's detail) rather than lose the sitting altogether.
+    try {
+      localStorage.setItem(
+        PAPER_EXAM_HISTORY_KEY,
+        JSON.stringify(kept.map((e, i) => (i === 0 ? e : { ...e, result: undefined }))),
+      );
+    } catch {
+      /* storage blocked: the sitting just won't appear in the history */
+    }
+  }
+}
+
 export function finishExam(lessonId: string, result: ExamResult, now = Date.now()): ExamSession | null {
-  return update(lessonId, (s) => {
+  const done = update(lessonId, (s) => {
     s.submittedAt = now;
     s.result = result;
   });
+  if (done) {
+    recordExamHistory({
+      lessonId,
+      scope: done.scope,
+      minutes: done.minutes,
+      startedAt: done.startedAt,
+      submittedAt: now,
+      total: result.total,
+      answered: result.answered,
+      correct: result.correct,
+      result,
+    });
+  }
+  return done;
+}
+
+/** Keys (see sittingKey) of the submitted sittings whose result is still stored, so they can be opened. */
+export function reviewableSittings(history: ExamHistoryEntry[] = getExamHistory()): Set<string> {
+  const keys = new Set<string>();
+  for (const h of history) if (h.result) keys.add(sittingKey(h));
+  for (const s of Object.values(read())) if (s.submittedAt && s.result) keys.add(sittingKey(s));
+  return keys;
+}
+
+/** A submitted sitting of a lesson, the current one or one kept in the history; null when its detail is gone. */
+export function getExamSitting(lessonId: string, startedAt: number): ExamSession | null {
+  const current = getExam(lessonId);
+  if (current?.startedAt === startedAt && current.submittedAt && current.result) return current;
+  const h = getExamHistory().find((e) => e.lessonId === lessonId && e.startedAt === startedAt);
+  if (!h?.result) return null;
+  return {
+    lessonId,
+    scope: h.scope,
+    minutes: h.minutes,
+    startedAt,
+    endsAt: startedAt + h.minutes * 60_000,
+    answers: {},
+    flagged: {},
+    submittedAt: h.submittedAt,
+    result: h.result,
+  };
+}
+
+/** Every lesson's current sitting (running or just submitted). */
+export function listExams(): ExamSession[] {
+  return Object.values(read());
+}
+
+/** Sittings not yet submitted (even if the clock ran out: opening one submits it), the one that ends soonest first. */
+export function listRunningExams(): ExamSession[] {
+  return listExams()
+    .filter((s) => !s.submittedAt)
+    .sort((a, b) => a.endsAt - b.endsAt);
 }
 
 export function clearExam(lessonId: string): void {

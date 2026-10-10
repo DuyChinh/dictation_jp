@@ -78,7 +78,7 @@ describe("ExamSetup", () => {
       <MemoryRouter initialEntries={["/start"]}>
         <UiLanguageProvider>
           <Routes>
-            <Route path="/start" element={<ExamSetup lessonId="l" paper={paper} lessonLabel="JLPT N2 – 12/2025" />} />
+            <Route path="/start" element={<ExamSetup lessonId="l" paper={paper} listeningCount={0} lessonLabel="JLPT N2 – 12/2025" />} />
             <Route path="/lessons/l/paper/exam" element={<div>exam room</div>} />
           </Routes>
         </UiLanguageProvider>
@@ -118,7 +118,7 @@ describe("ExamSetup", () => {
 
   it("limits the sitting to the chosen part", () => {
     renderCard();
-    fireEvent.click(screen.getByRole("radio", { name: /Từ vựng/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^Từ vựng(?! -)/ }));
     fireEvent.click(screen.getByRole("button", { name: /Bắt đầu thi/ }));
     expect(getExam("l")?.scope).toBe("vocab");
   });

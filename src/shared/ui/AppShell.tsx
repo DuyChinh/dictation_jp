@@ -6,6 +6,7 @@ import { useUiLanguage } from "../i18n/UiLanguageContext";
 import type { TranslationKey, UiLang } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeProvider";
 import { Flag } from "./Flag";
+import { PRICING_READY } from "../../config/pricing";
 import { Icon, type IconName } from "./Icon";
 
 export type Crumb = { label: string; to?: string };
@@ -34,12 +35,20 @@ function loadCollapsed(): boolean {
   }
 }
 
-const NAV: Array<{ to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean }> = [
+type NavItem = { to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean };
+
+/** What the learner does: find a test, sit it, see how it went. */
+const NAV_LEARN: NavItem[] = [
   { to: "/", label: "nav.home", icon: "home", end: true },
   { to: "/lessons", label: "nav.practice", icon: "book" },
+  { to: "/exams", label: "nav.exams", icon: "clock" },
   { to: "/history", label: "nav.progress", icon: "chart" },
-  { to: "/pricing", label: "nav.pro", icon: "crown" },
+];
+
+/** Everything else: feedback, the plan page and support. */
+const NAV_MORE: NavItem[] = [
   { to: "/feedback", label: "nav.feedback", icon: "message" },
+  { to: "/pricing", label: "nav.pro", icon: "crown" },
   { to: "/donate", label: "nav.donate", icon: "heart", heart: true },
 ];
 
@@ -164,25 +173,32 @@ export function AppShell({
         </div>
 
         <nav className="shell-nav" aria-label={t("nav.main")}>
-          <span className="shell-nav__group">{t("nav.group")}</span>
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `shell-nav__item${item.heart ? " shell-nav__item--heart" : ""}${isActive ? " active" : ""}`
-              }
-              onClick={closeMenu}
-            >
-              <Icon name={item.icon} />
-              <span className="shell-nav__label">{t(item.label)}</span>
-            </NavLink>
+          {[
+            { group: t("nav.group"), items: NAV_LEARN },
+            { group: t("nav.group2"), items: NAV_MORE },
+          ].map(({ group, items }) => (
+            <div key={group} className="shell-nav__section">
+              <span className="shell-nav__group">{group}</span>
+              {items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `shell-nav__item${item.heart ? " shell-nav__item--heart" : ""}${isActive ? " active" : ""}`
+                  }
+                  onClick={closeMenu}
+                >
+                  <Icon name={item.icon} />
+                  <span className="shell-nav__label">{t(item.label)}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
         <div className="shell-sidebar__foot">
-          {pathname !== "/pricing" && (
+          {PRICING_READY && pathname !== "/pricing" && (
             <div className="upsell">
               <span className="upsell__title">{t("upsell.title")}</span>
               <span className="upsell__body">{t("upsell.body")}</span>

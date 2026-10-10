@@ -4,6 +4,8 @@ import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
 import { HistoryPage } from "../pages/HistoryPage";
 import { LessonsPage } from "../pages/LessonsPage";
+import { ExamRoomPage } from "../pages/ExamRoomPage";
+import { ExamHistoryPage } from "../pages/ExamHistoryPage";
 import { PricingPage } from "../pages/PricingPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { FeedbackPage } from "../pages/FeedbackPage";
@@ -15,6 +17,7 @@ import { PaperOverviewPage } from "../pages/PaperOverviewPage";
 import { PaperExamPage } from "../pages/PaperExamPage";
 import { PaperExamSetupPage } from "../pages/PaperExamSetupPage";
 import { PaperExamReviewPage } from "../pages/PaperExamReviewPage";
+import { PaperExamResultPage } from "../pages/PaperExamResultPage";
 import { ListeningResultPage } from "../pages/ListeningResultPage";
 import { AuthPage } from "../pages/AuthPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
@@ -63,6 +66,8 @@ export function AppRouter() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/lessons" element={<LessonsPage />} />
+                <Route path="/exams" element={<ExamRoomPage />} />
+                <Route path="/exams/history" element={<ExamHistoryPage />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
@@ -91,6 +96,10 @@ export function AppRouter() {
                 <Route
                   path="/lessons/:lessonId/paper/exam/setup"
                   element={<PaperExamSetupPage />}
+                />
+                <Route
+                  path="/lessons/:lessonId/paper/exam/result"
+                  element={<PaperExamResultPage />}
                 />
                 <Route
                   path="/lessons/:lessonId/paper/exam/review"

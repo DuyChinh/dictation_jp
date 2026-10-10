@@ -42,13 +42,14 @@ export type PaperItemResult = {
   stem_vi: string;
   summary_vi: string;
   point_tags: string[];
-  vocab: Array<{ word: string; reading?: string; meaning_vi: string }>;
+  vocab: Array<{ word: string; reading?: string; meaning_vi: string; sino_vi?: string }>;
   choices: Array<{
     id: string;
     text: string;
     correct: boolean;
     explanation_vi: string;
     meaning_vi?: string;
+    sino_vi?: string;
   }>;
   sort?: { slots: string[]; star_index: number };
   evidence_sentence_ids: string[];
@@ -109,13 +110,15 @@ export function evaluateTranslation(body: { lesson_id: string; sentence_id: stri
   });
 }
 
-export type ExamScope = PaperPart | "all";
+export type ExamScope = PaperPart | "all" | "listening";
 
 export type ExamItemResult = {
   item_id: string;
   no: number;
-  part: PaperPart;
+  part: PaperPart | "listening";
   mondai: number;
+  /** Listening only: the part (問題) the question belongs to, to open it in the listening practice. */
+  section_id?: string;
   selected: string | null;
   correct_choice_id: string | null;
   correct: boolean;
@@ -135,6 +138,17 @@ export function submitPaperExam(body: {
   answers: Array<{ item_id: string; choice_id: string }>;
 }) {
   return apiFetch<{ result: ExamResult }>("/api/evaluate/paper-exam", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Grade a timed listening sitting: one pick per question id, correct answers revealed only in the result. */
+export function submitListeningExam(body: {
+  lesson_id: string;
+  answers: Array<{ question_id: string; choice_id: string }>;
+}) {
+  return apiFetch<{ result: ExamResult }>("/api/evaluate/listening-exam", {
     method: "POST",
     body: JSON.stringify(body),
   });

@@ -13,7 +13,16 @@ import {
 } from "../../shared/storage/paperExamStore";
 import { PARTS, PART_KANJI, scopeTitle } from "./paperLabels";
 
-type Props = { lessonId: string; paper: PaperPractice; lessonLabel: string };
+type Props = {
+  lessonId: string;
+  /** The written part, when the lesson has one. */
+  paper: PaperPractice | null;
+  /** Listening questions available to sit (0 when the lesson has no listening part). */
+  listeningCount: number;
+  lessonLabel: string;
+  /** Part to select first, e.g. from a "take the listening test" link. */
+  initialScope?: ExamScope;
+};
 
 const isPreset = (m: number) => (PRESET_MINUTES as readonly number[]).includes(m);
 
@@ -31,17 +40,28 @@ function perQuestion(minutes: number | null, count: number): string {
 }
 
 /** Pick what to sit and for how long; a live exam slip shows what the sitting will be. */
-export function ExamSetup({ lessonId, paper, lessonLabel }: Props) {
+export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initialScope }: Props) {
   const { t } = useUiLanguage();
   const navigate = useNavigate();
-  const [scope, setScope] = useState<ExamScope>("all");
+  const available = (id: ExamScope): boolean => (id === "listening" ? listeningCount > 0 : !!paper);
+  const [scope, setScope] = useState<ExamScope>(() =>
+    initialScope && available(initialScope) ? initialScope : paper ? "all" : "listening",
+  );
+  const [allowReplay, setAllowReplay] = useState(false);
   const initial = lastMinutes();
   const [preset, setPreset] = useState<number | null>(isPreset(initial) ? initial : null);
   const [custom, setCustom] = useState(isPreset(initial) ? "" : String(initial));
 
   const minutes = preset ?? parseMinutes(custom);
   const customInvalid = preset === null && custom.trim() !== "" && parseMinutes(custom) === null;
-  const count = scope === "all" ? paper.items.length : paper.counts[scope];
+  const count =
+    scope === "listening"
+      ? listeningCount
+      : !paper
+        ? 0
+        : scope === "all"
+          ? paper.items.length
+          : paper.counts[scope];
   const running = getExam(lessonId);
   const unfinished = running && !running.submittedAt;
   const examHref = `/lessons/${encodeURIComponent(lessonId)}/paper/exam`;
@@ -49,14 +69,23 @@ export function ExamSetup({ lessonId, paper, lessonLabel }: Props) {
 
   function start() {
     if (minutes === null || count === 0) return;
-    startExam(lessonId, scope, minutes);
+    startExam(lessonId, scope, minutes, Date.now(), { allowReplay });
     navigate(examHref);
   }
 
   const scopes: Array<{ id: ExamScope; kanji: string; n: number }> = [
-    { id: "all", kanji: "全", n: paper.items.length },
-    ...PARTS.map((p) => ({ id: p as ExamScope, kanji: PART_KANJI[p], n: paper.counts[p] })),
+    ...(paper
+      ? [
+          { id: "all" as ExamScope, kanji: "全", n: paper.items.length },
+          ...PARTS.map((p) => ({ id: p as ExamScope, kanji: PART_KANJI[p], n: paper.counts[p] })),
+        ]
+      : []),
+    ...(listeningCount > 0 ? [{ id: "listening" as ExamScope, kanji: "聴", n: listeningCount }] : []),
   ];
+  const listening = scope === "listening";
+  const rules = listening
+    ? (["exam.listen.rule1", "exam.listen.rule2", "exam.listen.rule3"] as const)
+    : (["exam.rule1", "exam.rule2", "exam.rule3"] as const);
 
   return (
     <div className="exam-setup">
@@ -89,7 +118,7 @@ export function ExamSetup({ lessonId, paper, lessonLabel }: Props) {
                   className={`exam-scope${scope === s.id ? " is-on" : ""}`}
                   onClick={() => setScope(s.id)}
                 >
-                  <span className="exam-scope__kanji" aria-hidden="true">
+                  <span className="exam-scope__kanji" data-tone={s.id === "all" ? undefined : s.id} aria-hidden="true">
                     {s.kanji}
                   </span>
                   <span className="exam-scope__text">
@@ -146,8 +175,18 @@ export function ExamSetup({ lessonId, paper, lessonLabel }: Props) {
             </p>
           </fieldset>
 
+          {listening && (
+            <label className="exam-option">
+              <input type="checkbox" checked={allowReplay} onChange={(e) => setAllowReplay(e.target.checked)} />
+              <span>
+                <strong>{t("exam.listen.replayLabel")}</strong>
+                <small>{t("exam.listen.replayHint")}</small>
+              </span>
+            </label>
+          )}
+
           <ul className="exam-rules">
-            {(["exam.rule1", "exam.rule2", "exam.rule3"] as const).map((k, i) => (
+            {rules.map((k, i) => (
               <li key={k}>
                 <span aria-hidden="true">{["①", "②", "③"][i]}</span>
                 {t(k)}

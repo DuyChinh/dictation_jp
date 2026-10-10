@@ -9,7 +9,7 @@ import { useLesson } from "../shared/content/hooks";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import type { TranslationKey } from "../shared/i18n/translations";
-import { getExam } from "../shared/storage/paperExamStore";
+import { getExam, getExamSitting } from "../shared/storage/paperExamStore";
 import { getPaperProgress, saveSentence, type SentenceStatus } from "../shared/storage/paperProgressStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
@@ -36,10 +36,12 @@ export function PaperExamReviewPage() {
   const [evidence, setEvidence] = useState<Record<string, string[]>>({});
   const [sentences, setSentences] = useState<Record<string, SentenceStatus>>(() => getPaperProgress(lessonId).sentences);
 
-  const session = getExam(lessonId);
+  // An earlier sitting (opened from the history) is named by its start time; otherwise the lesson's latest one.
+  const sittingAt = Number(params.get("at")) || undefined;
+  const session = sittingAt ? getExamSitting(lessonId, sittingAt) : getExam(lessonId);
   const result = session?.submittedAt ? session.result : undefined;
   const base = `/lessons/${encodeURIComponent(lessonId)}`;
-  const examHref = `${base}/paper/exam`;
+  const examHref = sittingAt ? `${base}/paper/exam/result?at=${sittingAt}` : `${base}/paper/exam`;
   const fallback = (lesson && getLocalizedText(lesson.title, uiLang)) || lessonId;
 
   const requestedFilter = params.get("filter") as Filter | null;
@@ -68,7 +70,8 @@ export function PaperExamReviewPage() {
   const index = current ? shown.indexOf(current) : -1;
   const nextItem = shown[index + 1];
   const crumbs = [
-    { label: t("nav.practice"), to: "/lessons" },
+    { label: t("nav.exams"), to: "/exams" },
+    ...(sittingAt ? [{ label: t("exams.history"), to: "/exams/history" }] : []),
     { label: lessonShortTitle(lesson?.source, fallback), to: base },
     { label: t("exam.review.title") },
   ];
@@ -100,9 +103,13 @@ export function PaperExamReviewPage() {
       {paper && !result && (
         <div className="notice">
           <Icon name="clock" />
-          {t("exam.noSession")}
-          <Link to={`${examHref}/setup`} className="paper-soft" style={{ marginLeft: "auto" }}>
-            {t("exam.title")}
+          {sittingAt ? t("exams.sittingGone") : t("exam.noSession")}
+          <Link
+            to={sittingAt ? "/exams/history" : `${examHref}/setup`}
+            className="paper-soft"
+            style={{ marginLeft: "auto" }}
+          >
+            {sittingAt ? t("exams.history") : t("exam.title")}
           </Link>
         </div>
       )}

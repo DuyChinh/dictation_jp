@@ -17,3 +17,6 @@ export const PRICING = {
   paymentMethods: "",
   newTestsPolicy: "",
 };
+
+/** True once there is something to buy: before that the sales prompts (upsell card, Pro buttons) stay hidden. */
+export const PRICING_READY = Boolean(PRICING.monthlyPrice || PRICING.yearlyPrice || PRICING.upgradeUrl);

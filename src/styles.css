@@ -1,4 +1,4 @@
-/* Design tokens — "paper & indigo". Legacy names kept so existing components restyle. */
+/* Design tokens — "paper & azure". Legacy names kept so existing components restyle. */
 :root {
   --font-family: "Be Vietnam Pro", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-jp: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
@@ -14,40 +14,43 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
 
-  --bg-color: #f5f3ee;
-  --bg-gradient: #f5f3ee;
+  --bg-color: #f2f5fa;
+  --bg-gradient: #f2f5fa;
   --bg-card: #ffffff;
   --sidebar-bg: #ffffff;
-  --header-bg: #f5f3ee;
-  --header-border: #e3ded5;
+  --header-bg: #f2f5fa;
+  --header-border: #dce3ee;
   --card-bg: #ffffff;
-  --card-border: #e3ded5;
-  --card-shadow: 0 1px 2px rgba(22, 24, 29, 0.04);
-  --card-shadow-hover: 0 8px 24px rgba(22, 24, 29, 0.08);
-  --surface-2: #faf8f4;
-  --surface-3: #eeeae3;
+  --card-border: #dce3ee;
+  --card-shadow: 0 1px 2px rgba(20, 40, 80, 0.05);
+  --card-shadow-hover: 0 8px 24px rgba(20, 40, 80, 0.10);
+  --surface-2: #f5f7fb;
+  --surface-3: #e6ebf3;
 
-  --text-main: #16181d;
-  --ink-2: #3a3f48;
-  --text-muted: #5b616c;
-  --text-subtle: #6f747d;
+  --text-main: #0e1a2c;
+  --ink-2: #2e3b52;
+  --text-muted: #53617a;
+  --text-subtle: #5d6a82;
 
-  --primary-color: #2a4b9b;
-  --primary-hover: #213c7d;
-  --primary-light: #eaeef8;
-  --navy: #1e3a8a;
+  --primary-color: #1a73e8;
+  --primary-hover: #1259b8;
+  --primary-light: #e8f1fe;
+  --navy: #174ea6;
   --heart: #d6336c;
   --heart-soft: #fcebf1;
   --petal: #f6b8cb;
   /* Filled surfaces (buttons, selected pills) with --primary-text on them. */
-  --primary-fill: #2a4b9b;
-  --primary-fill-hover: #213c7d;
+  --primary-fill: #1a73e8;
+  --primary-fill-hover: #1566d3;
   --primary-text: #ffffff;
-  --ring: #c9d4ee;
+  --ring: #c3d9fb;
+  /* "Marked for review": filled like an answered dot, but in amber so the two never blur. */
+  --flag-fill: #fbbf24;
+  --flag-text: #3a2600;
 
-  --accent-color: #16181d;
-  --accent-light: #f0ede7;
-  --inverse-bg: #16181d;
+  --accent-color: #0e1a2c;
+  --accent-light: #eef2f8;
+  --inverse-bg: #0e1a2c;
   --inverse-text: #ffffff;
 
   --ok: #1b6e4c;
@@ -57,62 +60,73 @@
   --bad: #a8372b;
   --bad-soft: #f9e7e4;
 
-  --border-color: #e3ded5;
+  --border-color: #dce3ee;
   --input-bg: #ffffff;
-  --input-border: #d8d2c7;
-  --input-focus: #2a4b9b;
-  --input-text: #16181d;
+  --input-border: #cfd8e6;
+  --input-focus: #1a73e8;
+  --input-text: #0e1a2c;
 
   --page-btn-bg: #ffffff;
-  --page-btn-border: #d8d2c7;
-  --page-btn-text: #3a3f48;
-  --page-btn-active-bg: #2a4b9b;
+  --page-btn-border: #cfd8e6;
+  --page-btn-text: #2e3b52;
+  --page-btn-active-bg: #1a73e8;
   --page-btn-active-text: #ffffff;
 
-  --diff-equal: #16181d;
+  --diff-equal: #0e1a2c;
   --diff-added-bg: #e6f2ec;
   --diff-added-text: #1b6e4c;
   --diff-removed-bg: #f9e7e4;
   --diff-removed-text: #a8372b;
+
+  /* One colour per part of the exam, so cards can be told apart at a glance. */
+  --tone-listening: #1a73e8; --tone-listening-soft: #e8f1fe;
+  --tone-vocab: #0f766e;     --tone-vocab-soft: #e1f3f0;
+  --tone-grammar: #a35a00;   --tone-grammar-soft: #fbf1dc;
+  --tone-reading: #b4325f;   --tone-reading-soft: #fbe9ef;
+  --tone-dictation: #6a3fb5; --tone-dictation-soft: #efe8fa;
+  --cta-gradient: linear-gradient(135deg, #1a73e8, #1a73e8);
+  --hero-glow: radial-gradient(60% 80% at 85% 0%, rgba(26, 115, 232, 0.08), transparent 70%);
 }
 
-/* "Yoru" — indigo night. Light blue for text, focus and progress; deep indigo under white text. */
+/* Dark — slate night. Light azure for text, focus and progress; azure fill under white text. */
 [data-theme="dark"] {
-  --bg-color: #0d1220;
-  --bg-gradient: #0d1220;
-  --bg-card: #151c2d;
-  --sidebar-bg: #111727;
-  --header-bg: #0d1220;
-  --header-border: #28324b;
-  --card-bg: #151c2d;
-  --card-border: #28324b;
-  --card-shadow: none;
+  --bg-color: #0e131b;
+  --bg-gradient: #0e131b;
+  --bg-card: #151c27;
+  --sidebar-bg: #0a0f16;
+  --header-bg: #0e131b;
+  --header-border: #283245;
+  --card-bg: #151c27;
+  --card-border: #2a3548;
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.28);
   --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --surface-2: #1a2236;
-  --surface-3: #212a40;
+  --surface-2: #1b2330;
+  --surface-3: #243044;
 
-  --text-main: #e9edf6;
-  --ink-2: #c4cbdc;
-  --text-muted: #98a3bb;
-  --text-subtle: #8792ab;
+  --text-main: #e9eef6;
+  --ink-2: #c5cfdf;
+  --text-muted: #9aa7bb;
+  --text-subtle: #8794aa;
 
-  --primary-color: #a3b8ff;
-  --primary-hover: #bccbff;
-  --primary-light: rgba(163, 184, 255, 0.13);
+  --primary-color: #5aa2ff;
+  --primary-hover: #7db5ff;
+  --primary-light: rgba(90, 162, 255, 0.14);
   /* Lifted from true navy so it still reads on the dark background. */
-  --navy: #5b7ae0;
+  --navy: #3b82e8;
   --heart: #ff7aa2;
   --heart-soft: rgba(255, 122, 162, 0.14);
   --petal: rgba(255, 170, 196, 0.55);
-  --primary-fill: #4466d6;
-  --primary-fill-hover: #3a5bc9;
+  --primary-fill: #1a73e8;
+  --primary-fill-hover: #1566d3;
   --primary-text: #ffffff;
-  --ring: rgba(163, 184, 255, 0.35);
+  --ring: rgba(90, 162, 255, 0.45);
+  --flag-fill: #f6b93b;
+  --flag-text: #241800;
 
-  --accent-color: #e9edf6;
-  --accent-light: #1a2236;
-  --inverse-bg: #e9edf6;
-  --inverse-text: #0d1220;
+  --accent-color: #e9eef6;
+  --accent-light: #1b2330;
+  --inverse-bg: #e9eef6;
+  --inverse-text: #0b1018;
 
   --ok: #62d3a3;
   --ok-soft: rgba(98, 211, 163, 0.14);
@@ -121,23 +135,31 @@
   --bad: #ff9a8a;
   --bad-soft: rgba(255, 154, 138, 0.14);
 
-  --border-color: #28324b;
-  --input-bg: #151c2d;
-  --input-border: #3a4665;
-  --input-focus: #a3b8ff;
-  --input-text: #e9edf6;
+  --border-color: #2a3548;
+  --input-bg: #0f151e;
+  --input-border: #35425a;
+  --input-focus: #5aa2ff;
+  --input-text: #e9eef6;
 
-  --page-btn-bg: #151c2d;
-  --page-btn-border: #3a4665;
-  --page-btn-text: #c4cbdc;
-  --page-btn-active-bg: #4466d6;
+  --page-btn-bg: #151c27;
+  --page-btn-border: #35425a;
+  --page-btn-text: #c5cfdf;
+  --page-btn-active-bg: #1a73e8;
   --page-btn-active-text: #ffffff;
 
-  --diff-equal: #e9edf6;
+  --diff-equal: #e9eef6;
   --diff-added-bg: rgba(98, 211, 163, 0.14);
   --diff-added-text: #62d3a3;
   --diff-removed-bg: rgba(255, 154, 138, 0.14);
   --diff-removed-text: #ff9a8a;
+
+  --tone-listening: #5aa2ff; --tone-listening-soft: rgba(90, 162, 255, 0.15);
+  --tone-vocab: #5fd6c6;     --tone-vocab-soft: rgba(95, 214, 198, 0.14);
+  --tone-grammar: #f5c26b;   --tone-grammar-soft: rgba(245, 194, 107, 0.14);
+  --tone-reading: #ff8fb1;   --tone-reading-soft: rgba(255, 143, 177, 0.14);
+  --tone-dictation: #c3a6ff; --tone-dictation-soft: rgba(195, 166, 255, 0.15);
+  --cta-gradient: linear-gradient(135deg, #1a73e8, #1a73e8);
+  --hero-glow: radial-gradient(60% 80% at 85% 0%, rgba(58, 140, 255, 0.16), transparent 70%);
 }
 
 * {

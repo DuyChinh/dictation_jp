@@ -62,7 +62,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
       });
       // What was answered counts as progress in the normal practice screens too.
       for (const r of result.items) {
-        if (r.selected) saveAnswer(lessonId, r.item_id, { choiceId: r.selected, correct: r.correct, at: Date.now(), part: r.part });
+        if (r.selected && r.part !== "listening") saveAnswer(lessonId, r.item_id, { choiceId: r.selected, correct: r.correct, at: Date.now(), part: r.part });
       }
       const done = finishExam(lessonId, result);
       if (done) onChange(done);

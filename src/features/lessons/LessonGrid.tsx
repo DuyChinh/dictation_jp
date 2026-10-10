@@ -321,6 +321,8 @@ export function LessonGrid({
   onStatusChange,
   kind = "all",
   onKindChange,
+  limit,
+  newestFirst = false,
 }: {
   lessons: LessonSummary[];
   loading: boolean;
@@ -333,12 +335,16 @@ export function LessonGrid({
   onStatusChange?: (status: StatusFilter) => void;
   kind?: KindFilter;
   onKindChange?: (kind: KindFilter) => void;
+  /** Show only the first few lessons (the home page's "latest" row). */
+  limit?: number;
+  /** Order by sitting, newest first, ignoring what was practised last. */
+  newestFirst?: boolean;
 }) {
   const { t, uiLang } = useUiLanguage();
   const { level } = useLevel();
   const activity = useLessonActivity();
   const view = useLessonView();
-  const sorted = useMemo(() => sortLessons(lessons, activity), [lessons, activity]);
+  const sorted = useMemo(() => sortLessons(lessons, newestFirst ? {} : activity), [lessons, activity, newestFirst]);
   const progress = useMemo(() => progressFor(lessons), [lessons]);
 
   if (loading) return <div className="notice">{t("home.loading")}</div>;
@@ -366,7 +372,8 @@ export function LessonGrid({
   const matching = kind === "all" ? inLevel : inLevel.filter((l) => lessonKind(l.source) === kind);
   const counts: Record<StatusFilter, number> = { all: matching.length, todo: 0, doing: 0, done: 0 };
   for (const l of matching) counts[progress[l.id]!.status] += 1;
-  const shown = status === "all" ? matching : matching.filter((l) => progress[l.id]!.status === status);
+  const allShown = status === "all" ? matching : matching.filter((l) => progress[l.id]!.status === status);
+  const shown = limit ? allShown.slice(0, limit) : allShown;
   const filtered = searching || status !== "all" || kind !== "all";
 
   const tabs = onKindChange && (
@@ -426,7 +433,7 @@ export function LessonGrid({
               <LessonCard key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
             ),
           )}
-          {!filtered && (
+          {!filtered && (!limit || shown.length === 0) && (
             <div className="coming-card">
               <strong>{shown.length === 0 ? t("home.empty") : t("home.comingTitle")}</strong>
               <span>{t("home.comingBody")}</span>

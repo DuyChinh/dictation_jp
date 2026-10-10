@@ -1,0 +1,235 @@
+/*
+ * Navigation, home, exam room and part colours. Loaded after ui.css and paper.css so it can refine them.
+ * Colour tokens (--tone-*, --cta-gradient, --hero-glow) live in styles.css, one set per theme.
+ */
+
+/* ---- Sidebar: two groups, the second set apart ---- */
+.shell-nav__section { display: flex; flex-direction: column; gap: 4px; }
+.shell-nav__section + .shell-nav__section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--card-border); }
+[data-theme="dark"] .shell-sidebar { box-shadow: 1px 0 0 var(--card-border); }
+/* The current page is a solid block of the brand colour, not a faint tint. */
+.shell-nav__item.active,
+.shell-nav__item.active:hover { background: var(--primary-fill); color: var(--primary-text); font-weight: 600; }
+.shell-nav__item.active svg { color: inherit; }
+[data-theme="dark"] .shell-nav__item.active { box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35); }
+
+/* ---- Part colours: one hue per part of the exam ---- */
+[data-tone="listening"] { --tone: var(--tone-listening); --tone-soft: var(--tone-listening-soft); }
+[data-tone="vocab"] { --tone: var(--tone-vocab); --tone-soft: var(--tone-vocab-soft); }
+[data-tone="grammar"] { --tone: var(--tone-grammar); --tone-soft: var(--tone-grammar-soft); }
+[data-tone="reading"] { --tone: var(--tone-reading); --tone-soft: var(--tone-reading-soft); }
+[data-tone="dictation"] { --tone: var(--tone-dictation); --tone-soft: var(--tone-dictation-soft); }
+.part-card__kanji[data-tone],
+.preview__kanji[data-tone],
+.exam-scope__kanji[data-tone] { background: var(--tone-soft); color: var(--tone); }
+.part-card:has([data-tone="listening"]) { --tone: var(--tone-listening); }
+.part-card:has([data-tone="vocab"]) { --tone: var(--tone-vocab); }
+.part-card:has([data-tone="grammar"]) { --tone: var(--tone-grammar); }
+.part-card:has([data-tone="reading"]) { --tone: var(--tone-reading); }
+.part-card:has([data-tone="dictation"]) { --tone: var(--tone-dictation); }
+.part-card:has([data-tone]) .progress > span { background: var(--tone); }
+.part-card:has([data-tone]) { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.part-card:has([data-tone]):hover { border-color: var(--tone); }
+
+/* ---- Home ---- */
+.hero { position: relative; isolation: isolate; }
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -32px 0 -24px;
+  z-index: -1;
+  border-radius: 32px;
+  background: var(--hero-glow);
+  pointer-events: none;
+}
+.hero__cta .btn--primary { background: var(--cta-gradient); }
+.hero__cta .btn--primary:hover:not(:disabled) { background: var(--cta-gradient); filter: brightness(1.08); }
+[data-theme="dark"] .hero__cta .btn--primary { box-shadow: 0 8px 24px rgba(26, 115, 232, 0.35); }
+
+.level-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px dashed var(--input-border);
+  max-width: 520px;
+}
+.level-ask__q { font-size: 15px; font-weight: 600; }
+.level-ask__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.level-ask__chips button {
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--card-border);
+  background: var(--surface-2);
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.level-ask__chips button:hover { border-color: var(--input-border); }
+.level-ask__chips button[aria-pressed="true"] { background: var(--primary-fill); border-color: var(--primary-fill); color: var(--primary-text); }
+.level-ask__hint { font-size: 13px; color: var(--text-muted); }
+
+.resume--exam .resume__icon { background: var(--primary-light); color: var(--primary-color); }
+
+.path-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 40px; }
+.path-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  color: var(--text-main);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.path-card:hover { transform: translateY(-2px); border-color: var(--tone); box-shadow: var(--card-shadow-hover); color: var(--text-main); }
+.path-card--practice { --tone: var(--tone-vocab); --tone-soft: var(--tone-vocab-soft); }
+.path-card--exam { --tone: var(--primary-color); --tone-soft: var(--primary-light); }
+.path-card--dictation { --tone: var(--tone-dictation); --tone-soft: var(--tone-dictation-soft); }
+.path-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--tone-soft);
+  color: var(--tone);
+}
+.path-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.path-card__text strong { font-size: 16px; }
+.path-card__text span { font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
+.path-card > svg:last-child { color: var(--text-subtle); flex-shrink: 0; }
+
+/* ---- Exam room ---- */
+.exam-running {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary-color);
+}
+.exam-running__icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--card-bg); color: var(--primary-color); }
+.exam-running__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.exam-running__left { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.exam-running__left.is-over { color: var(--bad); }
+.exam-running .btn { flex-shrink: 0; }
+
+.exam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.exam-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 3px solid var(--primary-color);
+  box-shadow: var(--card-shadow);
+}
+.exam-pick__top { display: flex; align-items: center; justify-content: space-between; }
+.exam-pick__parts { font-size: 14px; letter-spacing: 0.2em; color: var(--text-muted); }
+.exam-pick__title { margin: 0; font-size: 20px; font-weight: 700; }
+.exam-pick__title a { color: inherit; }
+.exam-pick__meta { margin: 0; font-size: 13.5px; color: var(--text-muted); }
+.exam-pick__last { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
+.exam-pick__last.is-empty { color: var(--text-muted); }
+.exam-pick__last span { color: var(--text-muted); }
+.exam-pick__actions { margin-top: auto; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 10px; }
+.exam-history__empty { margin: 0; padding: 20px 24px; }
+
+/* ---- Exam room: the listening test ---- */
+.exam-entry__ctas { display: flex; flex-direction: column; gap: 10px; }
+.exam-entry__cta--alt { background: transparent; color: var(--text-main); border: 1.5px solid var(--acc); }
+.exam-entry__cta--alt:hover { background: var(--acc-soft); color: var(--text-main); filter: none; }
+
+.exam-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--card-border);
+  background: var(--card-bg);
+  cursor: pointer;
+}
+.exam-option input { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; accent-color: var(--primary-fill); }
+.exam-option span { display: flex; flex-direction: column; gap: 2px; }
+.exam-option strong { font-size: 15px; }
+.exam-option small { font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+
+.exam-listen__where { margin-right: auto; margin-left: 12px; font-weight: 600; }
+.exam-listen__where small { font-weight: 400; color: var(--text-muted); }
+.exam-audio {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--primary-light);
+  border: 1.5px solid var(--card-border);
+  margin-bottom: 8px;
+}
+.exam-audio.is-playing { border-color: var(--primary-color); }
+.exam-audio__icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--primary-fill); color: var(--primary-text); }
+.exam-audio.is-playing .exam-audio__icon { animation: exam-audio-pulse 1.4s ease-in-out infinite; }
+.exam-audio__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.exam-audio__bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.exam-audio__bar span { display: block; height: 100%; background: var(--primary-color); transition: width 0.25s linear; }
+.exam-audio__body small { font-size: 13px; color: var(--text-muted); }
+@keyframes exam-audio-pulse { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .exam-audio.is-playing .exam-audio__icon { animation: none; } }
+
+/* ---- Progress page: sittings ---- */
+.empty--inline { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 4px 0; }
+.empty--inline p { margin: 0; color: var(--text-muted); }
+.exam-scores { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.exam-scores li { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--surface-3); }
+.exam-scores li:first-child { border-top: 0; }
+.exam-scores__name { flex: 1; min-width: 0; font-weight: 600; }
+.exam-scores__score { display: flex; align-items: baseline; gap: 10px; }
+.exam-scores__score strong { font-size: 18px; }
+.exam-scores__score span { font-size: 13px; color: var(--text-muted); }
+.exam-scores__all { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; }
+
+/* ---- Lesson page: the per-問題 table folds away ---- */
+.parts-fold { margin-top: 8px; }
+.parts-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  list-style: none;
+}
+.parts-fold > summary::-webkit-details-marker { display: none; }
+.parts-fold > summary > span { display: flex; flex-direction: column; gap: 2px; }
+.parts-fold > summary strong { font-size: 16px; }
+.parts-fold > summary small { font-size: 13px; color: var(--text-muted); }
+.parts-fold > summary svg { flex-shrink: 0; color: var(--text-muted); transition: transform 0.15s ease; }
+.parts-fold[open] > summary svg { transform: rotate(90deg); }
+.parts-fold > .parts { margin-top: 12px; }
+
+@media (max-width: 900px) {
+  .path-grid { grid-template-columns: 1fr; }
+  .exam-running { flex-wrap: wrap; }
+  .exam-running .btn { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .path-card, .parts-fold > summary svg, .part-card { transition: none !important; }
+  .path-card:hover { transform: none; }
+}

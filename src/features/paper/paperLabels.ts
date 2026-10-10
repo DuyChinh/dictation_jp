@@ -70,5 +70,6 @@ import type { ExamScope } from "../../shared/api/paper";
 
 /** Display name of the part (or the whole written part) an exam sitting covers. */
 export function scopeTitle(scope: ExamScope, t: (key: never) => string): string {
+  if (scope === "listening") return t("exam.scope.listening" as never);
   return scope === "all" ? t("exam.scope.all" as never) : t(`paper.title.${scope}` as never);
 }

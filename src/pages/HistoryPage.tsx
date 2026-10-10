@@ -7,6 +7,8 @@ import type { UiLang } from "../shared/i18n/translations";
 import { getAllDictationProgress, syncProgressOverviewFromServer } from "../shared/storage/dictationProgressStore";
 import { getAllListeningAnswers } from "../shared/storage/listeningScoreStore";
 import { getLessonActivity } from "../shared/storage/lessonActivityStore";
+import { getExamHistory } from "../shared/storage/paperExamStore";
+import { getPaperProgress } from "../shared/storage/paperProgressStore";
 import { sortLessons } from "../features/lessons/lessonSearch";
 import { fmt } from "../shared/i18n/format";
 import {
@@ -153,7 +155,9 @@ export function HistoryPage() {
           const answers = Object.values(listening[l.id] ?? {});
           const right = answers.filter((a) => a.correct).length;
           const total = l.counts.dictation_segments || 1;
+          const written = Object.keys(getPaperProgress(l.id).answers).length;
           return {
+            written,
             id: l.id,
             label: lessonShortTitle(l.source, l.id),
             done,
@@ -164,7 +168,7 @@ export function HistoryPage() {
             pct: Math.min(100, Math.round((done / total) * 100)),
           };
         })
-        .filter((l) => l.done > 0 || l.review > 0 || l.answered > 0),
+        .filter((l) => l.done > 0 || l.review > 0 || l.answered > 0 || l.written > 0),
     [lessons, progress, listening],
   );
 
@@ -186,6 +190,7 @@ export function HistoryPage() {
     return l ? lessonShortTitle(l.source, fallback) : fallback || id;
   };
 
+  const examHistory = useMemo(() => getExamHistory(), []);
   const badges = badgesFor(totals, accuracy);
   const kpis = [
     { label: t("history.kpiCorrect"), value: String(totals.correct), note: `${totals.attempts} ${t("history.kpiAttempts")}` },
@@ -256,6 +261,11 @@ export function HistoryPage() {
                   <span>
                     {t("lesson.dictationTitle")} {l.done}/{l.total}
                   </span>
+                  {l.written > 0 && (
+                    <span>
+                      {t("history.written")} {l.written}
+                    </span>
+                  )}
                   {l.answered > 0 && (
                     <span>
                       {t("listening.title")} {fmt(t("history.listeningRight"), { right: l.right, answered: l.answered })}
@@ -272,6 +282,41 @@ export function HistoryPage() {
           )}
         </section>
       </div>
+
+      <section className="panel card-pad" style={{ marginBottom: 16 }}>
+        <div className="card-pad__head">
+          <h2>{t("history.exams")}</h2>
+          <span>{t("history.examsSub")}</span>
+        </div>
+        {examHistory.length === 0 ? (
+          <div className="empty empty--inline">
+            <p>{t("history.examsEmpty")}</p>
+            <Link to="/exams" className="btn btn--primary btn--sm">
+              {t("history.examsCta")}
+            </Link>
+          </div>
+        ) : (
+          <ul className="exam-scores">
+            {examHistory.slice(0, 5).map((h) => (
+              <li key={`${h.lessonId}-${h.startedAt}`}>
+                <span className="exam-scores__name">{lessonName(h.lessonId, h.lessonId)}</span>
+                <span className="exam-scores__date muted">
+                  {new Date(h.submittedAt).toLocaleDateString(uiLang === "ja" ? "ja-JP" : uiLang === "en" ? "en-GB" : "vi-VN")}
+                </span>
+                <span className="exam-scores__score tabular">
+                  <strong>{h.correct}/{h.total}</strong>
+                  <span>{h.total ? Math.round((h.correct / h.total) * 100) : 0}%</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {examHistory.length > 0 && (
+          <Link to="/exams" className="exam-scores__all">
+            {t("history.examsCta")} →
+          </Link>
+        )}
+      </section>
 
       <section className="panel card-pad" style={{ marginBottom: 16 }}>
         <div className="card-pad__head">
