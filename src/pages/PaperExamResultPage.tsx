@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ExamResultView } from "../features/paper/ExamResultView";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useLesson, usePractice } from "../shared/content/hooks";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
-import { clearExam, getExam, getExamSitting, type ExamSession } from "../shared/storage/paperExamStore";
+import { clearExam, getExam, getExamSitting, syncExamHistoryFromServer, type ExamSession } from "../shared/storage/paperExamStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
@@ -37,7 +37,15 @@ export function PaperExamResultPage() {
   const { t, uiLang } = useUiLanguage();
   const { lesson } = useLesson(lessonId);
   const startedAt = Number(params.get("at")) || 0;
-  const session = useMemo(() => (startedAt ? getExamSitting(lessonId, startedAt) : null), [lessonId, startedAt]);
+  const [session, setSession] = useState(() => (startedAt ? getExamSitting(lessonId, startedAt) : null));
+
+  useEffect(() => {
+    if (startedAt && !session) {
+      void syncExamHistoryFromServer().then(() => {
+        setSession(getExamSitting(lessonId, startedAt));
+      });
+    }
+  }, [lessonId, startedAt, session]);
   const listening = session?.scope === "listening";
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;

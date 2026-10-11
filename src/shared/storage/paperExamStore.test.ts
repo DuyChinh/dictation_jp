@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearExam,
   finishExam,
@@ -13,6 +13,7 @@ import {
   reviewableSittings,
   setExamAnswer,
   startExam,
+  syncExamHistoryFromServer,
   toggleExamFlag,
 } from "./paperExamStore";
 
@@ -132,6 +133,63 @@ describe("reviewing past sittings", () => {
     expect(history[29]!.result).toBeDefined();
     expect(history[30]!.result).toBeUndefined();
     expect(reviewableSittings().size).toBe(30);
+  });
+
+  it("keeps the detail of all sittings without the 30-entry limit when logged in", () => {
+    localStorage.setItem("token", "test-token");
+    for (let i = 0; i < 35; i++) {
+      startExam(`l${i}`, "all", 40, 1_000 + i);
+      finishExam(`l${i}`, result(1), 2_000 + i);
+      clearExam(`l${i}`);
+    }
+    const history = getExamHistory();
+    expect(history).toHaveLength(35);
+    expect(history[0]!.result).toBeDefined();
+    expect(history[30]!.result).toBeDefined();
+    expect(history[34]!.result).toBeDefined();
+    expect(reviewableSittings().size).toBe(35);
+  });
+
+  it("syncs exam history from server and merges with local storage", async () => {
+    localStorage.setItem("token", "test-token");
+    const serverSittings = [
+      {
+        lessonId: "serv1",
+        scope: "all" as const,
+        minutes: 40,
+        startedAt: 1000,
+        submittedAt: 5000,
+        total: 10,
+        answered: 10,
+        correct: 8,
+        result: result(8),
+      },
+      {
+        lessonId: "serv2",
+        scope: "vocab" as const,
+        minutes: 20,
+        startedAt: 2000,
+        submittedAt: 6000,
+        total: 10,
+        answered: 10,
+        correct: 9,
+        result: result(9),
+      },
+    ];
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: serverSittings }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const synced = await syncExamHistoryFromServer();
+    expect(synced).toHaveLength(2);
+    expect(synced[0]!.lessonId).toBe("serv2"); // sorted newest to oldest (submittedAt: 6000 > 5000)
+    expect(synced[1]!.lessonId).toBe("serv1");
+    expect(getExamHistory()).toHaveLength(2);
+
+    vi.unstubAllGlobals();
   });
 });
 

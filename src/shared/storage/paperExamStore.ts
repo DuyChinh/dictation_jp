@@ -1,4 +1,5 @@
 import type { ExamResult, ExamScope } from "../api/paper";
+import { apiUrl } from "../env";
 
 /**
  * A timed sitting of a lesson's written part ("phòng thi"). The deadline is a timestamp, so a
@@ -158,22 +159,51 @@ export function getExamHistory(): ExamHistoryEntry[] {
   }
 }
 
+function token(): string | null {
+  try {
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
+}
+
 function recordExamHistory(entry: ExamHistoryEntry): void {
   const list = getExamHistory().filter((e) => !(e.lessonId === entry.lessonId && e.startedAt === entry.startedAt));
   list.unshift(entry);
-  const kept = list.slice(0, HISTORY_LIMIT).map((e, i) => (i < DETAIL_LIMIT || !e.result ? e : { ...e, result: undefined }));
+  const isUser = Boolean(token());
+  // When not logged in (guest): keep up to DETAIL_LIMIT (30) with per-question results.
+  // When logged in: no artificial limit on details or history; DB stores everything, and local cache keeps as much as fits.
+  const kept = isUser
+    ? list
+    : list.slice(0, HISTORY_LIMIT).map((e, i) => (i < DETAIL_LIMIT || !e.result ? e : { ...e, result: undefined }));
   try {
     localStorage.setItem(PAPER_EXAM_HISTORY_KEY, JSON.stringify(kept));
   } catch {
-    // Storage full: keep the score lines (and this sitting's detail) rather than lose the sitting altogether.
+    // Storage full: keep the score lines (and recent sittings' detail) rather than lose the sitting altogether.
     try {
       localStorage.setItem(
         PAPER_EXAM_HISTORY_KEY,
-        JSON.stringify(kept.map((e, i) => (i === 0 ? e : { ...e, result: undefined }))),
+        JSON.stringify(kept.map((e, i) => (i < DETAIL_LIMIT || !e.result ? e : { ...e, result: undefined }))),
       );
     } catch {
       /* storage blocked: the sitting just won't appear in the history */
     }
+  }
+}
+
+/** Sends one exam sitting to the account in DB; resolves false when offline or refused. */
+export async function uploadExamHistory(entry: ExamHistoryEntry): Promise<boolean> {
+  const t = token();
+  if (!t) return true;
+  try {
+    const res = await fetch(apiUrl("/api/progress/exam-history"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+      body: JSON.stringify(entry),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -183,7 +213,7 @@ export function finishExam(lessonId: string, result: ExamResult, now = Date.now(
     s.result = result;
   });
   if (done) {
-    recordExamHistory({
+    const entry: ExamHistoryEntry = {
       lessonId,
       scope: done.scope,
       minutes: done.minutes,
@@ -193,9 +223,53 @@ export function finishExam(lessonId: string, result: ExamResult, now = Date.now(
       answered: result.answered,
       correct: result.correct,
       result,
-    });
+    };
+    recordExamHistory(entry);
+    void uploadExamHistory(entry);
   }
   return done;
+}
+
+/**
+ * Sync exam history from server for logged-in user.
+ * The server returns history sorted from newest to oldest without limit.
+ */
+export async function syncExamHistoryFromServer(): Promise<ExamHistoryEntry[]> {
+  const t = token();
+  if (!t) return getExamHistory();
+
+  try {
+    const res = await fetch(apiUrl("/api/progress/exam-history"), {
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.history)) {
+        const serverList: ExamHistoryEntry[] = data.history;
+        const local = getExamHistory();
+        const serverKeys = new Set(serverList.map((h) => sittingKey(h)));
+        const unuploaded = local.filter((h) => !serverKeys.has(sittingKey(h)));
+        for (const item of unuploaded) {
+          void uploadExamHistory(item);
+        }
+        const merged = [...unuploaded, ...serverList].sort((a, b) => b.submittedAt - a.submittedAt);
+        try {
+          localStorage.setItem(PAPER_EXAM_HISTORY_KEY, JSON.stringify(merged));
+        } catch {
+          try {
+            localStorage.setItem(
+              PAPER_EXAM_HISTORY_KEY,
+              JSON.stringify(merged.map((e, i) => (i < DETAIL_LIMIT || !e.result ? e : { ...e, result: undefined }))),
+            );
+          } catch {}
+        }
+        return merged;
+      }
+    }
+  } catch {
+    // fallback to local
+  }
+  return getExamHistory();
 }
 
 /** Keys (see sittingKey) of the submitted sittings whose result is still stored, so they can be opened. */

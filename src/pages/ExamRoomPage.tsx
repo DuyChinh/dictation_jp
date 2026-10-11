@@ -15,6 +15,7 @@ import {
   getExamHistory,
   listRunningExams,
   reviewableSittings,
+  syncExamHistoryFromServer,
   type ExamHistoryEntry,
   type ExamSession,
 } from "../shared/storage/paperExamStore";
@@ -60,10 +61,17 @@ export function ExamRoomPage() {
   const { t, uiLang } = useUiLanguage();
   const { level } = useLevel();
   const { lessons, loading, error } = useLessonList();
-  const [history] = useState<ExamHistoryEntry[]>(getExamHistory);
-  const [reviewable] = useState(() => reviewableSittings(history));
+  const [history, setHistory] = useState<ExamHistoryEntry[]>(getExamHistory);
+  const [reviewable, setReviewable] = useState(() => reviewableSittings(history));
   const [running] = useState<ExamSession[]>(listRunningExams);
   const now = useNow(running.length > 0);
+
+  useEffect(() => {
+    void syncExamHistoryFromServer().then((synced) => {
+      setHistory(synced);
+      setReviewable(reviewableSittings(synced));
+    });
+  }, []);
 
   // In the URL so coming back from an exam keeps the search and filters.
   const [params, setParams] = useSearchParams();

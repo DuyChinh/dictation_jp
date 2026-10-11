@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PassageStage } from "../features/paper/PassageStage";
 import { PaperItemCard } from "../features/paper/PaperItemCard";
@@ -9,7 +9,7 @@ import { useLesson } from "../shared/content/hooks";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import type { TranslationKey } from "../shared/i18n/translations";
-import { getExam, getExamSitting } from "../shared/storage/paperExamStore";
+import { getExam, getExamSitting, syncExamHistoryFromServer } from "../shared/storage/paperExamStore";
 import { getPaperProgress, saveSentence, type SentenceStatus } from "../shared/storage/paperProgressStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
@@ -38,7 +38,16 @@ export function PaperExamReviewPage() {
 
   // An earlier sitting (opened from the history) is named by its start time; otherwise the lesson's latest one.
   const sittingAt = Number(params.get("at")) || undefined;
-  const session = sittingAt ? getExamSitting(lessonId, sittingAt) : getExam(lessonId);
+  const [session, setSession] = useState(() => (sittingAt ? getExamSitting(lessonId, sittingAt) : getExam(lessonId)));
+
+  useEffect(() => {
+    if (sittingAt && !session) {
+      void syncExamHistoryFromServer().then(() => {
+        setSession(getExamSitting(lessonId, sittingAt));
+      });
+    }
+  }, [lessonId, sittingAt, session]);
+
   const result = session?.submittedAt ? session.result : undefined;
   const base = `/lessons/${encodeURIComponent(lessonId)}`;
   const examHref = sittingAt ? `${base}/paper/exam/result?at=${sittingAt}` : `${base}/paper/exam`;

@@ -7,7 +7,7 @@ import type { UiLang } from "../shared/i18n/translations";
 import { getAllDictationProgress, syncProgressOverviewFromServer } from "../shared/storage/dictationProgressStore";
 import { getAllListeningAnswers } from "../shared/storage/listeningScoreStore";
 import { getLessonActivity } from "../shared/storage/lessonActivityStore";
-import { getExamHistory } from "../shared/storage/paperExamStore";
+import { getExamHistory, syncExamHistoryFromServer } from "../shared/storage/paperExamStore";
 import { getPaperProgress } from "../shared/storage/paperProgressStore";
 import { sortLessons } from "../features/lessons/lessonSearch";
 import { fmt } from "../shared/i18n/format";
@@ -85,6 +85,7 @@ export function HistoryPage() {
   const { t, uiLang } = useUiLanguage();
   const [stats, setStats] = useState<UserOverallStats>(() => getUserStats());
   const [history, setHistory] = useState<PracticeSessionItem[]>(() => getPracticeHistory());
+  const [examHistory, setExamHistory] = useState(() => getExamHistory());
   const { lessons } = useLessonList();
 
   // Bumped once the account's data is merged in, so the figures below are read again.
@@ -92,12 +93,15 @@ export function HistoryPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([syncHistoryFromServer(), syncProgressOverviewFromServer()]).then(([res]) => {
-      if (cancelled) return;
-      setStats(res.stats);
-      setHistory(res.history);
-      setSynced((n) => n + 1);
-    });
+    void Promise.all([syncHistoryFromServer(), syncProgressOverviewFromServer(), syncExamHistoryFromServer()]).then(
+      ([res, _overview, examList]) => {
+        if (cancelled) return;
+        setStats(res.stats);
+        setHistory(res.history);
+        if (examList) setExamHistory(examList);
+        setSynced((n) => n + 1);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -190,7 +194,6 @@ export function HistoryPage() {
     return l ? lessonShortTitle(l.source, fallback) : fallback || id;
   };
 
-  const examHistory = useMemo(() => getExamHistory(), []);
   const badges = badgesFor(totals, accuracy);
   const kpis = [
     { label: t("history.kpiCorrect"), value: String(totals.correct), note: `${totals.attempts} ${t("history.kpiAttempts")}` },

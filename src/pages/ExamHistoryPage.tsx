@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ExamHistoryTable, useExamLabel } from "../features/paper/ExamHistoryTable";
 import { filterHistory } from "../features/paper/examHistoryFilter";
@@ -7,7 +7,7 @@ import { scopeTitle } from "../features/paper/paperLabels";
 import type { ExamScope } from "../shared/api/paper";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
-import { getExamHistory, reviewableSittings } from "../shared/storage/paperExamStore";
+import { getExamHistory, reviewableSittings, syncExamHistoryFromServer } from "../shared/storage/paperExamStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
@@ -17,8 +17,15 @@ const SCOPES: ExamScope[] = ["all", "vocab", "grammar", "reading", "listening"];
 export function ExamHistoryPage() {
   const { t } = useUiLanguage();
   const { lessons } = useLessonList();
-  const [history] = useState(getExamHistory);
-  const [reviewable] = useState(() => reviewableSittings(history));
+  const [history, setHistory] = useState(getExamHistory);
+  const [reviewable, setReviewable] = useState(() => reviewableSittings(history));
+
+  useEffect(() => {
+    void syncExamHistoryFromServer().then((synced) => {
+      setHistory(synced);
+      setReviewable(reviewableSittings(synced));
+    });
+  }, []);
   // In the URL so going back from a result keeps the search and filters.
   const [params, setParams] = useSearchParams();
   const query = params.get("q") ?? "";

@@ -5,6 +5,12 @@ import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistorySto
 import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
 import { LISTENING_ATTEMPTS_KEY, getAllListeningAttempts, uploadListeningAttempt } from "./listeningAttemptStore";
+import {
+  PAPER_EXAM_KEY,
+  PAPER_EXAM_HISTORY_KEY,
+  getExamHistory,
+  syncExamHistoryFromServer,
+} from "./paperExamStore";
 
 /**
  * Practice data in this browser belongs either to a guest or to one account.
@@ -24,6 +30,8 @@ const PRACTICE_KEYS = [
   LISTENING_ATTEMPTS_KEY,
   RESUME_KEY,
   LESSON_ACTIVITY_KEY,
+  PAPER_EXAM_KEY,
+  PAPER_EXAM_HISTORY_KEY,
 ];
 
 /** Rows per import request, to stay well under the server's request size limit. */
@@ -66,16 +74,19 @@ function collectGuestData() {
     lesson_id: lessonId,
     last_active_at: at,
   }));
-  return { dictation, listening, activity, sessions: getPracticeHistory() };
+  return { dictation, listening, activity, sessions: getPracticeHistory(), examHistory: getExamHistory() };
 }
 
 async function importGuestData(token: string): Promise<boolean> {
-  const { dictation, listening, activity, sessions } = collectGuestData();
+  const { dictation, listening, activity, sessions, examHistory } = collectGuestData();
   const batches: Record<string, unknown>[] = [];
   for (let i = 0; i < dictation.length; i += CHUNK) batches.push({ dictation: dictation.slice(i, i + CHUNK) });
   for (let i = 0; i < listening.length; i += CHUNK) batches.push({ listening: listening.slice(i, i + CHUNK) });
   if (activity.length) batches.push({ activity: activity.slice(0, 500) });
   if (sessions.length) batches.push({ sessions: sessions.slice(0, 50) });
+  if (examHistory.length) {
+    for (let i = 0; i < examHistory.length; i += 100) batches.push({ examHistory: examHistory.slice(i, i + 100) });
+  }
 
   try {
     for (const batch of batches) {
@@ -112,6 +123,7 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
     if (localStorage.getItem(PENDING_IMPORT_KEY) === userId && (await importGuestData(token))) {
       localStorage.removeItem(PENDING_IMPORT_KEY);
     }
+    void syncExamHistoryFromServer();
     return;
   }
 
@@ -124,4 +136,5 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
   }
 
   localStorage.setItem(OWNER_KEY, userId);
+  void syncExamHistoryFromServer();
 }
