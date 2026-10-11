@@ -252,7 +252,19 @@ export async function syncExamHistoryFromServer(): Promise<ExamHistoryEntry[]> {
         for (const item of unuploaded) {
           void uploadExamHistory(item);
         }
-        const merged = [...unuploaded, ...serverList].sort((a, b) => b.submittedAt - a.submittedAt);
+        const localByKey = new Map(local.map((h) => [sittingKey(h), h]));
+        const mergedServer = serverList.map((serverItem) => {
+          if (!serverItem.result) {
+            const loc = localByKey.get(sittingKey(serverItem));
+            if (loc?.result) {
+              const enriched = { ...serverItem, result: loc.result };
+              void uploadExamHistory(enriched);
+              return enriched;
+            }
+          }
+          return serverItem;
+        });
+        const merged = [...unuploaded, ...mergedServer].sort((a, b) => b.submittedAt - a.submittedAt);
         try {
           localStorage.setItem(PAPER_EXAM_HISTORY_KEY, JSON.stringify(merged));
         } catch {

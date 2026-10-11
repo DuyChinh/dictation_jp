@@ -191,6 +191,39 @@ describe("reviewing past sittings", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("preserves local result detail when server sitting entry lacks result", async () => {
+    localStorage.setItem("token", "test-token");
+    startExam("s-preserve", "vocab", 20, 1000);
+    finishExam("s-preserve", result(10), 2000);
+    expect(getExamHistory()[0]?.result).toBeDefined();
+
+    // Server returns the same sitting, but without result detail
+    const serverSittings = [
+      {
+        lessonId: "s-preserve",
+        scope: "vocab" as const,
+        minutes: 20,
+        startedAt: 1000,
+        submittedAt: 2000,
+        total: 10,
+        answered: 10,
+        correct: 10,
+      },
+    ];
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: serverSittings }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const synced = await syncExamHistoryFromServer();
+    expect(synced[0]?.result).toBeDefined();
+    expect(getExamHistory()[0]?.result).toBeDefined();
+
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("listRunningExams", () => {
