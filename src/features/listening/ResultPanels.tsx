@@ -1,7 +1,10 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LocalizedText } from "../../shared/content/getLocalizedText";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import type { SupportLang } from "../../shared/content/languageSettings";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { SegmentPlayer } from "../../shared/audio/SegmentPlayer";
+import type { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { Icon } from "../../shared/ui/Icon";
 
 export function ExplanationPanel({
@@ -70,6 +73,95 @@ function translationLines(
   });
 }
 
+function splitSentences(text: string): string[] {
+  const sents: string[] = [];
+  let cur = "";
+  let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    cur += ch;
+    if (ch === "“" || ch === "”" || ch === "\"" || ch === "「" || ch === "」") {
+      inQuote = !inQuote;
+    }
+    if (!inQuote && (ch === "." || ch === "?" || ch === "!")) {
+      const nextChar = text[i + 1];
+      if (ch === "." && nextChar && /\d/.test(nextChar)) {
+        continue;
+      }
+      if (i === text.length - 1 || /\s/.test(nextChar ?? "")) {
+        sents.push(cur.trim());
+        cur = "";
+      }
+    }
+  }
+  if (cur.trim()) {
+    sents.push(cur.trim());
+  }
+  return sents.filter(Boolean);
+}
+
+function resolveLineTranslations(
+  segments: DialogueSegment[],
+  dialogue: LocalizedText | null | undefined,
+  lang: SupportLang,
+): string[] {
+  const direct = segments.map((s) => (usable(s.text[lang] ?? "") ? s.text[lang]!.trim() : ""));
+  if (direct.every((t) => !!t)) {
+    return direct;
+  }
+
+  const full = dialogue && usable(dialogue[lang] ?? "") ? dialogue[lang]!.trim() : "";
+  if (!full) return direct;
+
+  const lines = full.split("\n").map((l) => l.trim()).filter(Boolean);
+  const turns: Array<{ speaker_id: string; segments: Array<{ seg: DialogueSegment; sIdx: number }> }> = [];
+  for (let sIdx = 0; sIdx < segments.length; sIdx++) {
+    const seg = segments[sIdx]!;
+    const last = turns[turns.length - 1];
+    if (last && last.speaker_id === seg.speaker_id) {
+      last.segments.push({ seg, sIdx });
+    } else {
+      turns.push({ speaker_id: seg.speaker_id, segments: [{ seg, sIdx }] });
+    }
+  }
+
+  const result = [...direct];
+
+  if (lines.length === turns.length) {
+    for (let tIdx = 0; tIdx < turns.length; tIdx++) {
+      const turn = turns[tIdx]!;
+      const lineText = lines[tIdx]!.replace(/^[^:：]+[:：]\s*/, "").trim();
+      if (turn.segments.length === 1) {
+        const sIdx = turn.segments[0]!.sIdx;
+        if (!result[sIdx]) result[sIdx] = lineText;
+      } else {
+        const sents = splitSentences(lineText);
+        if (sents.length === turn.segments.length) {
+          for (let i = 0; i < sents.length; i++) {
+            const sIdx = turn.segments[i]!.sIdx;
+            if (!result[sIdx]) result[sIdx] = sents[i]!;
+          }
+        } else {
+          for (let i = 0; i < turn.segments.length; i++) {
+            const sIdx = turn.segments[i]!.sIdx;
+            if (!result[sIdx]) {
+              result[sIdx] = sents[i] || lineText;
+            }
+          }
+        }
+      }
+    }
+  } else if (lines.length === segments.length) {
+    for (let i = 0; i < segments.length; i++) {
+      if (!result[i]) {
+        result[i] = lines[i]!.replace(/^[^:：]+[:：]\s*/, "").trim();
+      }
+    }
+  }
+
+  return result;
+}
+
 /**
  * Whole dialogue: each line in Japanese with its translation under it, coloured by speaker.
  * Lines in `evidenceIds` carry the answer and are highlighted green; lines in `wrongIds` are what
@@ -85,6 +177,10 @@ export function DialoguePanel({
   evidenceIds,
   wrongIds,
   onPlayLine,
+  audio,
+  audioRange,
+  showPlayer = true,
+  defaultShowTranslations = false,
 }: {
   segments: DialogueSegment[];
   speakers: Array<{ id: string; label: LocalizedText }>;
@@ -93,15 +189,114 @@ export function DialoguePanel({
   evidenceIds?: readonly string[];
   wrongIds?: readonly string[];
   onPlayLine?: (fromMs: number, toMs: number) => void;
+  audio?: ReturnType<typeof useAudioEngine>;
+  audioRange?: { startMs: number; endMs: number } | null;
+  showPlayer?: boolean;
+  defaultShowTranslations?: boolean;
 }) {
   const { t } = useUiLanguage();
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const activeLineRef = useRef<HTMLLIElement | null>(null);
+
+  const lineTranslations = useMemo(
+    () => resolveLineTranslations(segments, dialogue, lang),
+    [segments, dialogue, lang],
+  );
+
+  const [expandedTrIndices, setExpandedTrIndices] = useState<Set<number>>(() => {
+    if (defaultShowTranslations) {
+      return new Set(segments.map((_, i) => i));
+    }
+    return new Set();
+  });
+
+  const hasAnyTr = useMemo(() => lineTranslations.some((tr) => !!tr), [lineTranslations]);
+  const allExpanded = hasAnyTr && segments.every((_, i) => !lineTranslations[i] || expandedTrIndices.has(i));
+
+  const toggleLineTr = (i: number) => {
+    setExpandedTrIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  const toggleAllTr = () => {
+    if (allExpanded) {
+      setExpandedTrIndices(new Set());
+    } else {
+      setExpandedTrIndices(new Set(segments.map((_, i) => i)));
+    }
+  };
+
+  useEffect(() => {
+    if (!audio?.engine) return;
+    const eng = audio.engine;
+    const update = () => {
+      setNowMs(eng.getCurrentTimeMs());
+      setIsPlaying(eng.getState() === "playing");
+    };
+    update();
+    const id = setInterval(update, 80);
+    return () => clearInterval(id);
+  }, [audio, audio?.state]);
+
+  const activeSegmentIndex = useMemo(() => {
+    if (nowMs == null) return -1;
+    for (let i = 0; i < segments.length; i++) {
+      const s = segments[i]!;
+      if (s.start_ms == null || s.end_ms == null) continue;
+      if (nowMs >= s.start_ms && nowMs < s.end_ms) {
+        return i;
+      }
+      const next = segments[i + 1];
+      if (
+        nowMs >= s.end_ms &&
+        ((next && next.start_ms != null && nowMs < next.start_ms) ||
+          (!next && nowMs <= s.end_ms + 1200))
+      ) {
+        return i;
+      }
+    }
+    return -1;
+  }, [nowMs, segments]);
+
+  useEffect(() => {
+    if (activeSegmentIndex >= 0 && isPlaying && activeLineRef.current) {
+      if (typeof activeLineRef.current.scrollIntoView === "function") {
+        activeLineRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [activeSegmentIndex, isPlaying]);
+
+  const handleLineClick = (s: DialogueSegment) => {
+    if (s.start_ms == null) return;
+    if (audio && audioRange) {
+      void audio.playFrom(audioRange, s.start_ms).catch(() => undefined);
+    } else if (onPlayLine && s.end_ms != null) {
+      onPlayLine(s.start_ms, s.end_ms);
+    }
+  };
+
+  const handlePlayLineOnly = (e: React.MouseEvent, s: DialogueSegment) => {
+    e.stopPropagation();
+    if (s.start_ms == null || s.end_ms == null) return;
+    if (onPlayLine) {
+      onPlayLine(s.start_ms, s.end_ms);
+    } else if (audio) {
+      void audio.playSegment({ startMs: s.start_ms, endMs: s.end_ms }).catch(() => undefined);
+    }
+  };
+
   const labelOf = (id: string) => {
     const s = speakers.find((x) => x.id === id);
     return getLocalizedText(s?.label, "ja") || id;
   };
-  // Only the requested language: getLocalizedText would fall back to Japanese or "—".
-  const lineTr = (text: LocalizedText) => (usable(text[lang] ?? "") ? text[lang]!.trim() : "");
-  const hasLineTr = segments.some((s) => lineTr(s.text));
   const full = dialogue && usable(dialogue[lang] ?? "") ? dialogue[lang]!.trim() : "";
   const evidence = new Set(evidenceIds ?? []);
   const wrong = new Set((wrongIds ?? []).filter((id) => !evidence.has(id)));
@@ -112,68 +307,160 @@ export function DialoguePanel({
 
   return (
     <section className="dialogue" aria-label="Transcript">
-      {evidenceIds && (
-        <div className="seg-legend dialogue__legend" aria-label={t("listening.legendMarks")}>
-          <span>
-            <i className="i-ok" />
-            {t("listening.legendAnswerLine")}
-          </span>
-          <span>
-            <i className="i-bad" />
-            {t("listening.legendWrongLine")}
-          </span>
+      {audio && audioRange && showPlayer && (
+        <div className="dialogue__player-wrap">
+          <SegmentPlayer
+            audio={audio}
+            range={audioRange}
+            onReplay={() => void audio.playSegment(audioRange).catch(() => undefined)}
+            clock="relative"
+            seekKeys
+          />
         </div>
       )}
+
+      <div className="dialogue__toolbar">
+        {evidenceIds ? (
+          <div className="seg-legend dialogue__legend" aria-label={t("listening.legendMarks")}>
+            <span>
+              <i className="i-ok" />
+              {t("listening.legendAnswerLine")}
+            </span>
+            <span>
+              <i className="i-bad" />
+              {t("listening.legendWrongLine")}
+            </span>
+          </div>
+        ) : <div />}
+        {hasAnyTr && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--xs dialogue__toggle-all"
+            onClick={toggleAllTr}
+            title={allExpanded ? t("listening.hideAllTranslations") : t("listening.showAllTranslations")}
+          >
+            <Icon name="globe" size={14} />
+            <span>{allExpanded ? t("listening.hideAllTranslations") : t("listening.showAllTranslations")}</span>
+          </button>
+        )}
+      </div>
+
       <ol className="dialogue__lines">
         {segments.map((s, i) => {
-          const tr = lineTr(s.text);
+          const tr = lineTranslations[i];
+          const isExpanded = expandedTrIndices.has(i);
           const who = labelOf(s.speaker_id);
           const mark = markOf(s.id);
           const timed = s.start_ms != null && s.end_ms != null;
+          const isActive = activeSegmentIndex === i;
+          const canPlay = timed && (!!audio || !!onPlayLine);
           return (
             <li
               key={s.id ?? i}
-              className={`dialogue__line${mark === "answer" ? " is-answer" : mark === "wrong" ? " is-wrong" : ""}`}
+              ref={isActive ? activeLineRef : null}
+              className={`dialogue__line${mark === "answer" ? " is-answer" : mark === "wrong" ? " is-wrong" : ""}${isActive ? " is-active" : ""}${canPlay ? " dialogue__line--interactive" : ""}`}
               data-tone={speakerTone(s.speaker_id, who, order)}
+              onClick={canPlay ? () => handleLineClick(s) : undefined}
+              title={canPlay ? t("listening.playFromLine") : undefined}
+              tabIndex={canPlay ? 0 : undefined}
+              role={canPlay ? "button" : undefined}
+              onKeyDown={
+                canPlay
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleLineClick(s);
+                      }
+                    }
+                  : undefined
+              }
             >
               <strong className="dialogue__who jp">{who}</strong>
               <div className="dialogue__text">
+                {isActive && (
+                  <span className="dialogue__active-pill">
+                    <Icon name="volume" size={13} />
+                    {isPlaying ? t("listening.nowPlaying") : t("dictation.pause")}
+                  </span>
+                )}
                 {mark === "answer" && <span className="dialogue__badge">{t("listening.answerHere")}</span>}
                 {mark === "wrong" && (
                   <span className="dialogue__badge dialogue__badge--wrong">{t("listening.wrongHere")}</span>
                 )}
                 <span className="jp">{getLocalizedText(s.text, "ja")}</span>
-                {tr && <span className="dialogue__tr">{tr}</span>}
+                {isExpanded && tr && (
+                  <div
+                    className="dialogue__tr-box"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="dialogue__tr-badge">
+                      <Icon name="globe" size={11} />
+                      {lang === "vi" ? "VI" : "EN"}
+                    </span>
+                    <span className="dialogue__tr-text">{tr}</span>
+                    <button
+                      type="button"
+                      className="dialogue__tr-box-close"
+                      aria-label={t("listening.hideLineTranslation")}
+                      title={t("listening.hideLineTranslation")}
+                      onClick={() => toggleLineTr(i)}
+                    >
+                      <Icon name="close" size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
-              {onPlayLine && timed && (
-                <button
-                  type="button"
-                  className="icon-btn icon-btn--round dialogue__play"
-                  style={{ width: 34, height: 34 }}
-                  aria-label={t("listening.playLine")}
-                  title={t("listening.playLine")}
-                  onClick={() => onPlayLine(s.start_ms!, s.end_ms!)}
-                >
-                  <Icon name="play" size={14} />
-                </button>
-              )}
+              <div className="dialogue__actions" onClick={(e) => e.stopPropagation()}>
+                {tr && (
+                  <button
+                    type="button"
+                    className={`icon-btn icon-btn--round dialogue__tr-btn${isExpanded ? " is-active" : ""}`}
+                    style={{ width: 34, height: 34 }}
+                    aria-label={isExpanded ? t("listening.hideLineTranslation") : t("listening.showLineTranslation")}
+                    title={isExpanded ? t("listening.hideLineTranslation") : t("listening.showLineTranslation")}
+                    aria-expanded={isExpanded}
+                    onClick={() => toggleLineTr(i)}
+                  >
+                    <span className="dialogue__tr-btn-label">
+                      {lang === "vi" ? "VI" : "EN"}
+                    </span>
+                  </button>
+                )}
+                {canPlay && (
+                  <button
+                    type="button"
+                    className={`icon-btn icon-btn--round dialogue__play${isActive && isPlaying ? " is-playing" : ""}`}
+                    style={{ width: 34, height: 34 }}
+                    aria-label={t("listening.playLine")}
+                    title={t("listening.playLine")}
+                    onClick={(e) => handlePlayLineOnly(e, s)}
+                  >
+                    <Icon name={isActive && isPlaying ? "pause" : "play"} size={14} />
+                  </button>
+                )}
+              </div>
             </li>
           );
         })}
       </ol>
-      {!hasLineTr && full && (
-        <div className="dialogue__full">
-          <span className="eyebrow">{lang === "vi" ? "Bản dịch" : "Translation"}</span>
-          {fullLines ? (
-            fullLines.map((l, i) => (
-              <p key={i} className={`dialogue__trline${l.mark ? ` is-${l.mark}` : ""}`}>
-                {l.text}
-              </p>
-            ))
-          ) : (
-            <p>{full}</p>
-          )}
-        </div>
+      {full && (
+        <details className="dialogue__full-details">
+          <summary className="dialogue__full-summary">
+            <span className="eyebrow">{lang === "vi" ? "Xem toàn bộ bản dịch bài nghe" : "Full dialogue translation"}</span>
+            <Icon name="chevronRight" size={14} />
+          </summary>
+          <div className="dialogue__full-body">
+            {fullLines ? (
+              fullLines.map((l, i) => (
+                <p key={i} className={`dialogue__trline${l.mark ? ` is-${l.mark}` : ""}`}>
+                  {l.text}
+                </p>
+              ))
+            ) : (
+              <p>{full}</p>
+            )}
+          </div>
+        </details>
       )}
     </section>
   );

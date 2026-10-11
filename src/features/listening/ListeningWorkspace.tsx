@@ -448,6 +448,8 @@ export function ListeningWorkspace({
             </div>
             {showDialogue && (
               <DialoguePanel
+                audio={audio}
+                audioRange={range}
                 segments={resultsByPart[primary.id]?.segments ?? primary.segments}
                 speakers={practice.speakers}
                 dialogue={primary.dialogue_translation}
@@ -460,7 +462,6 @@ export function ListeningWorkspace({
                   if (!r || r.correct) return [];
                   return r.choices.find((c) => c.id === r.selected_choice_id)?.evidence_segment_ids ?? [];
                 })}
-                onPlayLine={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
               />
             )}
           </section>

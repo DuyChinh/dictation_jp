@@ -108,6 +108,294 @@
 .path-card__text span { font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
 .path-card > svg:last-child { color: var(--text-subtle); flex-shrink: 0; }
 
+/* ---- Dictation Spotlight Section on Home ---- */
+.dict-spotlight {
+  margin-bottom: 48px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(232, 241, 254, 0.55) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  padding: 32px 36px;
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="dark"] .dict-spotlight {
+  background: linear-gradient(135deg, rgba(26, 41, 66, 0.6) 0%, rgba(15, 23, 42, 0.85) 100%);
+}
+
+.dict-spotlight__content {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.dict-spotlight__copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.dict-spotlight__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-color);
+  background: var(--primary-light);
+  padding: 4px 12px;
+  border-radius: 999px;
+  width: fit-content;
+  margin-bottom: 12px;
+}
+
+.dict-spotlight__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+
+.dict-spotlight__sub {
+  font-size: 14.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+
+.dict-spotlight__benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.dict-spotlight__benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.dict-spotlight__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dict-spotlight__benefit strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.dict-spotlight__benefit span {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dict-spotlight__action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Simulated interactive dictation card */
+.dict-preview-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 12px 32px rgba(20, 40, 80, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dict-preview-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.dict-preview-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: var(--primary-light);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.dict-preview-card__time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.dict-preview-card__audio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.dict-preview-card__play {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-fill);
+  color: var(--primary-text);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.dict-preview-card__wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  flex: 1;
+}
+
+.dict-preview-card__wave span {
+  width: 4px;
+  border-radius: 2px;
+  background: var(--primary-color);
+  opacity: 0.8;
+  animation: wavePulse 1.2s ease-in-out infinite alternate;
+}
+.dict-preview-card__wave span:nth-child(2) { animation-delay: 0.15s; }
+.dict-preview-card__wave span:nth-child(3) { animation-delay: 0.3s; }
+.dict-preview-card__wave span:nth-child(4) { animation-delay: 0.45s; }
+.dict-preview-card__wave span:nth-child(5) { animation-delay: 0.2s; }
+.dict-preview-card__wave span:nth-child(6) { animation-delay: 0.35s; }
+.dict-preview-card__wave span:nth-child(7) { animation-delay: 0.5s; }
+.dict-preview-card__wave span:nth-child(8) { animation-delay: 0.25s; }
+
+@keyframes wavePulse {
+  0% { transform: scaleY(0.4); opacity: 0.4; }
+  100% { transform: scaleY(1); opacity: 0.95; }
+}
+
+.dict-preview-card__prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dict-preview-card__prompt .eyebrow {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dict-preview-card__prompt p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.dict-preview-card__input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--card-border);
+}
+
+.dict-preview-card__input .eyebrow {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dict-preview-card__tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dict-preview-card__tokens .token {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.dict-preview-card__tokens .token--ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.dict-preview-card__tokens .token--diff-bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+  text-decoration: line-through;
+}
+
+.dict-preview-card__tokens .token--diff-exp {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border: 1px dashed var(--primary-color);
+}
+
+.dict-preview-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.dict-preview-card__score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dict-preview-card__score .score-pill {
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--ok);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.dict-preview-card__hint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+@media (max-width: 900px) {
+  .dict-spotlight { padding: 24px; }
+  .dict-spotlight__content { grid-template-columns: 1fr; gap: 24px; }
+}
+
 /* ---- Exam room ---- */
 .exam-running {
   display: flex;

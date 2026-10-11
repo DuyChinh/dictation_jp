@@ -159,4 +159,15 @@ describe("Spike A — AudioEngine segment playback", () => {
     expect(engine.getCurrentTimeMs()).toBeLessThan(70_000);
     expect(engine.getState()).toBe("playing");
   });
+
+  it("plays from a specific timestamp inside range and sets activeRange to full range", async () => {
+    setup();
+    await engine.load("fake://long");
+    const range = { startMs: 60_000, endMs: 80_000 };
+    await engine.playFrom(range, 68_000);
+    expect(engine.getState()).toBe("playing");
+    expect(Math.round(fake.currentTime * 1000)).toBe(68_000);
+    expect(engine.getActiveRange()?.startMs).toBe(60_000);
+    expect(engine.getActiveRange()?.endMs).toBe(80_000);
+  });
 });

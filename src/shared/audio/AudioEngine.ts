@@ -99,6 +99,10 @@ export class AudioEngine {
     this.emit({ type: "ratechange", rate });
   }
 
+  getActiveRange(): SegmentRange | null {
+    return this.activeRange ? { ...this.activeRange } : null;
+  }
+
   getVolume(): number {
     return this.media.volume;
   }
@@ -218,6 +222,49 @@ export class AudioEngine {
   }
 
   /**
+   * Plays `range` starting from `fromMs` rather than `range.startMs`.
+   * Sets `activeRange` to `range` so that resume, pause, and seekInSegment operate on the whole range.
+   */
+  async playFrom(
+    range: SegmentRange,
+    fromMs: number,
+    opts?: { rate?: number },
+  ): Promise<void> {
+    this.ensureNotDisposed();
+    const gen = ++this.playGeneration;
+
+    this.stopEndMonitor();
+    this.media.pause();
+    this.segmentMode = "none";
+
+    if (opts?.rate != null) this.setPlaybackRate(opts.rate);
+
+    if (this.media.readyState < 1) {
+      await this.waitForMetadata();
+      if (gen !== this.playGeneration) return;
+    }
+
+    const durationMs = this.getDurationMs() ?? Number.POSITIVE_INFINITY;
+    const startMs = Math.max(0, range.startMs);
+    let endMs = Math.max(startMs + 1, range.endMs);
+    if (Number.isFinite(durationMs)) {
+      endMs = Math.min(endMs, durationMs);
+    }
+
+    this.activeRange = { startMs, endMs };
+    this.segmentMode = "playing_segment";
+
+    const seekTarget = Math.min(Math.max(fromMs, startMs), Math.max(startMs, endMs - this.endEpsilonMs - 20));
+    await this.seekMs(seekTarget);
+    if (gen !== this.playGeneration) return;
+
+    await this.media.play();
+    if (gen !== this.playGeneration) return;
+    this.setState("playing");
+    this.endMonitor = setInterval(() => this.checkSegmentEnd(), 15);
+  }
+
+  /**
    * Plays `range` from where it was paused. Starts over only when this range isn't the one
    * paused, or playback already reached its end.
    */
@@ -225,12 +272,18 @@ export class AudioEngine {
     this.ensureNotDisposed();
     const active = this.activeRange;
     const now = this.getCurrentTimeMs();
-    const sameRange = !!active && active.startMs === Math.max(0, range.startMs) && this.sameEnd(active, range);
-    const inside = sameRange && now >= active!.startMs && now < active!.endMs - this.endEpsilonMs - 50;
+    const durationMs = this.getDurationMs() ?? Number.POSITIVE_INFINITY;
+    const startMs = Math.max(0, range.startMs);
+    const endMs = Math.min(Math.max(startMs + 1, range.endMs), durationMs);
+    const sameEnd = !!active && this.sameEnd(active, range);
+    const inside =
+      (sameEnd || (now >= startMs && now < endMs)) &&
+      now < endMs - this.endEpsilonMs - 50;
     if (!inside || this.state === "ended") {
       await this.playSegment(range);
       return;
     }
+    this.activeRange = { startMs, endMs };
     const gen = ++this.playGeneration;
     this.stopEndMonitor();
     this.segmentMode = "playing_segment";

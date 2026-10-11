@@ -316,6 +316,20 @@ export function DictationWorkspace({
     return getSegmentTranslation(current.segment, current.question, uiLang);
   }, [current, uiLang]);
 
+  const questionRange = useMemo(() => {
+    const qAudio = current?.question.audio;
+    if (qAudio && qAudio.start_ms != null && qAudio.end_ms != null) {
+      return { startMs: qAudio.start_ms, endMs: qAudio.end_ms };
+    }
+    const segs = current?.question.segments.filter((s) => s.start_ms != null && s.end_ms != null) ?? [];
+    if (segs.length > 0) {
+      const minStart = Math.min(...segs.map((s) => s.start_ms!));
+      const maxEnd = Math.max(...segs.map((s) => s.end_ms!));
+      return { startMs: minStart, endMs: maxEnd };
+    }
+    return null;
+  }, [current?.question]);
+
   // Load audio when practice ready
   useEffect(() => {
     void audio.load(practice.audio_url).catch((e) => {
@@ -343,6 +357,7 @@ export function DictationWorkspace({
 
     if (current.segment.start_ms != null && current.segment.end_ms != null) {
       const timer = setTimeout(() => {
+        if (activeTab === "transcript") return;
         void audio
           .playSegment({
             startMs: current.segment.start_ms as number,
@@ -613,24 +628,27 @@ export function DictationWorkspace({
           </div>
         </div>
 
-        <SegmentPlayer
-          audio={audio}
-          range={
-            current.segment.start_ms != null && current.segment.end_ms != null
-              ? { startMs: current.segment.start_ms, endMs: current.segment.end_ms }
-              : null
-          }
-          onReplay={() => void onReplay()}
-        />
+        {activeTab === "dictation" && (
+          <SegmentPlayer
+            audio={audio}
+            range={
+              current.segment.start_ms != null && current.segment.end_ms != null
+                ? { startMs: current.segment.start_ms, endMs: current.segment.end_ms }
+                : null
+            }
+            onReplay={() => void onReplay()}
+          />
+        )}
 
         {activeTab === "transcript" ? (
           <section className="panel" style={{ padding: 24 }}>
             <DialoguePanel
+              audio={audio}
+              audioRange={questionRange}
               segments={current.question.segments}
               speakers={practice.speakers}
               dialogue={current.question.dialogue_translation}
               lang="vi"
-              onPlayLine={(from, to) => void audio.playSegment({ startMs: from, endMs: to }).catch(() => undefined)}
             />
           </section>
         ) : (

@@ -116,6 +116,117 @@ function StudyPaths({ dictationHref }: { dictationHref: string }) {
   );
 }
 
+/** Concise spotlight on the dictation method, showing its power and an interactive preview. */
+function DictationSpotlight({ dictationHref }: { dictationHref: string }) {
+  const { t } = useUiLanguage();
+  return (
+    <section className="dict-spotlight" aria-labelledby="dict-spot-title">
+      <div className="dict-spotlight__content">
+        <div className="dict-spotlight__copy">
+          <span className="dict-spotlight__eyebrow">
+            <Icon name="sparkles" size={15} />
+            {t("home.dictSpotEyebrow")}
+          </span>
+          <h2 id="dict-spot-title" className="dict-spotlight__title">
+            {t("home.dictSpotTitle")}
+          </h2>
+          <p className="dict-spotlight__sub">{t("home.dictSpotSub")}</p>
+
+          <div className="dict-spotlight__benefits">
+            <div className="dict-spotlight__benefit">
+              <span className="dict-spotlight__icon">
+                <Icon name="headphones" size={18} />
+              </span>
+              <div>
+                <strong>{t("home.dictBenefit1Title")}</strong>
+                <span>{t("home.dictBenefit1Desc")}</span>
+              </div>
+            </div>
+            <div className="dict-spotlight__benefit">
+              <span className="dict-spotlight__icon">
+                <Icon name="check" size={18} />
+              </span>
+              <div>
+                <strong>{t("home.dictBenefit2Title")}</strong>
+                <span>{t("home.dictBenefit2Desc")}</span>
+              </div>
+            </div>
+            <div className="dict-spotlight__benefit">
+              <span className="dict-spotlight__icon">
+                <Icon name="bulb" size={18} />
+              </span>
+              <div>
+                <strong>{t("home.dictBenefit3Title")}</strong>
+                <span>{t("home.dictBenefit3Desc")}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="dict-spotlight__action">
+            <Link to={dictationHref} className="btn btn--primary btn--lg">
+              <Icon name="headphones" size={18} />
+              {t("home.dictSpotCta")}
+              <Icon name="chevronRight" size={18} strokeWidth={2} />
+            </Link>
+          </div>
+        </div>
+
+        <div className="dict-spotlight__preview" aria-hidden="true">
+          <div className="dict-preview-card">
+            <div className="dict-preview-card__header">
+              <span className="dict-preview-card__badge">
+                <Icon name="headphones" size={14} />
+                {t("home.dictDemoBadge")}
+              </span>
+              <span className="dict-preview-card__time">JLPT N2 · 00:03 / 00:06</span>
+            </div>
+
+            <div className="dict-preview-card__audio">
+              <div className="dict-preview-card__play">
+                <Icon name="play" size={15} />
+              </div>
+              <div className="dict-preview-card__wave">
+                <span style={{ height: "45%" }} />
+                <span style={{ height: "75%" }} />
+                <span style={{ height: "100%" }} />
+                <span style={{ height: "60%" }} />
+                <span style={{ height: "90%" }} />
+                <span style={{ height: "40%" }} />
+                <span style={{ height: "80%" }} />
+                <span style={{ height: "55%" }} />
+              </div>
+            </div>
+
+            <div className="dict-preview-card__prompt">
+              <span className="eyebrow">{t("home.dictDemoAudioPrompt")}</span>
+              <p className="jp">「来週の会議の資料、もう準備できた？」</p>
+            </div>
+
+            <div className="dict-preview-card__input">
+              <span className="eyebrow">{t("home.dictDemoAudioDiff")}</span>
+              <div className="dict-preview-card__tokens">
+                <span className="token token--ok">らいしゅうの</span>
+                <span className="token token--ok">かいぎの</span>
+                <span className="token token--diff-bad">しりょ</span>
+                <span className="token token--diff-exp">しりょう</span>
+                <span className="token token--ok">もうできた</span>
+              </div>
+            </div>
+
+            <div className="dict-preview-card__footer">
+              <div className="dict-preview-card__score">
+                <span className="score-pill">95%</span>
+                <span>{t("home.dictDemoAccuracy")}</span>
+              </div>
+              <span className="dict-preview-card__hint">🎯 {t("home.dictDemoHint")}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Asked once, until a level is picked: the home page then points at tests of that level. */
 function LevelAsk() {
   const { t } = useUiLanguage();
@@ -264,6 +375,8 @@ export function HomePage() {
       )}
 
       <StudyPaths dictationHref={dictationHref} />
+
+      <DictationSpotlight dictationHref={dictationHref} />
 
       <section>
         <div className="section-head">

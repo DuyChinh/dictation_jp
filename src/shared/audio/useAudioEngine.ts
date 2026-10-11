@@ -64,6 +64,10 @@ export function useAudioEngine() {
       sequenceRef.current++;
       return getEngine()?.playSegment(range, opts) ?? Promise.resolve();
     },
+    playFrom: (range: SegmentRange, fromMs: number, opts?: { rate?: number }) => {
+      sequenceRef.current++;
+      return getEngine()?.playFrom(range, fromMs, opts) ?? Promise.resolve();
+    },
     /** Plays the ranges one after another; any other play, pause or seek cancels the rest. */
     playSequence: async (ranges: SegmentRange[]) => {
       const eng = getEngine();
