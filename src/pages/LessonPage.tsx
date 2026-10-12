@@ -101,27 +101,35 @@ export function LessonPage() {
 
   const paperCounts = lesson.paper?.counts;
   const cards: PartCardProps[] = [
-    {
-      key: "listening",
-      kanji: "聴",
-      tone: "listening",
-      title: t("lesson.listeningPart"),
-      desc: t("lesson.listeningPartDesc"),
-      done: listeningDone,
-      total: lesson.counts.questions,
-      href: `${base}/listening`,
-    },
-    {
-      key: "dictation",
-      kanji: "書",
-      tone: "dictation",
-      title: t("lesson.dictationTitle"),
-      desc: t("lesson.dictationDesc"),
-      done: correct,
-      total,
-      unit: t("lesson.sentencesUnit"),
-      href: resumeHref,
-    },
+    ...(lesson.counts.questions > 0
+      ? [
+          {
+            key: "listening",
+            kanji: "聴",
+            tone: "listening",
+            title: t("lesson.listeningPart"),
+            desc: t("lesson.listeningPartDesc"),
+            done: listeningDone,
+            total: lesson.counts.questions,
+            href: `${base}/listening`,
+          },
+        ]
+      : []),
+    ...(total > 0
+      ? [
+          {
+            key: "dictation",
+            kanji: "書",
+            tone: "dictation",
+            title: t("lesson.dictationTitle"),
+            desc: t("lesson.dictationDesc"),
+            done: correct,
+            total,
+            unit: t("lesson.sentencesUnit"),
+            href: resumeHref,
+          },
+        ]
+      : []),
     ...(paperCounts
       ? (["vocab", "grammar", "reading"] as const).map((part) => ({
           key: part,
@@ -191,76 +199,78 @@ export function LessonPage() {
         </div>
       </section>
 
-      <details className="parts-fold">
-        <summary>
-          <span>
-            <strong>{t("lesson.sectionsTitle")}</strong>
-            <small>{t("lesson.sectionsSub")}</small>
-          </span>
-          <Icon name="chevronRight" size={18} strokeWidth={2} />
-        </summary>
-        <div className="parts">
-          <div className="parts__row parts__row--head" aria-hidden="true">
-            <span>{t("lesson.colPart")}</span>
-            <span>{t("lesson.colType")}</span>
-            <span>{t("lesson.statQuestions")}</span>
-            <span>{t("lesson.statSegments")}</span>
-            <span>{t("lesson.colProgress")}</span>
-            <span />
-          </div>
-          {lesson.sections.map((s) => {
-            const type = partType(lesson.source, s.order);
-            const done = correctBySection[s.id] ?? 0;
-            const sPct = s.dictation_segment_count
-              ? Math.min(100, Math.round((done / s.dictation_segment_count) * 100))
-              : 0;
-            const q = `?section=${encodeURIComponent(s.id)}`;
-            const partNo = s.title.ja || `問題${s.order}`;
-            return (
-              <div key={s.id} className="parts__row">
-                <span className="parts__no">{partNo}</span>
-                <div className="parts__type">
-                  <strong>{type ? partLabel(type, uiLang) : getLocalizedText(s.title, uiLang)}</strong>
-                  {type && uiLang !== "ja" && <span>{type.ja}</span>}
-                </div>
-                <div className="parts__nums">
-                  <span className="parts__num">
-                    {s.question_count}
-                    <span className="parts__label"> {t("lesson.statQuestions").toLowerCase()}</span>
-                  </span>
-                  <span className="parts__num">
-                    {s.dictation_segment_count}
-                    <span className="parts__label"> {t("lesson.sentencesUnit")}</span>
-                  </span>
-                </div>
-                <div className="parts__progress">
-                  <div
-                    className="progress"
-                    role="progressbar"
-                    aria-label={`${partNo} ${t("lesson.colProgress")}`}
-                    aria-valuenow={sPct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  >
-                    <span style={{ width: `${sPct}%` }} />
+      {lesson.sections.length > 0 && (
+        <details className="parts-fold">
+          <summary>
+            <span>
+              <strong>{t("lesson.sectionsTitle")}</strong>
+              <small>{t("lesson.sectionsSub")}</small>
+            </span>
+            <Icon name="chevronRight" size={18} strokeWidth={2} />
+          </summary>
+          <div className="parts">
+            <div className="parts__row parts__row--head" aria-hidden="true">
+              <span>{t("lesson.colPart")}</span>
+              <span>{t("lesson.colType")}</span>
+              <span>{t("lesson.statQuestions")}</span>
+              <span>{t("lesson.statSegments")}</span>
+              <span>{t("lesson.colProgress")}</span>
+              <span />
+            </div>
+            {lesson.sections.map((s) => {
+              const type = partType(lesson.source, s.order);
+              const done = correctBySection[s.id] ?? 0;
+              const sPct = s.dictation_segment_count
+                ? Math.min(100, Math.round((done / s.dictation_segment_count) * 100))
+                : 0;
+              const q = `?section=${encodeURIComponent(s.id)}`;
+              const partNo = s.title.ja || `問題${s.order}`;
+              return (
+                <div key={s.id} className="parts__row">
+                  <span className="parts__no">{partNo}</span>
+                  <div className="parts__type">
+                    <strong>{type ? partLabel(type, uiLang) : getLocalizedText(s.title, uiLang)}</strong>
+                    {type && uiLang !== "ja" && <span>{type.ja}</span>}
                   </div>
-                  <span className="pct">{sPct}%</span>
+                  <div className="parts__nums">
+                    <span className="parts__num">
+                      {s.question_count}
+                      <span className="parts__label"> {t("lesson.statQuestions").toLowerCase()}</span>
+                    </span>
+                    <span className="parts__num">
+                      {s.dictation_segment_count}
+                      <span className="parts__label"> {t("lesson.sentencesUnit")}</span>
+                    </span>
+                  </div>
+                  <div className="parts__progress">
+                    <div
+                      className="progress"
+                      role="progressbar"
+                      aria-label={`${partNo} ${t("lesson.colProgress")}`}
+                      aria-valuenow={sPct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <span style={{ width: `${sPct}%` }} />
+                    </div>
+                    <span className="pct">{sPct}%</span>
+                  </div>
+                  <div className="parts__actions">
+                    <Link to={`${base}/dictation${q}`} className="btn btn--soft btn--sm">
+                      <Icon name="pencil" size={16} />
+                      {t("lesson.btnDictation")}
+                    </Link>
+                    <Link to={`${base}/listening${q}`} className="btn btn--muted btn--sm">
+                      <Icon name="headphones" size={16} />
+                      {t("lesson.btnListening")}
+                    </Link>
+                  </div>
                 </div>
-                <div className="parts__actions">
-                  <Link to={`${base}/dictation${q}`} className="btn btn--soft btn--sm">
-                    <Icon name="pencil" size={16} />
-                    {t("lesson.btnDictation")}
-                  </Link>
-                  <Link to={`${base}/listening${q}`} className="btn btn--muted btn--sm">
-                    <Icon name="headphones" size={16} />
-                    {t("lesson.btnListening")}
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </details>
+              );
+            })}
+          </div>
+        </details>
+      )}
     </AppShell>
   );
 }

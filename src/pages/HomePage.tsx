@@ -8,7 +8,7 @@ import { loadResume } from "../shared/storage/resumeStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
-import { lessonKind, lessonShortTitle, lessonSitting } from "../shared/content/lessonLabels";
+import { lessonKind, lessonLevel, lessonShortTitle, lessonSitting } from "../shared/content/lessonLabels";
 import {
   LessonGrid,
   LevelFilter,
@@ -17,7 +17,7 @@ import {
 } from "../features/lessons/LessonGrid";
 
 /** Static sample shown in the hero: the four parts of an exam and the 問題 each one covers. */
-function ExamPreview({ sitting }: { sitting: string }) {
+function ExamPreview({ levelLabel, sitting }: { levelLabel?: string; sitting: string }) {
   const { t } = useUiLanguage();
   const parts = [
     { kanji: "聴", tone: "listening", name: t("lesson.listeningPart"), range: "問題1 – 5" },
@@ -28,7 +28,7 @@ function ExamPreview({ sitting }: { sitting: string }) {
   return (
     <div className="preview" aria-hidden="true">
       <div className="preview__head">
-        <strong>JLPT N2</strong>
+        <strong>{levelLabel ? `JLPT ${levelLabel}` : "JLPT"}</strong>
         {sitting && <span className="tabular">{sitting}</span>}
       </div>
       <ul className="preview__parts">
@@ -276,7 +276,12 @@ export function HomePage() {
   const startLesson = inLevel.find((l) => lessonKind(l.source) === "exam") ?? inLevel[0];
   const previewLesson = inLevel.find((l) => l.paper) ?? startLesson;
   const startHref = startLesson ? `/lessons/${encodeURIComponent(startLesson.id)}` : "/lessons";
-  const dictationHref = startLesson ? `/lessons/${encodeURIComponent(startLesson.id)}/dictation` : "/lessons";
+  const dictationLesson =
+    inLevel.find((l) => l.counts.dictation_segments > 0) ??
+    lessons.find((l) => l.counts.dictation_segments > 0);
+  const dictationHref = dictationLesson
+    ? `/lessons/${encodeURIComponent(dictationLesson.id)}/dictation`
+    : "/lessons";
 
   return (
     <AppShell title={t("nav.home")}>
@@ -315,7 +320,10 @@ export function HomePage() {
             ))}
           </ul>
         </div>
-        <ExamPreview sitting={previewLesson ? lessonSitting(previewLesson.source) : ""} />
+        <ExamPreview
+          levelLabel={previewLesson ? lessonLevel(previewLesson.source) : level !== "ALL" ? level : "N2"}
+          sitting={previewLesson ? lessonSitting(previewLesson.source) : ""}
+        />
       </section>
 
       {runningExam ? (

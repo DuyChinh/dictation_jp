@@ -158,7 +158,9 @@ function statusLabelOf(status: LessonStatus, t: (k: TranslationKey) => string): 
 }
 
 function lessonParts(lesson: LessonSummary): number {
-  return lesson.paper ? 4 : 1;
+  if (lesson.paper && lesson.counts.questions > 0) return 4;
+  if (lesson.paper) return 3;
+  return 1;
 }
 
 function LessonCard({
