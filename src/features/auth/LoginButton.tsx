@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { useAuth, type User } from "./AuthContext";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
+import { useMyScore } from "../../shared/storage/myScoreStore";
+import { fmt } from "../../shared/i18n/format";
+import { formatPoints } from "../leaderboard/leaderboardUi";
 
 export function UserAvatar({ user, className = "account__avatar" }: { user: User; className?: string }) {
   const initial = user.displayName?.trim().charAt(0).toUpperCase() || "U";
@@ -23,7 +26,8 @@ export function planLabel(plan: string | undefined, freeLabel: string): string {
 /** Top-bar account area: log in / sign up when signed out, the user chip with its menu when signed in. */
 export function LoginButton() {
   const { user, logout, loading } = useAuth();
-  const { t } = useUiLanguage();
+  const { t, uiLang } = useUiLanguage();
+  const score = useMyScore(!!user);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +66,12 @@ export function LoginButton() {
             <span className="account__name">{user.displayName}</span>
             <span className={`account__plan${user.plan && user.plan !== "free" ? " is-paid" : ""}`}>
               {planLabel(user.plan, t("pricing.free"))}
+              {score && (
+                <span className="account__points">
+                  {" · "}
+                  {formatPoints(score.points, uiLang)} {t("lb.pointsUnit")}
+                </span>
+              )}
             </span>
           </span>
           <UserAvatar user={user} />
@@ -72,6 +82,17 @@ export function LoginButton() {
               <span className="account__menu-name">{user.displayName}</span>
               <span className="account__menu-email">{user.email}</span>
             </div>
+            {score && (
+              <Link to="/leaderboard" role="menuitem" className="account__menu-item account__menu-score" onClick={() => setOpen(false)}>
+                <Icon name="trophy" size={18} />
+                <span>
+                  <strong className="tabular">
+                    {formatPoints(score.points, uiLang)} {t("lb.pointsUnit")}
+                  </strong>
+                  <small>{fmt(t("lb.rankOf"), { rank: score.rank, total: score.total })}</small>
+                </span>
+              </Link>
+            )}
             <Link to="/profile" role="menuitem" className="account__menu-item" onClick={() => setOpen(false)}>
               <Icon name="user" size={18} />
               {t("profile.title")}

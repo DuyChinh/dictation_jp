@@ -199,8 +199,15 @@
 .paper-tile__text { font-size: 17px; font-weight: 500; line-height: 1.5; }
 .paper-sino { font-size: 12.5px; color: var(--text-muted); }
 .paper-sino b { color: var(--primary-color); font-weight: 700; letter-spacing: 0.04em; }
-.paper-tile__meaning { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.paper-tile__why { font-size: 13px; line-height: 1.55; color: var(--ink-2); white-space: pre-wrap; }
+/* The translation is what the learner reads first; the explanation sits quieter beneath it. */
+.paper-tile__meaning { font-size: 15px; line-height: 1.55; font-weight: 600; color: var(--text-main); }
+.paper-tile__why { margin-top: 2px; padding-top: 8px; border-top: 1px dashed var(--card-border); font-size: 12.5px; line-height: 1.55; color: var(--text-muted); white-space: pre-wrap; }
+.paper-tile__why b { color: var(--ink-2); font-weight: 600; }
+.paper-trans-label {
+  display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 6px; vertical-align: 1px;
+  background: var(--primary-light); color: var(--primary-color); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase;
+}
+.paper-stem-vi { margin: 0 0 6px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--primary-color); font-size: 16px; line-height: 1.6; font-weight: 600; color: var(--text-main); }
 .paper-tile.is-selected { border: 2px solid var(--primary-color); background: var(--primary-light); box-shadow: 0 0 0 3px var(--ring); }
 .paper-tile.is-selected .paper-tile__no { border-color: var(--primary-fill); background: var(--primary-fill); color: var(--primary-text); }
 .paper-tile.is-correct { border: 2px solid var(--ok); background: var(--ok-soft); }
@@ -221,8 +228,6 @@
 .paper-verdict.is-bad .paper-verdict__icon { background: var(--bad-soft); }
 .paper-remember { padding: 14px 18px; border-radius: 14px; background: var(--acc-soft); color: var(--text-main); font-size: 16px; }
 .paper-remember strong { color: var(--acc); }
-.paper-translation { font-size: 15px; color: var(--ink-2); }
-.paper-translation strong { color: var(--text-main); }
 .paper-sort__slots { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; }
 .paper-sort__slots li { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--surface-2); }
 .paper-sort__slots li.is-star { border-color: var(--acc); background: var(--acc-soft); font-weight: 700; }

@@ -16,6 +16,7 @@ import { useLevel, type JlptLevel } from "../../shared/context/LevelContext";
 import { isPracticeLesson, lessonKind, lessonLevel, lessonTitle, type LessonKind } from "../../shared/content/lessonLabels";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { Icon } from "../../shared/ui/Icon";
+import { positionText, lastPositionByLesson, type Position } from "../activity/recentActivity";
 import { lessonStatus, matchesLessonQuery, sortLessons, timeAgo, type LessonStatus } from "./lessonSearch";
 
 const LEVELS: JlptLevel[] = ["ALL", "N1", "N2", "N3", "N4", "N5"];
@@ -163,20 +164,45 @@ function lessonParts(lesson: LessonSummary): number {
   return 1;
 }
 
+/** When — and where, if known — the lesson was last worked on; the link reopens that question. */
+function RecentChip({ lessonId, position, at }: { lessonId: string; position?: Position; at: number }) {
+  const { t, uiLang } = useUiLanguage();
+  const ago = timeAgo(at, Date.now(), uiLang) ?? t("lessons.justNow");
+  const where = position ? positionText(position, t) : "";
+  const text = where ? fmt(t("lessons.recentAt"), { where, ago }) : fmt(t("lessons.recent"), { ago });
+  const title = fmt(t("lessons.recentTitle"), { ago });
+  const inner = (
+    <>
+      <Icon name="clock" size={14} strokeWidth={2} />
+      {text}
+    </>
+  );
+  return position ? (
+    <Link to={position.href} className="lesson-card__recent" title={`${title} · ${t("lessons.continueHere")}`}>
+      {inner}
+    </Link>
+  ) : (
+    <span className="lesson-card__recent" title={title} data-lesson={lessonId}>
+      {inner}
+    </span>
+  );
+}
+
 function LessonCard({
   lesson,
   progress,
   lastActiveAt,
+  position,
 }: {
   lesson: LessonSummary;
   progress: CardProgress;
   lastActiveAt: number | undefined;
+  position?: Position;
 }) {
   const { t, uiLang } = useUiLanguage();
   const { done, total, status } = progress;
   const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
   const detail = `/lessons/${encodeURIComponent(lesson.id)}`;
-  const ago = lastActiveAt ? (timeAgo(lastActiveAt, Date.now(), uiLang) ?? t("lessons.justNow")) : null;
   const practice = isPracticeLesson(lesson.source);
 
   return (
@@ -186,12 +212,7 @@ function LessonCard({
           <span className="badge">{lessonLevel(lesson.source)}</span>
           {practice && <span className="badge badge--practice">{t("lessons.practiceBadge")}</span>}
         </span>
-        {ago && (
-          <span className="lesson-card__recent" title={fmt(t("lessons.recentTitle"), { ago })}>
-            <Icon name="clock" size={14} strokeWidth={2} />
-            {fmt(t("lessons.recent"), { ago })}
-          </span>
-        )}
+        {lastActiveAt && <RecentChip lessonId={lesson.id} position={position} at={lastActiveAt} />}
       </div>
       <div>
         <h3 className="lesson-card__title">
@@ -239,10 +260,12 @@ function LessonRow({
   lesson,
   progress,
   lastActiveAt,
+  position,
 }: {
   lesson: LessonSummary;
   progress: CardProgress;
   lastActiveAt: number | undefined;
+  position?: Position;
 }) {
   const { t, uiLang } = useUiLanguage();
   const { done, total, status } = progress;
@@ -263,7 +286,8 @@ function LessonRow({
         </h3>
         <span className="lesson-row__meta">
           {fmt(t("lessons.cardStats"), { total: String(total), parts: String(lessonParts(lesson)) })}
-          {ago && ` · ${fmt(t("lessons.recent"), { ago })}`}
+          {ago &&
+            ` · ${position ? fmt(t("lessons.recentAt"), { where: positionText(position, t), ago }) : fmt(t("lessons.recent"), { ago })}`}
         </span>
       </div>
       <span className={`lesson-card__status lesson-row__status is-${status}`}>
@@ -348,6 +372,7 @@ export function LessonGrid({
   const view = useLessonView();
   const sorted = useMemo(() => sortLessons(lessons, newestFirst ? {} : activity), [lessons, activity, newestFirst]);
   const progress = useMemo(() => progressFor(lessons), [lessons]);
+  const positions = useMemo(() => lastPositionByLesson(), [lessons, activity]);
 
   if (loading) return <div className="notice">{t("home.loading")}</div>;
   if (error) {
@@ -430,9 +455,9 @@ export function LessonGrid({
           )}
           {shown.map((l) =>
             view === "list" ? (
-              <LessonRow key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
+              <LessonRow key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} position={positions.get(l.id)} />
             ) : (
-              <LessonCard key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} />
+              <LessonCard key={l.id} lesson={l} progress={progress[l.id]!} lastActiveAt={activity[l.id]} position={positions.get(l.id)} />
             ),
           )}
           {!filtered && (!limit || shown.length === 0) && (

@@ -226,3 +226,45 @@ describe("PaperItemCard in review mode", () => {
     expect(screen.queryByText(/Chính xác/)).toBeNull();
   });
 });
+
+describe("PaperItemCard translations", () => {
+  it("shows the question's translation under the question and each choice's translation before its explanation", async () => {
+    evaluate.mockImplementation(async (body: { choice_id: string }) => ({
+      result: {
+        correct: body.choice_id === "1",
+        selected_choice_id: body.choice_id,
+        correct_choice_id: "1",
+        stem_vi: "Dịch câu hỏi",
+        summary_vi: "",
+        point_tags: [],
+        vocab: [],
+        choices: ["1", "2", "3", "4"].map((id) => ({
+          id,
+          text: `c${id}`,
+          correct: id === "1",
+          meaning_vi: `Dịch đáp án ${id}`,
+          explanation_vi: `Vì sao ${id}`,
+        })),
+        evidence_sentence_ids: [],
+      },
+    }));
+    render(
+      <MemoryRouter>
+        <UiLanguageProvider>
+          <PaperItemCard
+            lessonId="l"
+            item={item(1)}
+            review={{ selected: "2", correctId: "1" }}
+            onAnswered={() => undefined}
+            onRetry={() => undefined}
+          />
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText("Dịch câu hỏi")).toBeTruthy());
+    expect(screen.getByText("Dịch đáp án 3")).toBeTruthy();
+    // The translation comes before the explanation inside the same choice.
+    const tile = screen.getByText("Dịch đáp án 3").closest("button")!;
+    expect(tile.textContent!.indexOf("Dịch đáp án 3")).toBeLessThan(tile.textContent!.indexOf("Vì sao 3"));
+  });
+});

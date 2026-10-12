@@ -43,6 +43,7 @@ const NAV_LEARN: NavItem[] = [
   { to: "/lessons", label: "nav.practice", icon: "book" },
   { to: "/exams", label: "nav.exams", icon: "clock" },
   { to: "/history", label: "nav.progress", icon: "chart" },
+  { to: "/leaderboard", label: "nav.leaderboard", icon: "trophy" },
 ];
 
 /** Everything else: feedback, the plan page and support. */

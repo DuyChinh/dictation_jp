@@ -1,3 +1,4 @@
+import { refreshMyScore } from "./myScoreStore";
 import { apiUrl } from "../env";
 
 /**
@@ -75,7 +76,9 @@ export function recordListeningAnswer(
         correct_choice_id: saved.correctChoiceId,
         answered_at: saved.answeredAt,
       }),
-    }).catch(() => {});
+    })
+      .then(() => refreshMyScore(true))
+      .catch(() => {});
   }
 
   return saved;

@@ -5,7 +5,14 @@
  */
 export const PAPER_PROGRESS_KEY = "jd.paper_progress.v1";
 
-export type PaperAnswer = { choiceId: string; correct: boolean; at: number; part: "vocab" | "grammar" | "reading" };
+export type PaperAnswer = {
+  choiceId: string;
+  correct: boolean;
+  at: number;
+  part: "vocab" | "grammar" | "reading";
+  /** 問題 number of the question, to reopen it; absent on answers saved before it was kept. */
+  mondai?: number;
+};
 export type SentenceStatus = "good" | "partial" | "weak" | "self";
 
 export type PaperProgress = {
@@ -30,6 +37,11 @@ function write(store: Store): void {
   } catch {
     /* storage full or blocked: progress just won't persist here */
   }
+}
+
+/** Every lesson's written-part progress, for the recent-activity views. */
+export function getAllPaperProgress(): Store {
+  return read();
 }
 
 export function getPaperProgress(lessonId: string): PaperProgress {
@@ -62,5 +74,17 @@ export function saveSentence(lessonId: string, sentenceId: string, status: Sente
 export function clearAnswers(lessonId: string, itemIds: string[]): PaperProgress {
   return update(lessonId, (p) => {
     for (const id of itemIds) delete p.answers[id];
+  });
+}
+
+/**
+ * Start a part of the written exam over: forget its answers and, for the parts that have passages to
+ * translate (問題9 cloze sits in grammar, 問題10–14 in reading), the translation marks of those passages.
+ */
+export function resetPaperPart(lessonId: string, part: PaperAnswer["part"]): PaperProgress {
+  const marker = part === "reading" ? "-r-p" : part === "grammar" ? "-g-p" : null;
+  return update(lessonId, (p) => {
+    for (const [id, a] of Object.entries(p.answers)) if (a.part === part) delete p.answers[id];
+    if (marker) for (const id of Object.keys(p.sentences)) if (id.includes(marker)) delete p.sentences[id];
   });
 }

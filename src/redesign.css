@@ -21,6 +21,7 @@
 [data-tone="dictation"] { --tone: var(--tone-dictation); --tone-soft: var(--tone-dictation-soft); }
 .part-card__kanji[data-tone],
 .preview__kanji[data-tone],
+.recent-list__kanji[data-tone],
 .exam-scope__kanji[data-tone] { background: var(--tone-soft); color: var(--tone); }
 .part-card:has([data-tone="listening"]) { --tone: var(--tone-listening); }
 .part-card:has([data-tone="vocab"]) { --tone: var(--tone-vocab); }

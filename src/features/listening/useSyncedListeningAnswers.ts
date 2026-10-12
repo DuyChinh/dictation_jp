@@ -24,5 +24,8 @@ export function useSyncedListeningAnswers(lessonId: string) {
     };
   }, [lessonId]);
 
-  return { answers, ready };
+  /** Read this browser's answers again (after they were cleared). */
+  const reload = () => setAnswers(getListeningAnswers(lessonId));
+
+  return { answers, ready, reload };
 }

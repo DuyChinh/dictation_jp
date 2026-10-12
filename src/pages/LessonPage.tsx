@@ -14,17 +14,19 @@ import {
   partType,
 } from "../shared/content/lessonLabels";
 import {
+  clearLessonProgress,
   getLessonProgress,
   syncLessonProgressFromServer,
   type SegmentProgressData,
 } from "../shared/storage/dictationProgressStore";
-import { loadResume } from "../shared/storage/resumeStore";
+import { clearListeningAnswers } from "../shared/storage/listeningScoreStore";
+import { clearResume, loadResume } from "../shared/storage/resumeStore";
 import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { scoreBySection } from "../features/listening/listeningUnits";
 import { ExamEntry } from "../features/paper/ExamEntry";
 import { PART_KANJI } from "../features/paper/paperLabels";
 import type { PaperPart } from "../shared/api/paper";
-import { getPaperProgress } from "../shared/storage/paperProgressStore";
+import { getPaperProgress, resetPaperPart } from "../shared/storage/paperProgressStore";
 
 export function LessonPage() {
   const { lessonId = "" } = useParams();
@@ -56,12 +58,29 @@ export function LessonPage() {
     return out;
   }, [practice, progressMap]);
 
-  const { answers: listeningAnswers } = useSyncedListeningAnswers(lessonId);
+  const { answers: listeningAnswers, reload: reloadListening } = useSyncedListeningAnswers(lessonId);
+  // Paper progress is read straight from storage on each render; this makes it render again after a reset.
+  const [, setResetCount] = useState(0);
   const listeningScore = useMemo(
     () => (practice ? scoreBySection(practice, listeningAnswers) : null),
     [practice, listeningAnswers],
   );
   const listeningDone = listeningScore ? listeningScore.right + listeningScore.wrong : 0;
+
+  /** Forgets this lesson's results for one part so it can be done again; the exam history is left alone. */
+  function resetPart(key: string) {
+    if (key === "listening") {
+      clearListeningAnswers(lessonId);
+      reloadListening();
+    } else if (key === "dictation") {
+      clearLessonProgress(lessonId);
+      clearResume(lessonId);
+      setProgressMap({});
+    } else if (key === "vocab" || key === "grammar" || key === "reading") {
+      resetPaperPart(lessonId, key);
+    }
+    setResetCount((n) => n + 1);
+  }
 
   const crumbsBase = [{ label: t("nav.practice"), to: "/lessons" }];
   const paperAnswers = Object.values(getPaperProgress(lessonId).answers);
@@ -191,10 +210,19 @@ export function LessonPage() {
             <h2 id="lesson-parts-title">{t("lesson.partsTitle")}</h2>
             <p>{t("lesson.partsSub")}</p>
           </div>
+          {(allDone > 0 || correct > 0) && (
+            <div className="section-head__aside">
+              <ResetButton
+                label={t("lesson.resetAll")}
+                confirm={t("lesson.resetConfirmAll")}
+                onConfirm={() => cards.forEach((c) => resetPart(c.key))}
+              />
+            </div>
+          )}
         </div>
         <div className="part-grid">
           {cards.map(({ key, ...card }) => (
-            <PartCard key={key} {...card} />
+            <PartCard key={key} {...card} onReset={() => resetPart(key)} />
           ))}
         </div>
       </section>
@@ -288,9 +316,45 @@ type PartCardProps = {
   total: number;
   href: string;
   extra?: ReactNode;
+  /** Start this part over; offered once something in it has been done. */
+  onReset?: () => void;
 };
 
-function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra }: Omit<PartCardProps, "key">) {
+/** A button that asks once, in place, before doing something that deletes results. */
+function ResetButton({ label, confirm, onConfirm }: { label: string; confirm: string; onConfirm: () => void }) {
+  const { t } = useUiLanguage();
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return (
+      <button type="button" className="btn btn--ghost btn--sm reset-btn" onClick={() => setAsking(true)}>
+        <Icon name="refresh" size={15} />
+        {label}
+      </button>
+    );
+  }
+  return (
+    <div className="reset-confirm" role="alertdialog" aria-label={label}>
+      <p>{confirm}</p>
+      <div>
+        <button
+          type="button"
+          className="btn btn--danger btn--sm"
+          onClick={() => {
+            setAsking(false);
+            onConfirm();
+          }}
+        >
+          {t("lesson.resetYes")}
+        </button>
+        <button type="button" className="btn btn--outline btn--sm" onClick={() => setAsking(false)}>
+          {t("lesson.resetCancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra, onReset }: Omit<PartCardProps, "key">) {
   const { t } = useUiLanguage();
   const shown = Math.min(done, total);
   const pct = total ? Math.round((shown / total) * 100) : 0;
@@ -316,6 +380,7 @@ function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra }: 
           {shown > 0 && shown < total ? t("paper.continue") : t("paper.start")}
         </Link>
         {extra}
+        {shown > 0 && onReset && <ResetButton label={t("lesson.resetPart")} confirm={t("lesson.resetConfirmPart")} onConfirm={onReset} />}
       </div>
     </article>
   );

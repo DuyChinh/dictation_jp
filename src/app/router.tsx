@@ -6,6 +6,7 @@ import { HistoryPage } from "../pages/HistoryPage";
 import { LessonsPage } from "../pages/LessonsPage";
 import { ExamRoomPage } from "../pages/ExamRoomPage";
 import { ExamHistoryPage } from "../pages/ExamHistoryPage";
+import { LeaderboardPage } from "../pages/LeaderboardPage";
 import { PricingPage } from "../pages/PricingPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { FeedbackPage } from "../pages/FeedbackPage";
@@ -69,6 +70,7 @@ export function AppRouter() {
                 <Route path="/exams" element={<ExamRoomPage />} />
                 <Route path="/exams/history" element={<ExamHistoryPage />} />
                 <Route path="/history" element={<HistoryPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />

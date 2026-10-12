@@ -5,6 +5,7 @@ import "./styles.css";
 import "./ui.css";
 import "./paper.css";
 import "./redesign.css";
+import "./leaderboard.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("root missing");

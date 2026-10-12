@@ -92,6 +92,12 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
       <p className="paper-stem jp" lang="ja">
         {stem.map((p, i) => (p.mark ? <u key={i}>{p.text}</u> : <span key={i}>{p.text}</span>))}
       </p>
+      {answered && result.stem_vi && (
+        <p className="paper-stem-vi">
+          <span className="paper-trans-label">{t("paper.translation")}</span>
+          {result.stem_vi}
+        </p>
+      )}
 
       <div className="paper-choices" role="radiogroup" aria-label={`${t("paper.question")} ${item.no}`}>
         {item.choices.map((c) => {
@@ -129,8 +135,17 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
                     {t("paper.sino")}: <b>{r.sino_vi}</b>
                   </span>
                 )}
-                {r?.meaning_vi && <span className="paper-tile__meaning">{r.meaning_vi}</span>}
-                {r && <span className="paper-tile__why">{r.explanation_vi}</span>}
+                {r?.meaning_vi && (
+                  <span className="paper-tile__meaning">
+                    <span className="paper-trans-label">{t("paper.translation")}</span>
+                    {r.meaning_vi}
+                  </span>
+                )}
+                {r && (
+                  <span className="paper-tile__why">
+                    <b>{t("paper.explain")}</b> {r.explanation_vi}
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -165,11 +180,6 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
             <p className="paper-remember">
               <strong>{t("paper.remember")} · </strong>
               {summary}
-            </p>
-          )}
-          {result.stem_vi && (
-            <p className="paper-translation">
-              <strong>{t("paper.translation")}:</strong> {result.stem_vi}
             </p>
           )}
           {result.sort && (

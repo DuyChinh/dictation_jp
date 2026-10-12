@@ -1,3 +1,4 @@
+import { refreshMyScore } from "./myScoreStore";
 import { apiUrl } from "../env";
 import { mergeListeningAnswers } from "./listeningScoreStore";
 
@@ -85,10 +86,36 @@ export function saveSegmentProgress(
         score: data.score,
         last_answer: data.lastAnswer,
       }),
-    }).catch(() => {});
+    })
+      .then(() => refreshMyScore(true))
+      .catch(() => {});
   }
 
   return updated;
+}
+
+/** Clears still on their way to the server; a sync waits for them so it can't bring cleared progress back. */
+let pendingClear: Promise<unknown> = Promise.resolve();
+
+/** Forgets every dictation sentence of a lesson (here and on the account) so it can be started over. */
+export function clearLessonProgress(lessonId: string): void {
+  const all = getAllDictationProgress();
+  delete all[lessonId];
+  try {
+    localStorage.setItem(DICTATION_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    // ignore
+  }
+  const token = localStorage.getItem("token");
+  if (token) {
+    const request = fetch(apiUrl(`/api/progress/lesson/${encodeURIComponent(lessonId)}`), {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(() => refreshMyScore(true))
+      .catch(() => {});
+    pendingClear = Promise.all([pendingClear, request]);
+  }
 }
 
 /**
@@ -103,6 +130,7 @@ export async function syncLessonProgressFromServer(
   }
 
   try {
+    await pendingClear;
     const res = await fetch(apiUrl(`/api/progress/lesson/${encodeURIComponent(lessonId)}`), {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -137,6 +165,7 @@ export async function syncProgressOverviewFromServer(): Promise<void> {
   if (!token) return;
 
   try {
+    await pendingClear;
     const res = await fetch(apiUrl("/api/progress/overview"), {
       headers: { Authorization: `Bearer ${token}` },
     });

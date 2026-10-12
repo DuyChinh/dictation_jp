@@ -1,3 +1,4 @@
+import { refreshMyScore } from "./myScoreStore";
 import type { ExamResult, ExamScope } from "../api/paper";
 import { apiUrl } from "../env";
 
@@ -201,6 +202,7 @@ export async function uploadExamHistory(entry: ExamHistoryEntry): Promise<boolea
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
       body: JSON.stringify(entry),
     });
+    if (res.ok) void refreshMyScore(true);
     return res.ok;
   } catch {
     return false;

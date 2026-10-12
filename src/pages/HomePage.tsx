@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PRICING_READY } from "../config/pricing";
 import { sortLessons } from "../features/lessons/lessonSearch";
 import { useLevel, type JlptLevel } from "../shared/context/LevelContext";
 import { formatClock, listRunningExams } from "../shared/storage/paperExamStore";
 import { loadResume } from "../shared/storage/resumeStore";
+import { syncProgressOverviewFromServer } from "../shared/storage/dictationProgressStore";
+import { getLessonActivity } from "../shared/storage/lessonActivityStore";
+import { RecentActivityList } from "../features/activity/RecentActivityList";
+import { positionText, recentPositions } from "../features/activity/recentActivity";
+import { timeAgo } from "../features/lessons/lessonSearch";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
+import { LeaderboardCard } from "../features/leaderboard/LeaderboardCard";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { lessonKind, lessonLevel, lessonShortTitle, lessonSitting } from "../shared/content/lessonLabels";
 import {
@@ -247,9 +253,27 @@ function LevelAsk() {
 }
 
 export function HomePage() {
-  const { t } = useUiLanguage();
+  const { t, uiLang } = useUiLanguage();
   const { level, chosen } = useLevel();
   const { lessons, loading, error } = useLessonList();
+
+  // The account's answers from other devices are merged in, then the figures below are read again.
+  const [synced, setSynced] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    void syncProgressOverviewFromServer().then(() => {
+      if (!cancelled) setSynced((n) => n + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const positions = useMemo(() => recentPositions(), [synced, lessons]);
+  const lessonById = useMemo(() => new Map(lessons.map((l) => [l.id, l])), [lessons]);
+  const latest = positions[0];
+  const latestLesson = latest ? lessonById.get(latest.lessonId) : undefined;
+  const hasActivity = Object.keys(getLessonActivity()).length > 0 || positions.length > 0;
   const resume = loadResume();
   const resumeLesson = resume ? lessons.find((l) => l.id === resume.lesson_id) : undefined;
   const [runningExam] = useState(() => listRunningExams()[0]);
@@ -349,6 +373,23 @@ export function HomePage() {
             {t("home.resumeExamCta")}
           </Link>
         </section>
+      ) : latest ? (
+        <section className="resume" aria-label={t("home.resumeLabel")}>
+          <span className="resume__icon">
+            <Icon name="pencil" size={22} />
+          </span>
+          <div className="resume__body">
+            <span className="eyebrow">{t("home.resumeLabel")}</span>
+            <span className="resume__title">
+              {latestLesson ? lessonShortTitle(latestLesson.source, latest.lessonId) : latest.lessonId} —{" "}
+              {positionText(latest, t)}
+              <span className="muted"> · {timeAgo(latest.at, Date.now(), uiLang) ?? t("lessons.justNow")}</span>
+            </span>
+          </div>
+          <Link to={latest.href} className="btn btn--dark" style={{ flexShrink: 0 }}>
+            {t("home.resumeCta")}
+          </Link>
+        </section>
       ) : (
         resume && (
           <section className="resume" aria-label={t("home.resumeLabel")}>
@@ -382,15 +423,37 @@ export function HomePage() {
         )
       )}
 
+      {positions.length > 1 && (
+        <section aria-labelledby="home-recent-title">
+          <div className="section-head">
+            <div>
+              <h2 id="home-recent-title">{t("home.recentTitle")}</h2>
+              <p>{t("home.recentSub")}</p>
+            </div>
+            <div className="section-head__aside">
+              <Link to="/history" className="btn btn--soft btn--sm">
+                {t("home.recentAll")}
+                <Icon name="chevronRight" size={16} strokeWidth={2} />
+              </Link>
+            </div>
+          </div>
+          <div className="panel card-pad" style={{ marginBottom: 40 }}>
+            <RecentActivityList positions={positions.slice(0, 4)} lessons={lessonById} />
+          </div>
+        </section>
+      )}
+
       <StudyPaths dictationHref={dictationHref} />
+
+      <LeaderboardCard />
 
       <DictationSpotlight dictationHref={dictationHref} />
 
       <section>
         <div className="section-head">
           <div>
-            <h2>{t("home.latestTitle")}</h2>
-            <p>{t("home.latestSub")}</p>
+            <h2>{hasActivity ? t("home.recentLessonsTitle") : t("home.latestTitle")}</h2>
+            <p>{hasActivity ? t("home.recentLessonsSub") : t("home.latestSub")}</p>
           </div>
           <div className="section-head__aside">
             <LevelFilter />
@@ -400,7 +463,7 @@ export function HomePage() {
             </Link>
           </div>
         </div>
-        <LessonGrid lessons={lessons} loading={loading} error={error} limit={3} newestFirst />
+        <LessonGrid lessons={lessons} loading={loading} error={error} limit={3} newestFirst={!hasActivity} />
       </section>
     </AppShell>
   );

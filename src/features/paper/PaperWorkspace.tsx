@@ -60,7 +60,7 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
   }
 
   function onAnswered(it: PaperItem, result: PaperItemResult) {
-    setProgress(saveAnswer(lessonId, it.id, { choiceId: result.selected_choice_id, correct: result.correct, at: Date.now(), part: it.part }));
+    setProgress(saveAnswer(lessonId, it.id, { choiceId: result.selected_choice_id, correct: result.correct, at: Date.now(), part: it.part, mondai: it.mondai }));
     setEvidence((prev) => ({ ...prev, [it.id]: result.evidence_sentence_ids }));
   }
 

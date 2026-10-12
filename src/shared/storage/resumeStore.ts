@@ -20,3 +20,13 @@ export function loadResume(): ResumePointer | null {
 export function saveResume(pointer: ResumePointer): void {
   localStorage.setItem(RESUME_KEY, JSON.stringify(pointer));
 }
+
+/** Forgets the saved place when it is in this lesson (the lesson was reset). */
+export function clearResume(lessonId: string): void {
+  if (loadResume()?.lesson_id !== lessonId) return;
+  try {
+    localStorage.removeItem(RESUME_KEY);
+  } catch {
+    // ignore
+  }
+}

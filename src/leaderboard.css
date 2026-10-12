@@ -1,0 +1,229 @@
+/* ---------- Leaderboard ---------- */
+.lb-card { display: flex; flex-direction: column; }
+.lb-card__title { display: flex; align-items: center; gap: 8px; }
+.lb-card__title svg { color: var(--acc); }
+
+.lb-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.lb-list { list-style: none; margin: 0; padding: 0; }
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 36px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--surface-3);
+}
+.lb-list > .lb-row:first-child { border-top: 0; }
+.lb-row.is-me { background: var(--primary-light); }
+.lb-row--skeleton { height: 62px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: lb-shimmer 1.4s linear infinite; }
+@keyframes lb-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .lb-row--skeleton { animation: none; } }
+
+.lb-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.lb-row[data-top="1"] .lb-rank { background: #f7d56a; color: #4a3500; }
+.lb-row[data-top="2"] .lb-rank { background: #d5dbe6; color: #2c3647; }
+.lb-row[data-top="3"] .lb-rank { background: #e8b78a; color: #4a2a10; }
+
+.lb-avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.lb-avatar--initial { display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; }
+
+.lb-name {
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-you {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-fill);
+  color: var(--primary-text);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+.lb-points { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.lb-points small, .lb-podium__points small, .lb-mycard__points small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+.lb-me { border-top: 1px dashed var(--card-border); padding: 10px 0 12px; background: var(--surface-2); }
+.lb-me__label { display: block; padding: 0 20px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.lb-me__of { display: block; padding: 2px 20px 0; font-size: 13px; color: var(--text-muted); }
+.lb-me .lb-row { border-top: 0; }
+
+.lb-guest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-top: 1px solid var(--surface-3);
+  background: var(--surface-2);
+}
+.lb-guest p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.lb-guest--page { border: 1px solid var(--card-border); border-radius: 16px; margin-bottom: 20px; }
+
+.lb-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 20px; margin: 0; color: var(--text-muted); text-align: center; }
+.lb-empty p { margin: 0; }
+
+.lb-card__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.lb-tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.lb-tabs button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lb-tabs button:hover { color: var(--text-main); }
+.lb-tabs button.is-active { background: var(--card-bg); color: var(--text-main); box-shadow: var(--card-shadow); }
+.lb-tabs button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.lb-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.lb-toolbar__hint { font-size: 13px; color: var(--text-muted); }
+
+/* ----- Full page ----- */
+.lb-page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.lb-page-head h1 { margin: 0; font-size: 30px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.lb-page-head p { margin: 6px 0 0; font-size: 15px; color: var(--text-muted); }
+.lb-page-head__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: var(--acc-soft);
+  color: var(--acc);
+}
+
+.lb-mycard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--primary-color);
+  border-radius: 16px;
+  background: var(--primary-light);
+}
+.lb-mycard__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.lb-mycard__name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-mycard__sub { font-size: 13px; color: var(--text-muted); }
+.lb-mycard__points { font-size: 22px; font-weight: 800; white-space: nowrap; }
+
+.lb-podium {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+}
+.lb-podium__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 10px 16px;
+  text-align: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+.lb-podium__item[data-place="1"] { order: 2; padding-top: 26px; padding-bottom: 22px; border-color: #e3b93c; background: var(--acc-soft); }
+.lb-podium__item[data-place="2"] { order: 1; }
+.lb-podium__item[data-place="3"] { order: 3; }
+.lb-podium__item.is-me { box-shadow: 0 0 0 2px var(--primary-color); }
+.lb-podium__medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 800;
+}
+.lb-podium__item[data-place="1"] .lb-podium__medal { background: #f7d56a; color: #4a3500; }
+.lb-podium__item[data-place="2"] .lb-podium__medal { background: #d5dbe6; color: #2c3647; }
+.lb-podium__item[data-place="3"] .lb-podium__medal { background: #e8b78a; color: #4a2a10; }
+.lb-podium__name { max-width: 100%; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-podium__points { font-weight: 800; font-size: 17px; }
+
+.lb-list-head {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lb-list-head span:first-child { text-align: center; }
+.lb-more { display: flex; justify-content: center; padding: 14px; border-top: 1px solid var(--surface-3); }
+.lb-note { margin: 12px 0 0; text-align: center; font-size: 14px; color: var(--text-muted); }
+
+.lb-how { margin-top: 28px; padding: 20px 24px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; }
+.lb-how h2 { margin: 0 0 12px; font-size: 17px; font-weight: 700; }
+.lb-how ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lb-how li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.lb-how li svg { flex-shrink: 0; margin-top: 2px; color: var(--ok); }
+
+/* ----- Points beside the avatar ----- */
+.account__points { font-weight: 700; color: var(--acc); }
+.account__menu-score { align-items: center; }
+.account__menu-score span { display: flex; flex-direction: column; line-height: 1.25; }
+.account__menu-score small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.account__menu-score svg { color: var(--acc); }
+
+@media (max-width: 640px) {
+  .lb-row { grid-template-columns: 30px 36px minmax(0, 1fr) auto; gap: 10px; padding: 10px 14px; }
+  .lb-me__label, .lb-me__of { padding-left: 14px; padding-right: 14px; }
+  .lb-page-head h1 { font-size: 24px; }
+  .lb-podium { gap: 8px; }
+  .lb-podium__item { padding: 14px 6px 12px; }
+  .lb-podium__item[data-place="1"] { padding-top: 20px; }
+  .lb-podium__name { font-size: 13px; }
+  .lb-podium__points { font-size: 14px; }
+  .lb-mycard__points { font-size: 18px; }
+}

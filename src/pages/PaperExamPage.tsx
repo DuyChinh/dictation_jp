@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ExamListeningRunner } from "../features/paper/ExamListeningRunner";
 import { ExamResultView } from "../features/paper/ExamResultView";
@@ -8,6 +8,7 @@ import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useLesson, usePractice } from "../shared/content/hooks";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
+import { touchLesson } from "../shared/storage/lessonActivityStore";
 import { clearExam, getExam, type ExamSession } from "../shared/storage/paperExamStore";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
@@ -19,6 +20,8 @@ function WrittenExam() {
   const { lesson } = useLesson(lessonId);
   const { paper, error, loading } = usePaperPractice(lessonId);
   const [session, setSession] = useState<ExamSession | null>(() => getExam(lessonId));
+  // Sitting an exam counts as working on the lesson, so it comes first in the lists.
+  useEffect(() => touchLesson(lessonId), [lessonId]);
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
   const overviewHref = `${lessonHref}/paper`;
@@ -80,6 +83,8 @@ function ListeningExam() {
   const { lesson } = useLesson(lessonId);
   const { practice, error, loading } = usePractice(lessonId);
   const [session, setSession] = useState<ExamSession | null>(() => getExam(lessonId));
+  // Sitting an exam counts as working on the lesson, so it comes first in the lists.
+  useEffect(() => touchLesson(lessonId), [lessonId]);
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
   const setupHref = `${lessonHref}/paper/exam/setup?scope=listening`;

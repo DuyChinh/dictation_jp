@@ -481,6 +481,13 @@
 .btn--muted:hover:not(:disabled) { background: var(--card-border); }
 .btn--ghost { background: transparent; color: var(--text-muted); }
 .btn--ghost:hover:not(:disabled) { color: var(--text-main); background: var(--surface-2); }
+.btn--danger { background: var(--bad); border-color: var(--bad); color: var(--card-bg); }
+.btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
+.reset-btn { align-self: flex-start; }
+.part-card__cta .reset-btn { align-self: center; }
+.reset-confirm { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bad-soft); border: 1px solid var(--bad); }
+.reset-confirm p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-main); }
+.reset-confirm > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .btn--lg { height: 48px; padding: 0 22px; font-size: 15px; border-radius: 12px; }
 .btn--sm { height: 40px; padding: 0 14px; font-size: 13px; border-radius: 9px; }
 .btn--block { width: 100%; }
@@ -931,6 +938,27 @@
   text-overflow: ellipsis;
 }
 .lesson-card__recent svg { flex-shrink: 0; }
+.lesson-card__recent:is(a) { text-decoration: none; }
+.lesson-card__recent:is(a):hover { filter: brightness(1.12); }
+
+/* ---------- Recent activity ---------- */
+.recent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.recent-list li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--surface-3); }
+.recent-list li:first-child { border-top: 0; }
+.recent-list__kanji {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary-light); color: var(--primary-color); font-size: 20px; font-weight: 700;
+}
+.recent-list__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.recent-list__lesson { color: inherit; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-list__lesson:hover { color: var(--primary-color); }
+.recent-list__where { font-size: 14px; color: var(--ink-2); }
+.recent-list__ago { font-size: 13px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .recent-list li { flex-wrap: wrap; }
+  .recent-list__ago { order: 3; }
+}
+
 .lesson-card__title { margin: 0; font-size: 18px; font-weight: 700; }
 .lesson-card__title a { color: inherit; }
 .lesson-card__title a:hover { color: var(--primary-color); }

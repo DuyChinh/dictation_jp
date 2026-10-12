@@ -20,6 +20,8 @@ import {
 } from "../shared/storage/practiceHistoryStore";
 import { useLessonList } from "../features/lessons/LessonGrid";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
+import { RecentActivityList } from "../features/activity/RecentActivityList";
+import { recentPositions } from "../features/activity/recentActivity";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -131,6 +133,10 @@ export function HistoryPage() {
     return { correct, attempts, practiced: practiced.size, bestStreak: stats.bestStreak };
   }, [progress, listening, stats.bestStreak]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const positions = useMemo(() => recentPositions(), [synced]);
+  const lessonById = useMemo(() => new Map(lessons.map((l) => [l.id, l])), [lessons]);
+
   const accuracy = totals.attempts > 0 ? Math.round((totals.correct / totals.attempts) * 100) : 0;
 
   /** Correct sentences per day over the last 30 days (by the day each was last answered). */
@@ -220,6 +226,16 @@ export function HistoryPage() {
           </div>
         ))}
       </section>
+
+      {positions.length > 0 && (
+        <section className="panel card-pad" style={{ marginBottom: 16 }}>
+          <div className="card-pad__head">
+            <h2>{t("history.recentActivity")}</h2>
+            <span>{t("history.recentActivitySub")}</span>
+          </div>
+          <RecentActivityList positions={positions.slice(0, 10)} lessons={lessonById} />
+        </section>
+      )}
 
       <div className="split-2">
         <section className="panel card-pad">
