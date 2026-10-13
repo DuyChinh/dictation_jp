@@ -1,47 +1,56 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
-import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import type { LeaderboardLevel, LeaderboardPeriod, LeaderboardRow } from "../../shared/api/leaderboard";
+import { useLevel } from "../../shared/context/LevelContext";
 import { fmt } from "../../shared/i18n/format";
+import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { useMyScore } from "../../shared/storage/myScoreStore";
 import { Icon } from "../../shared/ui/Icon";
-import type { LeaderboardPeriod } from "../../shared/api/leaderboard";
-import { LeaderAvatar, PeriodTabs, formatPoints, useLeaderboard } from "./leaderboardUi";
+import { useAuth } from "../auth/AuthContext";
+import { LeaderRow, LevelTabs, PeriodTabs, useLeaderboard } from "./leaderboardUi";
 
 const HOME_ROWS = 5;
 
-/** Home-page ranking: the top five, where the signed-in learner stands, and a way to the full list. */
+/** Home-page ranking: the top five for the learner's level, where they stand, and a way to the full list. */
 export function LeaderboardCard() {
-  const { t, uiLang } = useUiLanguage();
+  const { t } = useUiLanguage();
   const { user } = useAuth();
+  const { level: pickedLevel } = useLevel();
   const score = useMyScore(!!user);
   const [period, setPeriod] = useState<LeaderboardPeriod>("week");
-  const { entries, participants, me, loading, error, retry } = useLeaderboard(HOME_ROWS, period, score?.points);
+  const [level, setLevel] = useState<LeaderboardLevel>(pickedLevel);
+  useEffect(() => setLevel(pickedLevel), [pickedLevel]);
+
+  const { entries, me, loading, error, retry } = useLeaderboard(HOME_ROWS, period, level, score?.points);
   const meInTop = entries.some((e) => e.isMe);
+  const maxPoints = entries[0]?.points ?? 0;
+  const meRow: LeaderboardRow | null = me
+    ? { rank: me.rank, name: me.name, avatar: me.avatar, points: me.points, totalPoints: me.totalPoints, level: me.level, isMe: true }
+    : null;
+  const hint = period === "week" ? t("lb.hintWeek") : period === "month" ? t("lb.hintMonth") : t("lb.hintYear");
 
   return (
     <section className="lb-card" aria-labelledby="lb-card-title">
       <div className="section-head">
         <div>
           <h2 id="lb-card-title" className="lb-card__title">
-            <Icon name="trophy" size={22} />
+            <span className="lb-card__badge" aria-hidden="true">
+              <Icon name="trophy" size={20} />
+            </span>
             {t("lb.title")}
           </h2>
-          <p>{period === "week" ? t("lb.hintWeek") : t("lb.hintMonth")}</p>
+          <p>{hint}</p>
         </div>
         <div className="section-head__aside lb-card__actions">
-          <PeriodTabs
-            value={period}
-            onChange={setPeriod}
-            periods={["week", "month"]}
-            label={(p) => (p === "week" ? t("lb.week") : t("lb.month"))}
-          />
-          <Link to="/leaderboard" className="btn btn--soft btn--sm">
+          <PeriodTabs value={period} onChange={setPeriod} periods={["week", "month", "year"]} />
+          <Link to={`/leaderboard?period=${period}&level=${level}`} className="btn btn--soft btn--sm">
             {t("lb.viewAll")}
             <Icon name="chevronRight" size={16} strokeWidth={2} />
           </Link>
         </div>
       </div>
+
+      <LevelTabs value={level} onChange={setLevel} />
 
       <div className="lb-panel">
         {loading ? (
@@ -58,41 +67,26 @@ export function LeaderboardCard() {
             </button>
           </div>
         ) : entries.length === 0 ? (
-          <p className="lb-empty">{t("lb.periodEmpty")}</p>
+          <p className="lb-empty">{level === "ALL" ? t("lb.periodEmpty") : t("lb.levelEmpty")}</p>
         ) : (
           <ol className="lb-list">
             {entries.map((e) => (
-              <li key={e.rank} className={`lb-row${e.isMe ? " is-me" : ""}`} data-top={e.rank <= 3 ? e.rank : undefined}>
-                <span className="lb-rank tabular">{e.rank}</span>
-                <LeaderAvatar name={e.name} avatar={e.avatar} />
-                <span className="lb-name">
-                  {e.name}
-                  {e.isMe && <em className="lb-you">{t("lb.you")}</em>}
-                </span>
-                <span className="lb-points tabular">
-                  {formatPoints(e.points, uiLang)} <small>{t("lb.pointsUnit")}</small>
-                </span>
-              </li>
+              <LeaderRow key={e.rank} entry={e} period={period} level={level} maxPoints={maxPoints} showBar={false} />
             ))}
           </ol>
         )}
 
-        {user && me && !meInTop && !loading && !error && (
+        {user && meRow && !meInTop && !loading && !error && (
           <div className="lb-me">
             <span className="lb-me__label">{t("lb.yourRank")}</span>
-            <div className="lb-row is-me">
-              <span className="lb-rank tabular">{me.rank}</span>
-              <LeaderAvatar name={me.name} avatar={me.avatar} />
-              <span className="lb-name">
-                {me.name}
-                <em className="lb-you">{t("lb.you")}</em>
+            <ol className="lb-list">
+              <LeaderRow entry={meRow} period={period} level={level} maxPoints={maxPoints} showBar={false} />
+            </ol>
+            {me?.ahead && (
+              <span className="lb-me__of">
+                <Icon name="arrowUp" size={13} strokeWidth={2.2} />
+                {fmt(t("lb.ahead"), { n: me.ahead.gap, name: me.ahead.name })}
               </span>
-              <span className="lb-points tabular">
-                {formatPoints(me.points, uiLang)} <small>{t("lb.pointsUnit")}</small>
-              </span>
-            </div>
-            {participants > 0 && (
-              <span className="lb-me__of">{fmt(t("lb.rankOf"), { rank: me.rank, total: participants })}</span>
             )}
           </div>
         )}

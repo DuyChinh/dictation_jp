@@ -6,6 +6,16 @@ import { Icon } from "../../shared/ui/Icon";
 import { useMyScore } from "../../shared/storage/myScoreStore";
 import { fmt } from "../../shared/i18n/format";
 import { formatPoints } from "../leaderboard/leaderboardUi";
+import { AnimalAvatar } from "../leaderboard/animals";
+
+/** The account chip's picture: their upload when they have one, otherwise their animal. */
+function AccountAvatar({ user }: { user: User }) {
+  return user.avatar ? (
+    <img src={user.avatar} alt="" className="account__avatar" />
+  ) : (
+    <AnimalAvatar name={user.displayName || "U"} size={44} className="account__avatar" />
+  );
+}
 
 export function UserAvatar({ user, className = "account__avatar" }: { user: User; className?: string }) {
   const initial = user.displayName?.trim().charAt(0).toUpperCase() || "U";
@@ -74,7 +84,7 @@ export function LoginButton() {
               )}
             </span>
           </span>
-          <UserAvatar user={user} />
+          <AccountAvatar user={user} />
         </button>
         {open && (
           <div id="account-menu" className="account__menu" role="menu">

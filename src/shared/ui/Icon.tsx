@@ -241,6 +241,15 @@ const paths = {
       <path d="M12 13v4M10 17h4M8.5 20h7" />
     </>
   ),
+  flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  infinity: <path d="M12 12c-1.8-2.6-3.2-4-5-4a4 4 0 0 0 0 8c1.8 0 3.2-1.4 5-4zm0 0c1.8 2.6 3.2 4 5 4a4 4 0 0 0 0-8c-1.8 0-3.2 1.4-5 4z" />,
+  calendar: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </>
+  ),
+  arrowUp: <path d="M12 19V5M5 12l7-7 7 7" />,
   key: (
     <>
       <circle cx="8" cy="15" r="4.5" />
