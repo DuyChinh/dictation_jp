@@ -242,6 +242,13 @@ const paths = {
     </>
   ),
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+    </>
+  ),
+  bars: <path d="M6 14v4M10 8v10M14 11v7M18 6v12" />,
   infinity: <path d="M12 12c-1.8-2.6-3.2-4-5-4a4 4 0 0 0 0 8c1.8 0 3.2-1.4 5-4zm0 0c1.8 2.6 3.2 4 5 4a4 4 0 0 0 0-8c-1.8 0-3.2 1.4-5 4z" />,
   calendar: (
     <>

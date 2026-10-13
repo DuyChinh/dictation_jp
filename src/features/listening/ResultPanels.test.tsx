@@ -38,6 +38,26 @@ describe("DialoguePanel", () => {
     expect(screen.queryByText("—")).toBeNull();
   });
 
+  it("shows the translation and the VI/EN mark in the web's language, whatever the saved choice", () => {
+    localStorage.setItem("jd_ui_language", "en");
+    render(
+      <UiLanguageProvider>
+        <DialoguePanel
+          segments={[{ speaker_id: "m", text: { ja: "はい。", vi: "Vâng.", en: "Yes." } }]}
+          speakers={speakers}
+          dialogue={{ ja: "—" }}
+          lang="vi"
+          defaultShowTranslations
+        />
+      </UiLanguageProvider>,
+    );
+    expect(screen.getByText("Yes.")).toBeTruthy();
+    expect(screen.queryByText("Vâng.")).toBeNull();
+    expect(screen.getAllByText("EN").length).toBeGreaterThan(0);
+    expect(screen.queryByText("VI")).toBeNull();
+    localStorage.removeItem("jd_ui_language");
+  });
+
   it("shows each line's translation when defaultShowTranslations is true", () => {
     render(
       <UiLanguageProvider>
