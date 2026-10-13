@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { DialoguePanel, ExplanationPanel } from "./ResultPanels";
 
@@ -56,6 +56,64 @@ describe("DialoguePanel", () => {
     expect(screen.getAllByText("EN").length).toBeGreaterThan(0);
     expect(screen.queryByText("VI")).toBeNull();
     localStorage.removeItem("jd_ui_language");
+  });
+
+  it("falls back to the other language for lines that have no translation in the web's language", () => {
+    localStorage.setItem("jd_ui_language", "en");
+    render(
+      <UiLanguageProvider>
+        <DialoguePanel
+          segments={[{ speaker_id: "m", text: { ja: "はい。", vi: "Vâng." } }]}
+          speakers={speakers}
+          dialogue={{ ja: "—" }}
+          lang="en"
+        />
+      </UiLanguageProvider>,
+    );
+    const btn = screen.getByLabelText("Show translation");
+    expect(btn.textContent).toContain("VI");
+    fireEvent.click(btn);
+    expect(screen.getByText("Vâng.")).toBeTruthy();
+    localStorage.removeItem("jd_ui_language");
+  });
+
+  it("pauses the line being read where it is and carries on from there", () => {
+    const pause = vi.fn();
+    const resume = vi.fn(() => Promise.resolve());
+    const playSegment = vi.fn(() => Promise.resolve());
+    let state = "playing";
+    const audio = {
+      state,
+      engine: { getCurrentTimeMs: () => 500, getState: () => state },
+      pause,
+      resume,
+      playSegment,
+      playFrom: vi.fn(() => Promise.resolve()),
+    } as never;
+    const ui = () => (
+      <UiLanguageProvider>
+        <DialoguePanel
+          segments={[{ speaker_id: "m", text: { ja: "はい。" }, start_ms: 0, end_ms: 2000 }]}
+          speakers={speakers}
+          dialogue={{ ja: "—" }}
+          lang="vi"
+          audio={audio}
+          audioRange={{ startMs: 0, endMs: 5000 }}
+          showPlayer={false}
+        />
+      </UiLanguageProvider>
+    );
+    const { rerender } = render(ui());
+    fireEvent.click(screen.getByLabelText("Tạm dừng"));
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(playSegment).not.toHaveBeenCalled();
+
+    state = "paused";
+    (audio as { state: string }).state = "paused";
+    rerender(ui());
+    fireEvent.click(screen.getByLabelText("Nghe câu này"));
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(playSegment).not.toHaveBeenCalled();
   });
 
   it("shows each line's translation when defaultShowTranslations is true", () => {

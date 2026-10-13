@@ -217,10 +217,16 @@ export function DialoguePanel({
   const [isPlaying, setIsPlaying] = useState(false);
   const activeLineRef = useRef<HTMLLIElement | null>(null);
 
-  const lineTranslations = useMemo(
-    () => resolveLineTranslations(segments, dialogue, shownLang),
-    [segments, dialogue, shownLang],
-  );
+  const otherLang: SupportLang = shownLang === "vi" ? "en" : "vi";
+  // Each line is translated into the web's language; a line that only exists in the other one shows that instead.
+  const lineTr = useMemo(() => {
+    const primary = resolveLineTranslations(segments, dialogue, shownLang);
+    const fallback = resolveLineTranslations(segments, dialogue, otherLang);
+    return segments.map((_, i): { text: string; lang: SupportLang } | null =>
+      primary[i] ? { text: primary[i]!, lang: shownLang } : fallback[i] ? { text: fallback[i]!, lang: otherLang } : null,
+    );
+  }, [segments, dialogue, shownLang, otherLang]);
+  const lineTranslations = useMemo(() => lineTr.map((x) => x?.text ?? ""), [lineTr]);
 
   const [expandedTrIndices, setExpandedTrIndices] = useState<Set<number>>(() => {
     if (defaultShowTranslations) {
@@ -292,22 +298,40 @@ export function DialoguePanel({
     }
   }, [activeSegmentIndex, isPlaying]);
 
+  // How the current sound was started, so resuming continues over the same stretch.
+  const startedFrom = useRef<"line" | "range">("range");
+
   const handleLineClick = (s: DialogueSegment) => {
     if (s.start_ms == null) return;
     if (audio && audioRange) {
+      startedFrom.current = "range";
       void audio.playFrom(audioRange, s.start_ms).catch(() => undefined);
     } else if (onPlayLine && s.end_ms != null) {
       onPlayLine(s.start_ms, s.end_ms);
     }
   };
 
-  const handlePlayLineOnly = (e: React.MouseEvent, s: DialogueSegment) => {
+  const handlePlayLineOnly = (e: React.MouseEvent, s: DialogueSegment, isActive: boolean) => {
     e.stopPropagation();
     if (s.start_ms == null || s.end_ms == null) return;
+    const lineRange = { startMs: s.start_ms, endMs: s.end_ms };
+    if (audio && isActive) {
+      // The line being read: pause where it is, or carry on from there.
+      if (isPlaying) {
+        audio.pause();
+      } else if (startedFrom.current === "range" && audioRange) {
+        void audio.resume(audioRange).catch(() => undefined);
+      } else {
+        void audio.resume(lineRange).catch(() => undefined);
+      }
+      return;
+    }
     if (onPlayLine) {
+      startedFrom.current = "line";
       onPlayLine(s.start_ms, s.end_ms);
     } else if (audio) {
-      void audio.playSegment({ startMs: s.start_ms, endMs: s.end_ms }).catch(() => undefined);
+      startedFrom.current = "line";
+      void audio.playSegment(lineRange).catch(() => undefined);
     }
   };
 
@@ -315,7 +339,9 @@ export function DialoguePanel({
     const s = speakers.find((x) => x.id === id);
     return getLocalizedText(s?.label, "ja") || id;
   };
-  const full = dialogue && usable(dialogue[shownLang] ?? "") ? dialogue[shownLang]!.trim() : "";
+  const fullLang: SupportLang | null =
+    dialogue && usable(dialogue[shownLang] ?? "") ? shownLang : dialogue && usable(dialogue[otherLang] ?? "") ? otherLang : null;
+  const full = fullLang ? dialogue![fullLang]!.trim() : "";
   const evidence = new Set(evidenceIds ?? []);
   const wrong = new Set((wrongIds ?? []).filter((id) => !evidence.has(id)));
   const markOf = (id?: string): "answer" | "wrong" | null =>
@@ -366,6 +392,7 @@ export function DialoguePanel({
       <ol className="dialogue__lines">
         {segments.map((s, i) => {
           const tr = lineTranslations[i];
+          const trCode = (lineTr[i]?.lang ?? shownLang) === "vi" ? "VI" : "EN";
           const isExpanded = expandedTrIndices.has(i);
           const who = labelOf(s.speaker_id);
           const mark = markOf(s.id);
@@ -416,7 +443,7 @@ export function DialoguePanel({
                 {isActive && (
                   <span className="dialogue__active-pill">
                     <Icon name="bars" size={14} strokeWidth={2.4} />
-                    {isPlaying ? t("listening.nowPlaying") : t("dictation.pause")}
+                    {isPlaying ? t("listening.nowPlaying") : t("listening.paused")}
                   </span>
                 )}
                 {mark === "answer" && <span className="dialogue__badge">{t("listening.answerHere")}</span>}
@@ -431,7 +458,7 @@ export function DialoguePanel({
                   >
                     <span className="dialogue__tr-badge">
                       <TranslateGlyph size={16} />
-                      {shownLang === "vi" ? "VI" : "EN"}
+                      {trCode}
                     </span>
                     <span className="dialogue__tr-text">{tr}</span>
                     <button
@@ -458,7 +485,7 @@ export function DialoguePanel({
                   >
                     <TranslateGlyph size={20} />
                     <span className="dialogue__tr-btn-label">
-                      {shownLang === "vi" ? "VI" : "EN"}
+                      {trCode}
                     </span>
                   </button>
                 )}
@@ -467,9 +494,9 @@ export function DialoguePanel({
                     type="button"
                     className={`icon-btn icon-btn--round dialogue__play${isActive && isPlaying ? " is-playing" : ""}`}
                     style={{ width: 40, height: 40 }}
-                    aria-label={t("listening.playLine")}
-                    title={t("listening.playLine")}
-                    onClick={(e) => handlePlayLineOnly(e, s)}
+                    aria-label={isActive && isPlaying ? t("dictation.pause") : t("listening.playLine")}
+                    title={isActive && isPlaying ? t("dictation.pause") : t("listening.playLine")}
+                    onClick={(e) => handlePlayLineOnly(e, s, isActive)}
                   >
                     <Icon name={isActive && isPlaying ? "pause" : "play"} size={14} />
                   </button>
@@ -487,7 +514,7 @@ export function DialoguePanel({
       {full && (
         <details className="dialogue__full-details">
           <summary className="dialogue__full-summary">
-            <span className="eyebrow">{shownLang === "vi" ? "Xem toàn bộ bản dịch bài nghe" : "Full dialogue translation"}</span>
+            <span className="eyebrow">{fullLang === "vi" ? "Xem toàn bộ bản dịch bài nghe" : "Full dialogue translation"}</span>
             <Icon name="chevronRight" size={14} />
           </summary>
           <div className="dialogue__full-body">
