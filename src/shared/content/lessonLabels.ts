@@ -26,11 +26,12 @@ export function lessonKind(source: Source): LessonKind {
   return isPracticeLesson(source) ? "practice" : "other";
 }
 
-/** "JLPT N2 Practice 1", or "" when the source is not a numbered practice test. */
+/** "JLPT N2 Practice 1" (or "JLPT N2 <label>" when the source names one), "" when not a numbered practice test. */
 function practiceTitle(source: Source): string {
   const level = levelOf(source);
   if (!isPracticeLesson(source) || !level || !source?.set) return "";
-  return `JLPT ${level} Practice ${source.set}`;
+  const label = typeof source.label === "string" ? source.label.trim() : "";
+  return `JLPT ${level} ${label || `Practice ${source.set}`}`;
 }
 
 /** Page title, e.g. "JLPT N2 — 7/2025" or "JLPT N2 Practice 1". */
