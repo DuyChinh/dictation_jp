@@ -8,12 +8,12 @@ import { useTheme } from "../theme/ThemeProvider";
 import { Flag } from "./Flag";
 import { PRICING_READY } from "../../config/pricing";
 import { Icon, type IconName } from "./Icon";
+import { loadCollapsed, saveCollapsed } from "../storage/sidebarPref";
 
 export type Crumb = { label: string; to?: string };
 
 /** Below this width the sidebar is a drawer over the page; above it, a column that can shrink to icons. */
 const DRAWER_QUERY = "(max-width: 1023px)";
-const COLLAPSED_KEY = "jd.sidebar_collapsed.v1";
 
 function useIsDrawer(): boolean {
   const [drawer, setDrawer] = useState(() => window.matchMedia?.(DRAWER_QUERY).matches ?? false);
@@ -25,14 +25,6 @@ function useIsDrawer(): boolean {
     return () => mq.removeEventListener("change", onChange);
   }, []);
   return drawer;
-}
-
-function loadCollapsed(): boolean {
-  try {
-    return localStorage.getItem(COLLAPSED_KEY) === "1";
-  } catch {
-    return false;
-  }
 }
 
 type NavItem = { to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean };
@@ -144,11 +136,7 @@ export function AppShell({
     }
     const next = !collapsed;
     setCollapsed(next);
-    try {
-      localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0");
-    } catch {
-      // storage blocked: the choice lasts until reload
-    }
+    saveCollapsed(next);
   };
 
   return (

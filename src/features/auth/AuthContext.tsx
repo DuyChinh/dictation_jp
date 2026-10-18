@@ -1,3 +1,4 @@
+import { expandSidebar } from "../../shared/storage/sidebarPref";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiUrl } from "../../shared/env";
 import { adoptLocalData, clearAccountData } from "../../shared/storage/accountData";
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem("token", data.token);
     await adoptLocalData(data.user._id, data.token, { fromGuest: true });
+    expandSidebar();
     setUser(data.user);
   };
 
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem("token", data.token);
     await adoptLocalData(data.user._id, data.token, { fromGuest: true });
+    expandSidebar();
     setUser(data.user);
   };
 
@@ -108,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.ok) {
       const data = await res.json();
       await adoptLocalData(data.user._id, token, { fromGuest: true });
+      expandSidebar();
       setUser(data.user);
     } else {
       localStorage.removeItem("token");
