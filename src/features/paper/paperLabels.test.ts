@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPaperPart, mondaiLabel, segmentSentence, splitTarget } from "./paperLabels";
+import { isPaperPart, levelOfLesson, mondaiLabel, mondaiNo, segmentSentence, splitTarget } from "./paperLabels";
 
 describe("splitTarget", () => {
   it("marks the asked-about word of a stem", () => {
@@ -35,5 +35,16 @@ describe("labels", () => {
     expect(isPaperPart("listening")).toBe(false);
     expect(mondaiLabel(8, "vi")).toContain("★");
     expect(mondaiLabel(99, "vi")).toBe("問題99");
+  });
+});
+
+describe("N4 labels", () => {
+  it("prints the booklet 問題 number and names each N4 group", () => {
+    expect(levelOfLesson("jlpt-n4-2025-12")).toBe("N4");
+    expect(mondaiNo(6, "jlpt-n4-2025-12")).toBe(1);
+    expect(mondaiNo(9, "jlpt-n4-2025-12")).toBe(4);
+    expect(mondaiNo(6, "jlpt-n2-2025-12")).toBe(6);
+    expect(mondaiLabel(7, "vi", "jlpt-n4-2025-12")).toContain("★");
+    expect(mondaiLabel(3, "vi", "jlpt-n4-2025-12")).toBe("Từ hợp ngữ cảnh");
   });
 });

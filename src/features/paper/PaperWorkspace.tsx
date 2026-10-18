@@ -12,7 +12,7 @@ import {
 } from "../../shared/storage/paperProgressStore";
 import { PassageStage } from "./PassageStage";
 import { PaperItemCard } from "./PaperItemCard";
-import { mondaiLabel } from "./paperLabels";
+import { mondaiLabel, mondaiNo } from "./paperLabels";
 
 type Props = { lessonId: string; paper: PaperPractice; part: PaperPart };
 
@@ -149,22 +149,22 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
             onClick={() => go(m)}
           >
             <span className="paper-step__top">
-              <strong className="jp">問題{m}</strong>
+              <strong className="jp">問題{mondaiNo(m, lessonId)}</strong>
               <span>
                 {answered(list)}/{list.length}
               </span>
             </span>
-            <span className="paper-step__name">{mondaiLabel(m, uiLang)}</span>
+            <span className="paper-step__name">{mondaiLabel(m, uiLang, lessonId)}</span>
           </button>
         ))}
       </nav>
 
       <div className="paper-dotsbar">
         <span className="paper-dotsbar__label">
-          <strong className="jp">問題{active}</strong>
-          <span>· {mondaiLabel(active, uiLang)}</span>
+          <strong className="jp">問題{mondaiNo(active, lessonId)}</strong>
+          <span>· {mondaiLabel(active, uiLang, lessonId)}</span>
         </span>
-        <div className="paper-dots" role="group" aria-label={`問題${active}`}>
+        <div className="paper-dots" role="group" aria-label={`問題${mondaiNo(active, lessonId)}`}>
           {groupItems.map((i) => {
             const a = progress.answers[i.id];
             const state = a ? (a.correct ? " is-right" : " is-wrong") : "";

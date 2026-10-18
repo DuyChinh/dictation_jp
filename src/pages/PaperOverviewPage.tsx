@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ExamEntry } from "../features/paper/ExamEntry";
-import { mondaiLabel, PARTS, PART_KANJI } from "../features/paper/paperLabels";
+import { mondaiLabel, mondaiNo, PARTS, PART_KANJI } from "../features/paper/paperLabels";
 import { usePaperPractice } from "../features/paper/usePaperPractice";
 import type { PaperItem, PaperPart } from "../shared/api/paper";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
@@ -88,7 +88,7 @@ export function PaperOverviewPage() {
     ? t("paper.ov.restart")
     : stats.done === 0
       ? t("paper.start")
-      : `${t("paper.continue")}: 問題${stats.next.mondai} · ${t("paper.question").toLowerCase()} ${stats.next.no}`;
+      : `${t("paper.continue")}: 問題${mondaiNo(stats.next.mondai, lessonId)} · ${t("paper.question").toLowerCase()} ${stats.next.no}`;
 
   return (
     <AppShell breadcrumbs={crumbs}>
@@ -171,7 +171,8 @@ export function PaperOverviewPage() {
                 title={t(`paper.title.${part}` as const)}
                 desc={t(`paper.desc.${part}` as const)}
                 cta={done > 0 && done < items.length ? t("paper.continue") : done === 0 ? t("paper.start") : t("paper.redo")}
-                label={(m) => mondaiLabel(m, uiLang)}
+                label={(m) => mondaiLabel(m, uiLang, lessonId)}
+                qno={(m) => mondaiNo(m, lessonId)}
                 progressLabel={t("paper.ov.progress")}
                 unit={t("paper.questionsUnit")}
               />
@@ -207,6 +208,7 @@ function PartCard(props: {
   desc: string;
   cta: string;
   label: (m: number) => string;
+  qno: (m: number) => number;
   progressLabel: string;
   unit: string;
 }) {
@@ -234,7 +236,7 @@ function PartCard(props: {
             className={`paper-chip${c.done === c.total ? " is-done" : c.m === firstOpen && done > 0 ? " is-current" : ""}`}
             title={props.label(c.m)}
           >
-            <span className="jp">問題{c.m}</span>
+            <span className="jp">問題{props.qno(c.m)}</span>
             <small>
               {c.done}/{c.total}
             </small>

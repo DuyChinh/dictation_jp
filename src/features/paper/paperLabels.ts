@@ -21,8 +21,37 @@ export const MONDAI: Record<number, L> = {
   14: { ja: "情報検索", vi: "Tìm thông tin", en: "Information retrieval" },
 };
 
-export function mondaiLabel(mondai: number, lang: UiLang): string {
-  const l = MONDAI[mondai];
+/**
+ * N4 papers restart the printed 問題 numbers per booklet part, so their `mondai` ids run 1–11 in
+ * paper order (vocab 1–5, grammar 6–8, reading 9–11); `no` is the number printed in the exam.
+ */
+const N4_MONDAI: Record<number, L & { no: number }> = {
+  1: { no: 1, ja: "漢字の読み", vi: "Cách đọc kanji", en: "Kanji readings" },
+  2: { no: 2, ja: "表記", vi: "Viết bằng kanji", en: "Writing in kanji" },
+  3: { no: 3, ja: "文脈規定", vi: "Từ hợp ngữ cảnh", en: "Words in context" },
+  4: { no: 4, ja: "言い換え類義", vi: "Từ đồng nghĩa", en: "Close in meaning" },
+  5: { no: 5, ja: "用法", vi: "Cách dùng từ", en: "Usage" },
+  6: { no: 1, ja: "文の文法", vi: "Ngữ pháp trong câu", en: "Sentence grammar" },
+  7: { no: 2, ja: "文の組み立て", vi: "Sắp xếp câu (★)", en: "Sentence arrangement (★)" },
+  8: { no: 3, ja: "文章の文法", vi: "Ngữ pháp trong đoạn", en: "Passage grammar" },
+  9: { no: 4, ja: "内容理解（短文）", vi: "Đoạn ngắn", en: "Short passages" },
+  10: { no: 5, ja: "内容理解（中文）", vi: "Đoạn vừa", en: "Medium passages" },
+  11: { no: 6, ja: "情報検索", vi: "Tìm thông tin", en: "Information retrieval" },
+};
+
+/** JLPT level encoded in a lesson id such as "jlpt-n4-2025-12". */
+export function levelOfLesson(lessonId: string): string | undefined {
+  return /^jlpt-(n[1-5])-/i.exec(lessonId)?.[1]?.toUpperCase();
+}
+
+/** The 問題 number as printed in the exam (N4 restarts it per booklet part). */
+export function mondaiNo(mondai: number, lessonId?: string): number {
+  return lessonId && levelOfLesson(lessonId) === "N4" ? (N4_MONDAI[mondai]?.no ?? mondai) : mondai;
+}
+
+export function mondaiLabel(mondai: number, lang: UiLang, lessonId?: string): string {
+  const table: Record<number, L> = lessonId && levelOfLesson(lessonId) === "N4" ? N4_MONDAI : MONDAI;
+  const l = table[mondai];
   if (!l) return `問題${mondai}`;
   return lang === "ja" ? l.ja : lang === "en" ? l.en : l.vi;
 }

@@ -12,7 +12,7 @@ import {
 import { saveAnswer } from "../../shared/storage/paperProgressStore";
 import { Icon } from "../../shared/ui/Icon";
 import { PassageView } from "./PassageView";
-import { mondaiLabel, scopeTitle, splitTarget } from "./paperLabels";
+import { mondaiLabel, mondaiNo, scopeTitle, splitTarget } from "./paperLabels";
 
 type Props = {
   lessonId: string;
@@ -258,7 +258,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
           {groups.map((m) => (
             <div key={m} className="exam-palette__group">
               <span className="exam-palette__label">
-                <strong className="jp">問題{m}</strong> · {mondaiLabel(m, uiLang)}
+                <strong className="jp">問題{mondaiNo(m, lessonId)}</strong> · {mondaiLabel(m, uiLang, lessonId)}
               </span>
               <div className="exam-palette__dots">
                 {items

@@ -3,7 +3,7 @@ import type { ExamItemResult } from "../../shared/api/paper";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { partLabel, partType } from "../../shared/content/lessonLabels";
 import { formatClock, type ExamSession } from "../../shared/storage/paperExamStore";
-import { mondaiLabel, scopeTitle } from "./paperLabels";
+import { mondaiLabel, mondaiNo, scopeTitle } from "./paperLabels";
 
 type Props = {
   lessonId: string;
@@ -39,7 +39,7 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
         ? reviewHref(i?.no)
         : `/lessons/${encodeURIComponent(lessonId)}/listening`;
   const mondaiName = (m: number) =>
-    result.scope === "listening" ? partLabel(partType(source, m), uiLang) : mondaiLabel(m, uiLang);
+    result.scope === "listening" ? partLabel(partType(source, m), uiLang) : mondaiLabel(m, uiLang, lessonId);
   const limit = session.minutes * 60_000;
   const used = Math.min((session.submittedAt ?? session.endsAt) - session.startedAt, limit);
   const total = result.total;
@@ -136,7 +136,7 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
             <article key={g.m} className="exam-type">
               <div className="exam-type__head">
                 <div>
-                  <strong className="jp">問題{g.m}</strong>
+                  <strong className="jp">問題{result.scope === "listening" ? g.m : mondaiNo(g.m, lessonId)}</strong>
                   <span>{mondaiName(g.m)}</span>
                 </div>
                 <b>
