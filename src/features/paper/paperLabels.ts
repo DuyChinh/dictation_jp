@@ -39,6 +39,23 @@ const N4_MONDAI: Record<number, L & { no: number }> = {
   11: { no: 6, ja: "情報検索", vi: "Tìm thông tin", en: "Information retrieval" },
 };
 
+/** N1 papers have no 語形成 group, so their 問題 numbers (printed 1–13) mean something else than N2/N3. */
+const N1_MONDAI: Record<number, L> = {
+  1: { ja: "漢字読み", vi: "Cách đọc kanji", en: "Kanji readings" },
+  2: { ja: "文脈規定", vi: "Từ hợp ngữ cảnh", en: "Words in context" },
+  3: { ja: "言い換え類義", vi: "Từ đồng nghĩa", en: "Close in meaning" },
+  4: { ja: "用法", vi: "Cách dùng từ", en: "Usage" },
+  5: { ja: "文法形式の判断", vi: "Chọn mẫu ngữ pháp", en: "Grammar forms" },
+  6: { ja: "文の組み立て", vi: "Sắp xếp câu (★)", en: "Sentence arrangement (★)" },
+  7: { ja: "文章の文法", vi: "Ngữ pháp trong đoạn", en: "Passage grammar" },
+  8: { ja: "内容理解（短文）", vi: "Đoạn ngắn", en: "Short passages" },
+  9: { ja: "内容理解（中文）", vi: "Đoạn vừa", en: "Medium passages" },
+  10: { ja: "内容理解（長文）", vi: "Bài dài", en: "Long passage" },
+  11: { ja: "統合理解", vi: "Đọc so sánh A/B", en: "Comparing A and B" },
+  12: { ja: "主張理解（長文）", vi: "Bài dài, ý tác giả", en: "Author's argument" },
+  13: { ja: "情報検索", vi: "Tìm thông tin", en: "Information retrieval" },
+};
+
 /** JLPT level encoded in a lesson id such as "jlpt-n4-2025-12". */
 export function levelOfLesson(lessonId: string): string | undefined {
   return /^jlpt-(n[1-5])-/i.exec(lessonId)?.[1]?.toUpperCase();
@@ -50,7 +67,8 @@ export function mondaiNo(mondai: number, lessonId?: string): number {
 }
 
 export function mondaiLabel(mondai: number, lang: UiLang, lessonId?: string): string {
-  const table: Record<number, L> = lessonId && levelOfLesson(lessonId) === "N4" ? N4_MONDAI : MONDAI;
+  const level = lessonId ? levelOfLesson(lessonId) : undefined;
+  const table: Record<number, L> = level === "N4" ? N4_MONDAI : level === "N1" ? N1_MONDAI : MONDAI;
   const l = table[mondai];
   if (!l) return `問題${mondai}`;
   return lang === "ja" ? l.ja : lang === "en" ? l.en : l.vi;

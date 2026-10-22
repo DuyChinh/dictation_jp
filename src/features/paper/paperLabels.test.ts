@@ -47,4 +47,11 @@ describe("N4 labels", () => {
     expect(mondaiLabel(7, "vi", "jlpt-n4-2025-12")).toContain("★");
     expect(mondaiLabel(3, "vi", "jlpt-n4-2025-12")).toBe("Từ hợp ngữ cảnh");
   });
+
+  it("names the N1 groups, which differ from N2", () => {
+    expect(mondaiLabel(2, "vi", "jlpt-n1-2024-12")).toBe("Từ hợp ngữ cảnh");
+    expect(mondaiLabel(2, "vi", "jlpt-n2-2025-12")).not.toBe("Từ hợp ngữ cảnh");
+    expect(mondaiLabel(6, "vi", "jlpt-n1-2024-12")).toContain("★");
+    expect(mondaiNo(6, "jlpt-n1-2024-12")).toBe(6);
+  });
 });
