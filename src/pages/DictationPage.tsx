@@ -42,6 +42,7 @@ function DictationContent({
 }) {
   const [params] = useSearchParams();
   const questionId = params.get("question") ?? undefined;
+  const segmentId = params.get("segment") ?? undefined;
   const { practice, error, loading } = usePractice(lessonId, sectionId);
   const { t, uiLang } = useUiLanguage();
 
@@ -87,6 +88,7 @@ function DictationContent({
           practice={practice}
           sectionId={sectionId}
           initialQuestionId={questionId}
+          initialSegmentId={segmentId}
           parts={parts}
           lessonHref={lessonHref}
           sectionTypeLabel={sectionTypeLabel || undefined}

@@ -6,6 +6,7 @@ import {
   finishExam,
   formatClock,
   setExamAnswer,
+  setExamCursor,
   toggleExamFlag,
   type ExamSession,
 } from "../../shared/storage/paperExamStore";
@@ -31,7 +32,9 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
     () => paper.items.filter((i) => session.scope === "all" || i.part === session.scope).sort((a, b) => a.no - b.no),
     [paper, session.scope],
   );
-  const [currentId, setCurrentId] = useState(items[0]?.id ?? "");
+  const [currentId, setCurrentId] = useState(() =>
+    items.some((i) => i.id === session.cursor) ? session.cursor! : (items[0]?.id ?? ""),
+  );
   const [now, setNow] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -103,6 +106,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
   function go(id: string | undefined) {
     if (id) {
       setCurrentId(id);
+      setExamCursor(lessonId, id);
       window.scrollTo({ top: 0 });
     }
   }

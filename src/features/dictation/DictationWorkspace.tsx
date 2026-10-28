@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   PracticePackage,
   PracticeQuestion,
@@ -172,6 +173,8 @@ type Props = {
   initialIndex?: number;
   /** Start on the first sentence of this question (overrides initialIndex). */
   initialQuestionId?: string;
+  /** With initialQuestionId: the sentence of that question to start on. */
+  initialSegmentId?: string;
   /** Part (問題) switcher entries; each is a link to that part's dictation. */
   parts?: PartLink[];
   /** Lesson detail page, linked from the progress card. */
@@ -188,6 +191,7 @@ export function DictationWorkspace({
   sectionId,
   initialIndex = 0,
   initialQuestionId,
+  initialSegmentId,
   parts,
   lessonHref,
   sectionTypeLabel,
@@ -226,12 +230,30 @@ export function DictationWorkspace({
   }, [items]);
 
   const [index, setIndex] = useState(() => {
-    const fromQuestion = initialQuestionId
-      ? items.findIndex((it) => it.question.id === initialQuestionId)
+    const exact = initialQuestionId && initialSegmentId
+      ? items.findIndex((it) => it.key === `${initialQuestionId}::${initialSegmentId}`)
       : -1;
+    const fromQuestion = exact >= 0
+      ? exact
+      : initialQuestionId
+        ? items.findIndex((it) => it.question.id === initialQuestionId)
+        : -1;
     const start = fromQuestion >= 0 ? fromQuestion : initialIndex;
     return Math.min(Math.max(start, 0), Math.max(items.length - 1, 0));
   });
+
+  // Pin the sentence we are on in the URL, so a reload comes back to it instead of the first one.
+  const [params, setParams] = useSearchParams();
+  const pinnedQuestionId = items[index]?.question.id;
+  const pinnedSegmentId = items[index]?.segment.id;
+  useEffect(() => {
+    if (!pinnedQuestionId || !pinnedSegmentId) return;
+    if (params.get("question") === pinnedQuestionId && params.get("segment") === pinnedSegmentId) return;
+    const next = new URLSearchParams(params);
+    next.set("question", pinnedQuestionId);
+    next.set("segment", pinnedSegmentId);
+    setParams(next, { replace: true });
+  }, [pinnedQuestionId, pinnedSegmentId, params, setParams]);
 
   const activeQuestionId = items[index]?.question.id;
   const activeQuestionGroup = questionGroups.find(

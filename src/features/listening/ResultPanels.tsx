@@ -6,6 +6,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { SegmentPlayer } from "../../shared/audio/SegmentPlayer";
 import type { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { Icon } from "../../shared/ui/Icon";
+import { resolveLineTranslations } from "./lineTranslations";
 
 /** The usual "translate" mark: a Japanese character on one tile and a Latin letter on the one in front. */
 function TranslateGlyph({ size = 20 }: { size?: number }) {
@@ -87,95 +88,6 @@ function translationLines(
     const marks = turns[i]!.map((seg) => markOf(seg.id));
     return { text, mark: marks.includes("answer") ? "answer" : marks.includes("wrong") ? "wrong" : null };
   });
-}
-
-function splitSentences(text: string): string[] {
-  const sents: string[] = [];
-  let cur = "";
-  let inQuote = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    cur += ch;
-    if (ch === "“" || ch === "”" || ch === "\"" || ch === "「" || ch === "」") {
-      inQuote = !inQuote;
-    }
-    if (!inQuote && (ch === "." || ch === "?" || ch === "!")) {
-      const nextChar = text[i + 1];
-      if (ch === "." && nextChar && /\d/.test(nextChar)) {
-        continue;
-      }
-      if (i === text.length - 1 || /\s/.test(nextChar ?? "")) {
-        sents.push(cur.trim());
-        cur = "";
-      }
-    }
-  }
-  if (cur.trim()) {
-    sents.push(cur.trim());
-  }
-  return sents.filter(Boolean);
-}
-
-function resolveLineTranslations(
-  segments: DialogueSegment[],
-  dialogue: LocalizedText | null | undefined,
-  lang: SupportLang,
-): string[] {
-  const direct = segments.map((s) => (usable(s.text[lang] ?? "") ? s.text[lang]!.trim() : ""));
-  if (direct.every((t) => !!t)) {
-    return direct;
-  }
-
-  const full = dialogue && usable(dialogue[lang] ?? "") ? dialogue[lang]!.trim() : "";
-  if (!full) return direct;
-
-  const lines = full.split("\n").map((l) => l.trim()).filter(Boolean);
-  const turns: Array<{ speaker_id: string; segments: Array<{ seg: DialogueSegment; sIdx: number }> }> = [];
-  for (let sIdx = 0; sIdx < segments.length; sIdx++) {
-    const seg = segments[sIdx]!;
-    const last = turns[turns.length - 1];
-    if (last && last.speaker_id === seg.speaker_id) {
-      last.segments.push({ seg, sIdx });
-    } else {
-      turns.push({ speaker_id: seg.speaker_id, segments: [{ seg, sIdx }] });
-    }
-  }
-
-  const result = [...direct];
-
-  if (lines.length === turns.length) {
-    for (let tIdx = 0; tIdx < turns.length; tIdx++) {
-      const turn = turns[tIdx]!;
-      const lineText = lines[tIdx]!.replace(/^[^:：]+[:：]\s*/, "").trim();
-      if (turn.segments.length === 1) {
-        const sIdx = turn.segments[0]!.sIdx;
-        if (!result[sIdx]) result[sIdx] = lineText;
-      } else {
-        const sents = splitSentences(lineText);
-        if (sents.length === turn.segments.length) {
-          for (let i = 0; i < sents.length; i++) {
-            const sIdx = turn.segments[i]!.sIdx;
-            if (!result[sIdx]) result[sIdx] = sents[i]!;
-          }
-        } else {
-          for (let i = 0; i < turn.segments.length; i++) {
-            const sIdx = turn.segments[i]!.sIdx;
-            if (!result[sIdx]) {
-              result[sIdx] = sents[i] || lineText;
-            }
-          }
-        }
-      }
-    }
-  } else if (lines.length === segments.length) {
-    for (let i = 0; i < segments.length; i++) {
-      if (!result[i]) {
-        result[i] = lines[i]!.replace(/^[^:：]+[:：]\s*/, "").trim();
-      }
-    }
-  }
-
-  return result;
 }
 
 /**

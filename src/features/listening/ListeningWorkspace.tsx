@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { PracticePackage } from "../../shared/api/content";
 import { evaluateListening, type ListeningEvalResult } from "../../shared/api/evaluate";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
@@ -61,6 +61,7 @@ export function ListeningWorkspace({
 }: Props) {
   const { t, uiLang } = useUiLanguage();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const units = useMemo(
     () => flattenUnits(practice, { sectionId, onlyQuestionIds }),
     [practice, sectionId, onlyQuestionIds],
@@ -86,6 +87,15 @@ export function ListeningWorkspace({
   const current: ListeningUnit | undefined = units[index];
   const primary = current?.parts[0]?.question;
   const range = primary ? { startMs: primary.audio.start_ms, endMs: primary.audio.end_ms } : null;
+
+  // Pin the question we are on in the URL, so a reload comes back to it instead of the first one.
+  const unitId = current?.unitId;
+  useEffect(() => {
+    if (!unitId || params.get("question") === unitId) return;
+    const next = new URLSearchParams(params);
+    next.set("question", unitId);
+    setParams(next, { replace: true });
+  }, [unitId, params, setParams]);
 
   useEffect(() => {
     void audio.load(practice.audio_url).catch(() => undefined);

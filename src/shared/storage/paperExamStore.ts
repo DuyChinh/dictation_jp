@@ -32,6 +32,8 @@ export type ExamSession = {
   allowReplay?: boolean;
   /** Listening: units whose audio has already started, so reopening one does not play it again. */
   played?: Record<string, true>;
+  /** The question on screen (item id, or listening unit id), so a reload comes back to it. */
+  cursor?: string;
   submittedAt?: number;
   result?: ExamResult;
 };
@@ -125,6 +127,13 @@ export function clearExamAnswer(lessonId: string, itemId: string): ExamSession |
 export function markExamPlayed(lessonId: string, unitId: string): ExamSession | null {
   return update(lessonId, (s) => {
     s.played = { ...(s.played ?? {}), [unitId]: true };
+  });
+}
+
+/** Remembers the question on screen. Quiet: the screen already shows it, so nothing re-renders. */
+export function setExamCursor(lessonId: string, cursor: string): void {
+  update(lessonId, (s) => {
+    s.cursor = cursor;
   });
 }
 

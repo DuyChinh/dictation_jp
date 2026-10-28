@@ -12,6 +12,7 @@ import {
   formatClock,
   markExamPlayed,
   setExamAnswer,
+  setExamCursor,
   toggleExamFlag,
   type ExamSession,
 } from "../../shared/storage/paperExamStore";
@@ -39,7 +40,7 @@ const unitAnswered = (u: ListeningUnit, answers: Record<string, string>) => u.pa
 export function ExamListeningRunner({ lessonId, practice, session, onChange }: Props) {
   const { t, uiLang } = useUiLanguage();
   const units = useMemo(() => flattenUnits(practice), [practice]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, units.findIndex((u) => u.unitId === session.cursor)));
   const [now, setNow] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -176,6 +177,7 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
   function go(i: number) {
     if (i >= 0 && i < units.length) {
       setIndex(i);
+      setExamCursor(lessonId, units[i]!.unitId);
       window.scrollTo({ top: 0 });
     }
   }

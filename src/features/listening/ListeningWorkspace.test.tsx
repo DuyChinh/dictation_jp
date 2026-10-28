@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { getListeningAnswers } from "../../shared/storage/listeningScoreStore";
 import { LanguageProvider } from "../../shared/content/LanguageProvider";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
@@ -133,5 +133,39 @@ describe("ListeningWorkspace", () => {
       expect(screen.getByText("Chính xác!")).toBeTruthy();
     });
     expect(screen.queryByRole("button", { name: /Trả lời/ })).toBeNull();
+  });
+
+  it("keeps the question in the URL, so a reload does not go back to the first one", async () => {
+    const first = practice.sections[0]!.questions[0]!;
+    const two: PracticePackage = {
+      ...practice,
+      sections: [{ ...practice.sections[0]!, questions: [first, { ...first, id: "q2", order: 2 }] }],
+    };
+    const Where = () => <output data-testid="where">{useLocation().search}</output>;
+    const ui = (initial: string) => (
+      <MemoryRouter initialEntries={[initial]}>
+        <UiLanguageProvider>
+          <LanguageProvider>
+            <ListeningWorkspace
+              lessonId="fixture"
+              practice={two}
+              initialQuestionId={new URLSearchParams(initial.split("?")[1]).get("question") ?? undefined}
+              basePath="/lessons/fixture/listening"
+              lessonHref="/lessons/fixture"
+            />
+            <Where />
+          </LanguageProvider>
+        </UiLanguageProvider>
+      </MemoryRouter>
+    );
+    render(ui("/lessons/fixture/listening"));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("?question=q1"));
+    fireEvent.click(screen.getByRole("button", { name: /Câu 2/ }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("?question=q2"));
+    cleanup();
+
+    // A reload is a fresh mount on that URL.
+    render(ui("/lessons/fixture/listening?question=q2"));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/2\s*\/\s*2/);
   });
 });
