@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import type { PaperPassage, PassageTranslation } from "../../shared/api/paper";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
+import { LookupLayer } from "../dictionary/LookupLayer";
 
 type Props = {
   passage: PaperPassage;
@@ -47,6 +49,15 @@ function layoutBlocks(passage: PaperPassage): { blocks: Block[]; footnotes: stri
   return { blocks, footnotes };
 }
 
+/** Clicking a word looks it up while practising; the exam room (plain) stays free of aids. */
+function Sheet({ plain, children }: { plain: boolean; children: ReactNode }) {
+  return plain ? (
+    <div className="paper-passage__sheet">{children}</div>
+  ) : (
+    <LookupLayer className="paper-passage__sheet">{children}</LookupLayer>
+  );
+}
+
 /** A reading passage as printed, with on-demand translation. The drill itself lives beside the question. */
 export function PassageView({
   passage,
@@ -66,10 +77,9 @@ export function PassageView({
   const viOf = new Map(translation?.sentences.map((s) => [s.id, s.vi]) ?? []);
   const noteViOf = new Map(translation?.sentences.map((s) => [s.id, s.notes_vi]) ?? []);
   const evidence = passage.sentences.filter((s) => evidenceIds.has(s.id));
-
   return (
     <section className="paper-passage" aria-label={t("paper.passage")}>
-      <div className="paper-passage__sheet">
+      <Sheet plain={plain}>
         {(passage.title_ja || evidenceIds.size > 0) && (
           <div className="paper-passage__top">
             {passage.title_ja ? <h3 className="paper-passage__title jp">{passage.title_ja}</h3> : <span />}
@@ -133,7 +143,7 @@ export function PassageView({
             ))}
           </ul>
         )}
-      </div>
+      </Sheet>
 
       {!plain && (
       <div className="paper-passage__tools">

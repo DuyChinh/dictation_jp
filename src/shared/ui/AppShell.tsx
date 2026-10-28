@@ -35,6 +35,7 @@ const NAV_LEARN: NavItem[] = [
   { to: "/lessons", label: "nav.practice", icon: "book" },
   { to: "/exams", label: "nav.exams", icon: "clock" },
   { to: "/history", label: "nav.progress", icon: "chart" },
+  { to: "/dictionary", label: "nav.dictionary", icon: "search" },
   { to: "/leaderboard", label: "nav.leaderboard", icon: "trophy" },
 ];
 

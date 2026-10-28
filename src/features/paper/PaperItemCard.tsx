@@ -8,6 +8,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import type { TranslationKey } from "../../shared/i18n/translations";
 import type { PaperAnswer } from "../../shared/storage/paperProgressStore";
 import { Icon } from "../../shared/ui/Icon";
+import { LookupLayer } from "../dictionary/LookupLayer";
 import { splitTarget } from "./paperLabels";
 
 type Props = {
@@ -89,9 +90,11 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
           </span>
         )}
       </header>
-      <p className="paper-stem jp" lang="ja">
-        {stem.map((p, i) => (p.mark ? <u key={i}>{p.text}</u> : <span key={i}>{p.text}</span>))}
-      </p>
+      <LookupLayer>
+        <p className="paper-stem jp" lang="ja">
+          {stem.map((p, i) => (p.mark ? <u key={i}>{p.text}</u> : <span key={i}>{p.text}</span>))}
+        </p>
+      </LookupLayer>
       {answered && result.stem_vi && (
         <p className="paper-stem-vi">
           <span className="paper-trans-label">{t("paper.translation")}</span>
