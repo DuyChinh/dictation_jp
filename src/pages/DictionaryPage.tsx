@@ -92,6 +92,7 @@ export function DictionaryPage() {
         </form>
 
         <div className="dict-langs" role="group" aria-label={t("dict.langLabel")}>
+          <span className="dict-langs__label">{t("dict.langLabel")}:</span>
           {LANGS.map((l) => (
             <button
               key={l.value}

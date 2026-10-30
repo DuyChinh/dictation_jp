@@ -13,6 +13,8 @@
 .dict-search__box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 17px; color: var(--text-main); padding: 10px 0; }
 
 .dict-langs { display: flex; flex-wrap: wrap; gap: 8px; }
+.dict-langs { align-items: center; }
+.dict-langs__label { font-size: 13px; color: var(--text-muted); margin-right: 2px; }
 .dict-langs__tab {
   min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--card-border);
   background: var(--card-bg); color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer;

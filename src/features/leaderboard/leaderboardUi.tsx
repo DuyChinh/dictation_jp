@@ -15,8 +15,9 @@ import { Medal, RankBadge } from "./Medal";
 
 const LOCALES: Record<UiLang, string> = { vi: "vi-VN", ja: "ja-JP", en: "en-US" };
 
-export function formatPoints(points: number, lang: UiLang): string {
-  return points.toLocaleString(LOCALES[lang]);
+export function formatPoints(points: number | null | undefined, lang: UiLang): string {
+  // an older backend may not send every score field; show 0 rather than crash the page
+  return (points ?? 0).toLocaleString(LOCALES[lang]);
 }
 
 export const LEVEL_TABS: LeaderboardLevel[] = ["ALL", "N5", "N4", "N3", "N2", "N1"];
@@ -239,7 +240,7 @@ export function LeaderRow({
       )}
       <span className="lb-points tabular">
         <span className="lb-points__total">
-          {formatPoints(entry.totalPoints, uiLang)} <small>{t("lb.pointsUnit")}</small>
+          {formatPoints(entry.totalPoints ?? entry.points, uiLang)} <small>{t("lb.pointsUnit")}</small>
         </span>
         <GainChip points={entry.points} period={period} level={level} />
       </span>

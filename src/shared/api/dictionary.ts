@@ -63,6 +63,7 @@ export async function lookupWord(text: string, offset: number): Promise<LookupRe
   if (lookupCache.has(key)) return lookupCache.get(key) ?? null;
   const { result } = await apiFetch<{ result: LookupResult | null }>(
     `/api/dict/lookup?text=${encodeURIComponent(text)}&offset=${offset}`,
+    { cache: "no-cache" },
   );
   if (lookupCache.size > 300) lookupCache.clear();
   lookupCache.set(key, result);
@@ -70,13 +71,13 @@ export async function lookupWord(text: string, offset: number): Promise<LookupRe
 }
 
 export function searchDictionary(q: string, lang: SearchLang = "auto", signal?: AbortSignal): Promise<SearchResult> {
-  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=${lang}`, { signal });
+  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=${lang}`, { signal, cache: "no-cache" });
 }
 
 export async function fetchEntry(id: number): Promise<DictEntry> {
-  return (await apiFetch<{ entry: DictEntry }>(`/api/dict/entry/${id}`)).entry;
+  return (await apiFetch<{ entry: DictEntry }>(`/api/dict/entry/${id}`, { cache: "no-cache" })).entry;
 }
 
 export async function fetchKanji(chars: string): Promise<DictKanji[]> {
-  return (await apiFetch<{ kanji: DictKanji[] }>(`/api/dict/kanji?chars=${encodeURIComponent(chars)}`)).kanji;
+  return (await apiFetch<{ kanji: DictKanji[] }>(`/api/dict/kanji?chars=${encodeURIComponent(chars)}`, { cache: "no-cache" })).kanji;
 }
