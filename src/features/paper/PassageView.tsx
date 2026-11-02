@@ -92,7 +92,19 @@ export function PassageView({
           </div>
         )}
 
-        {passage.layout_ja ? (
+        {showTranslation ? (
+          <ol className="paper-bilingual">
+            {passage.sentences.map((s) => (
+              <li key={s.id} className={evidenceIds.has(s.id) ? "is-evidence" : ""}>
+                <span className="jp" lang="ja">
+                  {s.text}
+                </span>
+                <span className="paper-bilingual__vi">{viOf.get(s.id)}</span>
+                {noteViOf.get(s.id) && <small className="paper-bilingual__note">{noteViOf.get(s.id)}</small>}
+              </li>
+            ))}
+          </ol>
+        ) : passage.layout_ja ? (
           <>
             <pre className="paper-layout jp" lang="ja">
               {passage.layout_ja}
@@ -107,18 +119,6 @@ export function PassageView({
               </ul>
             )}
           </>
-        ) : showTranslation ? (
-          <ol className="paper-bilingual">
-            {passage.sentences.map((s) => (
-              <li key={s.id} className={evidenceIds.has(s.id) ? "is-evidence" : ""}>
-                <span className="jp" lang="ja">
-                  {s.text}
-                </span>
-                <span className="paper-bilingual__vi">{viOf.get(s.id)}</span>
-                {noteViOf.get(s.id) && <small className="paper-bilingual__note">{noteViOf.get(s.id)}</small>}
-              </li>
-            ))}
-          </ol>
         ) : (
           blocks.map((b, bi) => (
             <div key={bi} className="paper-text">
