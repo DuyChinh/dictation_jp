@@ -47,6 +47,8 @@ export type LookupResult = {
 };
 
 export type SearchLang = "auto" | "ja" | "en" | "vi";
+/** The dictionary the reader picked: Japanese with Vietnamese meanings, or with English ones. */
+export type MeaningPair = "vi" | "en";
 
 export type SearchResult = {
   query: string;
@@ -70,8 +72,14 @@ export async function lookupWord(text: string, offset: number): Promise<LookupRe
   return result;
 }
 
-export function searchDictionary(q: string, lang: SearchLang = "auto", signal?: AbortSignal): Promise<SearchResult> {
-  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=${lang}`, { signal, cache: "no-cache" });
+/** `meaning` is the language the reader picked meanings in; it only breaks ties for Latin text with no marks. */
+export function searchDictionary(
+  q: string,
+  signal?: AbortSignal,
+  meaning?: MeaningPair,
+): Promise<SearchResult> {
+  const hint = meaning ? `&meaning=${meaning}` : "";
+  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=auto${hint}`, { signal, cache: "no-cache" });
 }
 
 export async function fetchEntry(id: number): Promise<DictEntry> {

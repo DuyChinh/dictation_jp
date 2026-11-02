@@ -7,6 +7,7 @@ import "./paper.css";
 import "./redesign.css";
 import "./leaderboard.css";
 import "./dictionary.css";
+import "./select.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("root missing");

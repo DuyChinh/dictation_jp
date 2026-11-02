@@ -2,10 +2,16 @@ import { Link } from "react-router-dom";
 import type { DictEntry } from "../../shared/api/dictionary";
 import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { SpeakButton } from "../../shared/ui/SpeakButton";
 import { jlptLabel, miscLabel, uniquePos } from "./dictLabels";
+
+/** Which meanings to read: both (the interface language first), or one language only. */
+export type MeaningLang = "both" | "vi" | "en";
 
 type Props = {
   entry: DictEntry;
+  /** Language of the meanings and example translations; `both` unless the reader picked one. */
+  meaning?: MeaningLang;
   /** Popup: the first few meanings only, no examples. */
   compact?: boolean;
   /** Headword is a link to the full dictionary page. */
@@ -26,7 +32,7 @@ export function headwordOf(entry: DictEntry): { word: string; reading: string | 
 }
 
 /** One dictionary entry: headword and reading, then each meaning with its word class and notes. */
-export function EntryCard({ entry, compact = false, linkHeadword = false }: Props) {
+export function EntryCard({ entry, meaning = "both", compact = false, linkHeadword = false }: Props) {
   const { t, uiLang } = useUiLanguage();
   const { word, reading } = headwordOf(entry);
   const otherForms = [...entry.kanji.map((k) => k.text), ...entry.kana.map((k) => k.text)].filter(
@@ -34,20 +40,24 @@ export function EntryCard({ entry, compact = false, linkHeadword = false }: Prop
   );
   const senses = compact ? entry.senses.slice(0, COMPACT_SENSES) : entry.senses;
   const hiddenSenses = entry.senses.length - senses.length;
-  const vietnameseFirst = uiLang === "vi";
+  const vietnameseFirst = meaning === "vi" || (meaning === "both" && uiLang === "vi");
+  const oneLanguage = meaning !== "both";
 
   return (
     <article className={`dict-entry${compact ? " dict-entry--compact" : ""}`}>
       <header className="dict-entry__head">
         <div className="dict-entry__word">
           {reading && <span className="dict-entry__reading jp" lang="ja">{reading}</span>}
-          {linkHeadword ? (
-            <Link className="dict-entry__headword jp" lang="ja" to={`/dictionary?q=${encodeURIComponent(word)}&lang=ja`}>
-              {word}
-            </Link>
-          ) : (
-            <strong className="dict-entry__headword jp" lang="ja">{word}</strong>
-          )}
+          <div className="dict-entry__line">
+            {linkHeadword ? (
+              <Link className="dict-entry__headword jp" lang="ja" to={`/dictionary?q=${encodeURIComponent(word)}&lang=ja`}>
+                {word}
+              </Link>
+            ) : (
+              <strong className="dict-entry__headword jp" lang="ja">{word}</strong>
+            )}
+            <SpeakButton text={reading || word} />
+          </div>
         </div>
         <div className="dict-entry__badges">
           {entry.jlpt && <span className={`dict-badge dict-badge--n${entry.jlpt}`}>{jlptLabel(entry.jlpt)}</span>}
@@ -68,7 +78,8 @@ export function EntryCard({ entry, compact = false, linkHeadword = false }: Prop
           const vietnamese = s.vi.join("; ");
           const notes = [...s.misc, ...s.field].map((c) => miscLabel(c, uiLang));
           const first = vietnameseFirst ? (hasVi ? vietnamese : english) : english;
-          const second = vietnameseFirst ? (hasVi ? english : "") : hasVi ? vietnamese : "";
+          // One language only: English stands in just for a word that has no Vietnamese yet.
+          const second = oneLanguage ? "" : vietnameseFirst ? (hasVi ? english : "") : hasVi ? vietnamese : "";
           const samePos = i > 0 && s.pos.join() === senses[i - 1]!.pos.join();
           return (
             <li key={i} className="dict-sense">
@@ -99,10 +110,13 @@ export function EntryCard({ entry, compact = false, linkHeadword = false }: Prop
                 <ul className="dict-examples" aria-label={t("dict.examples")}>
                   {s.examples.map((x, k) => (
                     <li key={k}>
-                      <span className="jp" lang="ja">{x.ja}</span>
+                      <span className="dict-examples__ja">
+                        <span className="jp" lang="ja">{x.ja}</span>
+                        <SpeakButton text={x.ja} />
+                      </span>
                       {vietnameseFirst && x.vi && <span className="dict-examples__vi">{x.vi}</span>}
-                      <span className="dict-examples__en">{x.en}</span>
-                      {!vietnameseFirst && x.vi && <span className="dict-examples__vi">{x.vi}</span>}
+                      {(!oneLanguage || !vietnameseFirst || !x.vi) && <span className="dict-examples__en">{x.en}</span>}
+                      {!vietnameseFirst && !oneLanguage && x.vi && <span className="dict-examples__vi">{x.vi}</span>}
                     </li>
                   ))}
                 </ul>

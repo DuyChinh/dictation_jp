@@ -48,6 +48,27 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("EntryCard", () => {
+  it("reads Vietnamese only when asked: no English meaning or example translation beneath", () => {
+    render(wrap(<EntryCard entry={entry(["ăn"])} meaning="vi" />));
+    expect(screen.getByText("ăn")).toBeTruthy();
+    expect(screen.getByText("Tôi ăn một quả táo.")).toBeTruthy();
+    expect(screen.queryByText("to eat")).toBeNull();
+    expect(screen.queryByText("I eat an apple.")).toBeNull();
+  });
+
+  it("reads English only when asked, without the Vietnamese", () => {
+    render(wrap(<EntryCard entry={entry(["ăn"])} meaning="en" />));
+    expect(screen.getByText("to eat")).toBeTruthy();
+    expect(screen.getByText("I eat an apple.")).toBeTruthy();
+    expect(screen.queryByText("ăn")).toBeNull();
+    expect(screen.queryByText("Tôi ăn một quả táo.")).toBeNull();
+  });
+
+  it("falls back to English for a word with no Vietnamese yet, even in Vietnamese-only mode", () => {
+    render(wrap(<EntryCard entry={entry([])} meaning="vi" />));
+    expect(screen.getByText("to eat")).toBeTruthy();
+  });
+
   it("shows the Vietnamese meaning first, with English beneath, and the word class in Vietnamese", () => {
     render(wrap(<EntryCard entry={entry(["ăn"])} />));
     expect(screen.getByText("ăn")).toBeTruthy();

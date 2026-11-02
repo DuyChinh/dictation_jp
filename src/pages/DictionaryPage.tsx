@@ -1,8 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { searchDictionary, type SearchLang, type SearchResult } from "../shared/api/dictionary";
+import { searchDictionary, type MeaningPair, type SearchResult } from "../shared/api/dictionary";
 import { fmt } from "../shared/i18n/format";
-import type { TranslationKey } from "../shared/i18n/translations";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
@@ -10,12 +9,21 @@ import { EntryCard } from "../features/dictionary/EntryCard";
 import { KanjiCard } from "../features/dictionary/KanjiCard";
 import { LookupLayer } from "../features/dictionary/LookupLayer";
 
-const LANGS: Array<{ value: SearchLang; label: TranslationKey }> = [
-  { value: "auto", label: "dict.lang.auto" },
-  { value: "ja", label: "dict.lang.ja" },
-  { value: "vi", label: "dict.lang.vi" },
-  { value: "en", label: "dict.lang.en" },
+const PAIRS: Array<{ value: MeaningPair; label: "dict.pair.vi" | "dict.pair.en" }> = [
+  { value: "vi", label: "dict.pair.vi" },
+  { value: "en", label: "dict.pair.en" },
 ];
+const PAIR_KEY = "jd.dict_pair.v1";
+
+function savedPair(): MeaningPair | null {
+  try {
+    const v = localStorage.getItem(PAIR_KEY);
+    return v === "vi" || v === "en" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 const EXAMPLES = ["食べる", "勉強", "taberu", "ăn", "school", "かわいい"];
 
 type State =
@@ -25,10 +33,12 @@ type State =
   | { status: "done"; result: SearchResult };
 
 export function DictionaryPage() {
-  const { t } = useUiLanguage();
+  const { t, uiLang } = useUiLanguage();
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
-  const lang = (LANGS.find((l) => l.value === params.get("lang"))?.value ?? "auto") as SearchLang;
+  // Which dictionary: the address wins, then the last choice, then the interface language.
+  const fromAddress = PAIRS.find((p) => p.value === params.get("lang"))?.value;
+  const pair: MeaningPair = fromAddress ?? savedPair() ?? (uiLang === "en" || uiLang === "ja" ? "en" : "vi");
   const [draft, setDraft] = useState(q);
   const [state, setState] = useState<State>({ status: "idle" });
 
@@ -42,20 +52,28 @@ export function DictionaryPage() {
     }
     const controller = new AbortController();
     setState({ status: "loading" });
-    searchDictionary(q, lang, controller.signal)
+    searchDictionary(q, controller.signal, pair)
       .then((result) => setState({ status: "done", result }))
       .catch((e: unknown) => {
         if (!controller.signal.aborted) setState({ status: "error" });
         void e;
       });
     return () => controller.abort();
-  }, [q, lang]);
+  }, [q, pair]);
 
-  function go(nextQ: string, nextLang: SearchLang = lang) {
+  function go(nextQ: string, nextPair: MeaningPair = pair) {
     const next = new URLSearchParams();
     if (nextQ.trim()) next.set("q", nextQ.trim());
-    if (nextLang !== "auto") next.set("lang", nextLang);
+    next.set("lang", nextPair);
     setParams(next);
+  }
+  function choosePair(next: MeaningPair) {
+    try {
+      localStorage.setItem(PAIR_KEY, next);
+    } catch {
+      /* the choice just won't be remembered */
+    }
+    go(q || draft, next);
   }
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -86,32 +104,29 @@ export function DictionaryPage() {
               autoFocus
             />
           </div>
+          <select
+            className="dict-search__pair"
+            value={pair}
+            aria-label={t("dict.pairLabel")}
+            onChange={(e) => choosePair(e.target.value as MeaningPair)}
+          >
+            {PAIRS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {t(p.label)}
+              </option>
+            ))}
+          </select>
           <button type="submit" className="btn btn--primary" disabled={!draft.trim()}>
             {t("dict.search")}
           </button>
         </form>
-
-        <div className="dict-langs" role="group" aria-label={t("dict.langLabel")}>
-          <span className="dict-langs__label">{t("dict.langLabel")}:</span>
-          {LANGS.map((l) => (
-            <button
-              key={l.value}
-              type="button"
-              className={`dict-langs__tab${lang === l.value ? " is-active" : ""}`}
-              aria-pressed={lang === l.value}
-              onClick={() => go(q || draft, l.value)}
-            >
-              {t(l.label)}
-            </button>
-          ))}
-        </div>
 
         {state.status === "idle" && (
           <div className="dict-empty">
             <p>{t("dict.try")}:</p>
             <div className="dict-empty__chips">
               {EXAMPLES.map((x) => (
-                <button key={x} type="button" className="dict-chip jp" onClick={() => go(x, "auto")}>
+                <button key={x} type="button" className="dict-chip jp" onClick={() => go(x)}>
                   {x}
                 </button>
               ))}
@@ -147,7 +162,7 @@ export function DictionaryPage() {
                   {fmt(t("dict.resultCount"), { n: state.result.entries.length })}
                 </h2>
                 {state.result.entries.map((entry) => (
-                  <EntryCard key={entry.id} entry={entry} />
+                  <EntryCard key={entry.id} entry={entry} meaning={pair} />
                 ))}
               </section>
             )}

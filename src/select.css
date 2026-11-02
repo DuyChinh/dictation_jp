@@ -1,0 +1,30 @@
+/*
+ * Dropdowns: one shape everywhere. The browser's own arrow is thin and sits flush against the border, so it
+ * is replaced by a heavier chevron with room to its right. Written to out-rank the per-screen select rules
+ * (they set padding and background shorthands), and it only touches the right edge and the arrow.
+ */
+:root {
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%2333415c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] {
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23dbe3f0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6'/%3E%3C/svg%3E");
+}
+
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 42px;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 16px 16px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* The open list follows the theme instead of staying white in the dark one. */
+[data-theme="dark"] select { color-scheme: dark; }
+
+/* The language picker in the collapsed sidebar is a bare flag: no arrow, no room for one. */
+.shell.is-collapsed .shell-lang select { background-image: none; padding-right: 0; }
