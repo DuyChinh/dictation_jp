@@ -118,6 +118,31 @@ export function clearLessonProgress(lessonId: string): void {
   }
 }
 
+/** Forgets some dictation sentences of a lesson (one 問題), here and on the account. */
+export function clearSegmentProgress(lessonId: string, segmentIds: string[]): void {
+  if (segmentIds.length === 0) return;
+  const all = getAllDictationProgress();
+  const lesson = { ...(all[lessonId] ?? {}) };
+  for (const id of segmentIds) delete lesson[id];
+  all[lessonId] = lesson;
+  try {
+    localStorage.setItem(DICTATION_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    // ignore
+  }
+  const token = localStorage.getItem("token");
+  if (token) {
+    const request = fetch(apiUrl("/api/progress/dictation/clear"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ lesson_id: lessonId, segment_ids: segmentIds }),
+    })
+      .then(() => refreshMyScore(true))
+      .catch(() => {});
+    pendingClear = Promise.all([pendingClear, request]);
+  }
+}
+
 /**
  * Fetch and merge progress from backend for a lesson
  */

@@ -88,3 +88,13 @@ export function resetPaperPart(lessonId: string, part: PaperAnswer["part"]): Pap
     if (marker) for (const id of Object.keys(p.sentences)) if (id.includes(marker)) delete p.sentences[id];
   });
 }
+
+/** Start some 問題 of the written exam over: forget the answers to these questions and the translation marks of these passages. */
+export function resetPaperMondai(lessonId: string, itemIds: string[], passageIds: string[]): PaperProgress {
+  return update(lessonId, (p) => {
+    for (const id of itemIds) delete p.answers[id];
+    for (const id of Object.keys(p.sentences)) {
+      if (passageIds.some((pid) => id.startsWith(`${pid}-`))) delete p.sentences[id];
+    }
+  });
+}

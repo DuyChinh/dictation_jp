@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLesson, usePractice } from "../shared/content/hooks";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
@@ -15,6 +15,7 @@ import {
 } from "../shared/content/lessonLabels";
 import {
   clearLessonProgress,
+  clearSegmentProgress,
   getLessonProgress,
   syncLessonProgressFromServer,
   type SegmentProgressData,
@@ -26,7 +27,7 @@ import { scoreBySection } from "../features/listening/listeningUnits";
 import { ExamEntry } from "../features/paper/ExamEntry";
 import { mondaiLabel, mondaiNo, PART_KANJI } from "../features/paper/paperLabels";
 import type { PaperPart } from "../shared/api/paper";
-import { getPaperProgress, resetPaperPart } from "../shared/storage/paperProgressStore";
+import { getPaperProgress, resetPaperMondai, resetPaperPart } from "../shared/storage/paperProgressStore";
 import { getLastMondai } from "../shared/storage/lastMondaiStore";
 import { usePaperPractice } from "../features/paper/usePaperPractice";
 
@@ -71,17 +72,38 @@ export function LessonPage() {
   );
   const listeningDone = listeningScore ? listeningScore.right + listeningScore.wrong : 0;
 
-  /** Forgets this lesson's results for one part so it can be done again; the exam history is left alone. */
-  function resetPart(key: string) {
+  /**
+   * Forgets this lesson's results for one part so it can be done again; the exam history is left alone.
+   * `ids` are the 問題 to redo (section ids, or 問題 numbers for the written parts); none means the whole part.
+   */
+  function resetPart(key: string, ids?: string[]) {
     if (key === "listening") {
-      clearListeningAnswers(lessonId);
+      const questionIds = ids
+        ? (practice?.sections ?? []).filter((s) => ids.includes(s.id)).flatMap((s) => s.questions.map((q) => q.id))
+        : undefined;
+      clearListeningAnswers(lessonId, questionIds);
       reloadListening();
     } else if (key === "dictation") {
-      clearLessonProgress(lessonId);
-      clearResume(lessonId);
-      setProgressMap({});
+      if (ids) {
+        const segmentIds = (practice?.sections ?? [])
+          .filter((s) => ids.includes(s.id))
+          .flatMap((s) => s.questions.flatMap((q) => q.segments.map((seg) => seg.id)));
+        clearSegmentProgress(lessonId, segmentIds);
+        setProgressMap(getLessonProgress(lessonId));
+      } else {
+        clearLessonProgress(lessonId);
+        clearResume(lessonId);
+        setProgressMap({});
+      }
     } else if (key === "vocab" || key === "grammar" || key === "reading") {
-      resetPaperPart(lessonId, key);
+      if (ids && paper) {
+        const mondai = ids.map(Number);
+        const items = paper.items.filter((i) => i.part === key && mondai.includes(i.mondai));
+        const passages = paper.passages.filter((p) => mondai.includes(p.mondai));
+        resetPaperMondai(lessonId, items.map((i) => i.id), passages.map((p) => p.id));
+      } else {
+        resetPaperPart(lessonId, key);
+      }
     }
     setResetCount((n) => n + 1);
   }
@@ -132,6 +154,7 @@ export function LessonPage() {
       .map((s) => {
         const type = partType(lesson.source, s.order);
         return {
+          id: s.id,
           label: `問${s.order}`,
           title: type ? partLabel(type, uiLang) : getLocalizedText(s.title, uiLang),
           href: `${base}/${kind}?section=${encodeURIComponent(s.id)}`,
@@ -148,6 +171,7 @@ export function LessonPage() {
       .map((m) => {
         const inMondai = items.filter((i) => i.mondai === m);
         return {
+          id: String(m),
           label: `問${mondaiNo(m, lesson.id)}`,
           title: mondaiLabel(m, uiLang, lesson.id),
           href: `${base}/paper/${part}?mondai=${m}`,
@@ -264,7 +288,7 @@ export function LessonPage() {
         </div>
         <div className="part-grid">
           {cards.map(({ key, ...card }) => (
-            <PartCard key={key} {...card} onReset={() => resetPart(key)} />
+            <PartCard key={key} {...card} onReset={(ids) => resetPart(key, ids)} />
           ))}
         </div>
       </section>
@@ -346,6 +370,8 @@ export function LessonPage() {
 }
 
 type Pick = {
+  /** Section id (listening, dictation) or 問題 number (written parts); what a partial reset is told. */
+  id: string;
   label: string;
   title: string;
   href: string;
@@ -370,8 +396,8 @@ type PartCardProps = {
   /** Jump straight to one 問題 of this part. */
   picks?: Pick[];
   extra?: ReactNode;
-  /** Start this part over; offered once something in it has been done. */
-  onReset?: () => void;
+  /** Start this part over (all of it, or only the given 問題); offered once something in it has been done. */
+  onReset?: (ids?: string[]) => void;
 };
 
 /** A button that asks once, in place, before doing something that deletes results. */
@@ -405,6 +431,118 @@ function ResetButton({ label, confirm, onConfirm }: { label: string; confirm: st
         </button>
       </div>
     </div>
+  );
+}
+
+/** "Làm lại phần này": opens a dialog to choose which 問題 to redo; everything is chosen to begin with. */
+function ResetPartButton({
+  title,
+  picks,
+  onReset,
+}: {
+  title: string;
+  picks: Pick[];
+  onReset: (ids?: string[]) => void;
+}) {
+  const { t } = useUiLanguage();
+  const [open, setOpen] = useState(false);
+  const [all, setAll] = useState(true);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const many = picks.length > 1;
+
+  useEffect(() => {
+    if (open) dialogRef.current?.focus();
+  }, [open]);
+
+  function show() {
+    setAll(true);
+    setChosen([]);
+    setOpen(true);
+  }
+  function toggle(id: string) {
+    const base = all ? [] : chosen;
+    const next = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+    // Nothing picked, or everything picked, is the same as "all".
+    const everything = next.length === 0 || next.length === picks.length;
+    setAll(everything);
+    setChosen(everything ? [] : next);
+  }
+
+  return (
+    <>
+      <button type="button" className="btn btn--outline btn--sm part-card__reset" onClick={show}>
+        <Icon name="refresh" size={15} />
+        {t("lesson.resetPart")}
+      </button>
+      {open && (
+        <div
+          className="reset-modal"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            ref={dialogRef}
+            tabIndex={-1}
+            className="reset-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="reset-dialog-title"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+            }}
+          >
+            <h3 id="reset-dialog-title">
+              {t("lesson.resetTitle")} <small>{title}</small>
+            </h3>
+            <p>{many ? t("lesson.resetHint") : t("lesson.resetConfirmPart")}</p>
+            {many && (
+              <div className="reset-dialog__picks" role="group" aria-label={t("lesson.pickMondai")}>
+                <button
+                  type="button"
+                  className={`reset-chip reset-chip--all${all ? " is-on" : ""}`}
+                  aria-pressed={all}
+                  onClick={() => {
+                    setAll(true);
+                    setChosen([]);
+                  }}
+                >
+                  {t("lesson.resetEvery")}
+                </button>
+                {picks.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`reset-chip jp${!all && chosen.includes(p.id) ? " is-on" : ""}`}
+                    aria-pressed={!all && chosen.includes(p.id)}
+                    title={p.title}
+                    onClick={() => toggle(p.id)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="reset-dialog__actions">
+              <button type="button" className="btn btn--outline btn--sm" onClick={() => setOpen(false)}>
+                {t("lesson.resetCancel")}
+              </button>
+              <button
+                type="button"
+                className="btn btn--danger btn--sm"
+                onClick={() => {
+                  setOpen(false);
+                  onReset(all ? undefined : chosen);
+                }}
+              >
+                {t("lesson.resetYes")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -453,7 +591,7 @@ function PartCard({ kanji, tone, unit, title, desc, done, total, href, picks, ex
           {shown > 0 && shown < total ? t("paper.continue") : t("paper.start")}
         </Link>
         {extra}
-        {shown > 0 && onReset && <ResetButton label={t("lesson.resetPart")} confirm={t("lesson.resetConfirmPart")} onConfirm={onReset} />}
+        {shown > 0 && onReset && <ResetPartButton title={title} picks={picks ?? []} onReset={onReset} />}
       </div>
     </article>
   );

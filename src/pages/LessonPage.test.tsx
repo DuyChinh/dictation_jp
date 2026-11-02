@@ -1,8 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
-import { saveAnswer } from "../shared/storage/paperProgressStore";
+import { getPaperProgress, saveAnswer } from "../shared/storage/paperProgressStore";
 import { setLastMondai } from "../shared/storage/lastMondaiStore";
 import { LessonPage } from "./LessonPage";
 
@@ -86,5 +86,43 @@ describe("LessonPage 問題 chips", () => {
     expect(two!.style.getPropertyValue("--pct")).toBe("0%");
     expect(one!.getAttribute("aria-current")).toBeNull();
     expect(two!.getAttribute("aria-current")).toBe("true");
+  });
+});
+
+describe("LessonPage reset dialog", () => {
+  const answer = (no: number, mondai: number) =>
+    saveAnswer(LESSON, `${LESSON}-v-q${no}`, { choiceId: "1", correct: true, at: 1, part: "vocab", mondai });
+
+  function openDialog() {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Làm lại phần này/ }));
+    return screen.getByRole("alertdialog");
+  }
+
+  it("starts with everything chosen and clears the whole part", () => {
+    answer(1, 1);
+    answer(3, 2);
+    const dialog = openDialog();
+    expect(within(dialog).getByRole("button", { name: "Tất cả" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(dialog).getByRole("button", { name: /Xóa và làm lại/ }));
+    expect(Object.keys(getPaperProgress(LESSON).answers)).toEqual([]);
+  });
+
+  it("clears only the 問題 that was picked", () => {
+    answer(1, 1);
+    answer(3, 2);
+    const dialog = openDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "問2" }));
+    expect(within(dialog).getByRole("button", { name: "Tất cả" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(within(dialog).getByRole("button", { name: /Xóa và làm lại/ }));
+    expect(Object.keys(getPaperProgress(LESSON).answers)).toEqual([`${LESSON}-v-q1`]);
+  });
+
+  it("closes without clearing anything", () => {
+    answer(1, 1);
+    const dialog = openDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hủy" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(Object.keys(getPaperProgress(LESSON).answers)).toHaveLength(1);
   });
 });

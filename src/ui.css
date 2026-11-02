@@ -485,6 +485,37 @@
 .btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
 .reset-btn { align-self: flex-start; }
 .part-card__cta .reset-btn { align-self: center; }
+.part-card__cta .part-card__reset { width: 100%; justify-content: center; }
+.reset-modal { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start; padding: 14vh 20px 24px; background: rgba(5, 7, 12, 0.62); overflow-y: auto; }
+.reset-dialog {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+.reset-dialog h3 { margin: 0; font-size: 20px; display: flex; flex-direction: column; gap: 2px; }
+.reset-dialog h3 small { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.reset-dialog p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.reset-dialog__picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.reset-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+}
+.reset-chip:hover { border-color: var(--bad); }
+.reset-chip.is-on { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
+.reset-dialog__actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
 .reset-confirm { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bad-soft); border: 1px solid var(--bad); }
 .reset-confirm p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-main); }
 .reset-confirm > div { display: flex; flex-wrap: wrap; gap: 8px; }
