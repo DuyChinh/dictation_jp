@@ -9,6 +9,19 @@
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px;
   min-height: var(--touch-min); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; color: var(--text-muted);
 }
+.dict-search__mic {
+  flex: none; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dict-search__mic:hover { background: var(--surface-2); color: var(--primary-color); }
+.dict-search__mic.is-listening { background: var(--heart); color: #fff; animation: dict-mic-pulse 1.3s ease-out infinite; }
+@keyframes dict-mic-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--heart) 55%, transparent); }
+  100% { box-shadow: 0 0 0 12px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .dict-search__mic.is-listening { animation: none; } }
+.dict-state--listening { color: var(--text-main); }
 .dict-search__box:focus-within { border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
 .dict-search__box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 17px; color: var(--text-main); padding: 10px 0; }
 

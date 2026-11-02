@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
@@ -72,5 +72,84 @@ describe("DictionaryPage", () => {
     localStorage.setItem("jd.dict_pair.v1", "en");
     renderPage("/dictionary");
     expect((screen.getByRole("combobox", { name: "Chọn từ điển" }) as HTMLSelectElement).value).toBe("en");
+  });
+});
+
+describe("DictionaryPage microphone", () => {
+  type Fake = {
+    lang: string;
+    started: boolean;
+    onstart: (() => void) | null;
+    onresult: ((e: unknown) => void) | null;
+    onerror: ((e: { error: string }) => void) | null;
+    onend: (() => void) | null;
+  };
+  let current: Fake | null;
+
+  beforeEach(() => {
+    current = null;
+    class FakeRecognition implements Fake {
+      lang = "";
+      started = false;
+      interimResults = false;
+      continuous = false;
+      maxAlternatives = 1;
+      onstart: (() => void) | null = null;
+      onresult: ((e: unknown) => void) | null = null;
+      onerror: ((e: { error: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+      constructor() {
+        current = this;
+      }
+      start() {
+        this.started = true;
+        this.onstart?.();
+      }
+      stop() {
+        this.onend?.();
+      }
+      abort() {}
+    }
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const heard = (text: string, isFinal: boolean) =>
+    act(() => current!.onresult!({ resultIndex: 0, results: [{ isFinal, length: 1, 0: { transcript: text } }] }));
+
+  it("listens for Japanese and puts what it hears in the search box without searching yet", () => {
+    renderPage("/dictionary");
+    fireEvent.click(screen.getByRole("button", { name: "Nói tiếng Nhật để tra" }));
+    expect(current!.lang).toBe("ja-JP");
+    expect(screen.getByRole("status").textContent).toMatch(/Đang nghe/);
+
+    heard("ひ", false);
+    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("ひ");
+    heard("ひま", true);
+    act(() => current!.onend!());
+
+    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("ひま");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(searchDictionary).not.toHaveBeenCalled();
+  });
+
+  it("explains a refused microphone", () => {
+    renderPage("/dictionary");
+    fireEvent.click(screen.getByRole("button", { name: "Nói tiếng Nhật để tra" }));
+    act(() => current!.onerror!({ error: "not-allowed" }));
+    expect(screen.getByRole("alert").textContent).toMatch(/Chưa cho phép dùng micro/);
+  });
+
+  it("stays quiet when the person stops it themselves", () => {
+    renderPage("/dictionary");
+    fireEvent.click(screen.getByRole("button", { name: "Nói tiếng Nhật để tra" }));
+    act(() => current!.onerror!({ error: "aborted" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("has no microphone where the browser cannot recognise speech", () => {
+    vi.unstubAllGlobals();
+    renderPage("/dictionary");
+    expect(screen.queryByRole("button", { name: "Nói tiếng Nhật để tra" })).toBeNull();
   });
 });

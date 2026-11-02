@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { searchDictionary, type MeaningPair, type SearchResult } from "../shared/api/dictionary";
+import { useSpeechInput } from "../shared/audio/recognition";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
@@ -40,6 +41,14 @@ export function DictionaryPage() {
   const fromAddress = PAIRS.find((p) => p.value === params.get("lang"))?.value;
   const pair: MeaningPair = fromAddress ?? savedPair() ?? (uiLang === "en" || uiLang === "ja" ? "en" : "vi");
   const [draft, setDraft] = useState(q);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // What is heard goes into the box for the reader to check (and fix) before searching.
+  const mic = useSpeechInput({
+    onText: (text, final) => {
+      setDraft(text);
+      if (final) inputRef.current?.focus();
+    },
+  });
   const [state, setState] = useState<State>({ status: "idle" });
 
   useEffect(() => setDraft(q), [q]);
@@ -102,7 +111,20 @@ export function DictionaryPage() {
               spellCheck={false}
               maxLength={80}
               autoFocus
+              ref={inputRef}
             />
+            {mic.supported && (
+              <button
+                type="button"
+                className={`dict-search__mic${mic.listening ? " is-listening" : ""}`}
+                onClick={mic.listening ? mic.stop : mic.start}
+                aria-label={mic.listening ? t("dict.mic.stop") : t("dict.mic.start")}
+                aria-pressed={mic.listening}
+                title={mic.listening ? t("dict.mic.stop") : t("dict.mic.start")}
+              >
+                <Icon name="mic" size={20} strokeWidth={2} />
+              </button>
+            )}
           </div>
           <select
             className="dict-search__pair"
@@ -120,6 +142,9 @@ export function DictionaryPage() {
             {t("dict.search")}
           </button>
         </form>
+
+        {mic.listening && <p className="dict-state dict-state--listening" role="status">{t("dict.mic.listening")}</p>}
+        {mic.error && <p className="dict-state dict-state--error" role="alert">{t(`dict.mic.error.${mic.error}` as const)}</p>}
 
         {state.status === "idle" && (
           <div className="dict-empty">
@@ -172,6 +197,7 @@ export function DictionaryPage() {
         <footer className="dict-sources">
           <p>{t("dict.viAi")}</p>
           <p>{t("dict.sources")}</p>
+          {mic.supported && <p>{t("dict.mic.privacy")}</p>}
         </footer>
       </section>
     </AppShell>
