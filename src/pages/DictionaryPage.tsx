@@ -6,6 +6,7 @@ import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
+import { HandwritingPad } from "../features/handwriting/HandwritingPad";
 import { EntryCard } from "../features/dictionary/EntryCard";
 import { KanjiCard } from "../features/dictionary/KanjiCard";
 import { LookupLayer } from "../features/dictionary/LookupLayer";
@@ -42,6 +43,7 @@ export function DictionaryPage() {
   const pair: MeaningPair = fromAddress ?? savedPair() ?? (uiLang === "en" || uiLang === "ja" ? "en" : "vi");
   const [draft, setDraft] = useState(q);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [writing, setWriting] = useState(false);
   // What is heard goes into the box for the reader to check (and fix) before searching.
   const mic = useSpeechInput({
     onText: (text, final) => {
@@ -113,6 +115,16 @@ export function DictionaryPage() {
               autoFocus
               ref={inputRef}
             />
+            <button
+              type="button"
+              className={`dict-search__tool${writing ? " is-on" : ""}`}
+              onClick={() => setWriting((v) => !v)}
+              aria-label={t("dict.hw.open")}
+              aria-pressed={writing}
+              title={t("dict.hw.open")}
+            >
+              <Icon name="pencil" size={20} strokeWidth={2} />
+            </button>
             {mic.supported && (
               <button
                 type="button"
@@ -143,6 +155,15 @@ export function DictionaryPage() {
           </button>
         </form>
 
+        {writing && (
+          <HandwritingPad
+            onPick={(ch) => {
+              setDraft((d) => d + ch);
+              inputRef.current?.focus();
+            }}
+            onClose={() => setWriting(false)}
+          />
+        )}
         {mic.listening && <p className="dict-state dict-state--listening" role="status">{t("dict.mic.listening")}</p>}
         {mic.error && <p className="dict-state dict-state--error" role="alert">{t(`dict.mic.error.${mic.error}` as const)}</p>}
 

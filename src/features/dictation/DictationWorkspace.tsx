@@ -467,17 +467,14 @@ export function DictationWorkspace({
       });
 
       if (r.correct) {
-        if (!forceReveal) {
-          setStreak(nextStreak);
-          if (nextStreak >= 3) {
-            sfx.playStreak(nextStreak);
-          } else {
-            sfx.playVictory();
-          }
-          triggerFireworks();
+        // A correct answer is celebrated even on a retry; only the streak depends on not having needed the reveal.
+        setStreak(forceReveal ? 0 : nextStreak);
+        if (nextStreak >= 3) {
+          sfx.playStreak(nextStreak);
         } else {
-          setStreak(0);
+          sfx.playVictory();
         }
+        triggerFireworks();
       } else {
         sfx.playEncourage();
         setStreak(0);

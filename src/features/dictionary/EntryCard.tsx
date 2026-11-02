@@ -35,6 +35,7 @@ export function headwordOf(entry: DictEntry): { word: string; reading: string | 
 export function EntryCard({ entry, meaning = "both", compact = false, linkHeadword = false }: Props) {
   const { t, uiLang } = useUiLanguage();
   const { word, reading } = headwordOf(entry);
+  const hanViet = entry.hanViet?.[word];
   const otherForms = [...entry.kanji.map((k) => k.text), ...entry.kana.map((k) => k.text)].filter(
     (f) => f !== word && f !== reading,
   );
@@ -57,6 +58,9 @@ export function EntryCard({ entry, meaning = "both", compact = false, linkHeadwo
               <strong className="dict-entry__headword jp" lang="ja">{word}</strong>
             )}
             <SpeakButton text={reading || word} />
+            {hanViet && (
+              <span className="dict-entry__hv" title={t("dict.hanViet")}>{hanViet}</span>
+            )}
           </div>
         </div>
         <div className="dict-entry__badges">

@@ -101,6 +101,20 @@ describe("headwordOf", () => {
   });
 });
 
+describe("EntryCard Hán Việt", () => {
+  afterEach(cleanup);
+
+  it("shows the Sino-Vietnamese reading beside the headword when the entry has one", () => {
+    render(wrap(<EntryCard entry={{ ...entry(["ăn"]), hanViet: { "食べる": "THỰC" } }} />));
+    expect(screen.getByText("THỰC")).toBeTruthy();
+  });
+
+  it("shows nothing for a word without one", () => {
+    render(wrap(<EntryCard entry={entry(["ăn"])} />));
+    expect(document.querySelector(".dict-entry__hv")).toBeNull();
+  });
+});
+
 describe("labels", () => {
   it("names word classes, folding the godan variants, and falls back to the raw tag", () => {
     expect(posLabel("v5k-s", "vi")).toBe("động từ nhóm 1");

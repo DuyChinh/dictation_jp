@@ -28,19 +28,11 @@ const COLORS = [
   "#ffffff", // White Sparkle
 ];
 
-export function triggerConfetti(options?: {
-  particleCount?: number;
-  origin?: { x: number; y: number };
-  spread?: number;
-}) {
-  if (typeof window === "undefined") return;
+/** Particles of every burst in flight; one animation loop draws them all so overlapping bursts don't erase each other. */
+const particles: Particle[] = [];
+let animationFrameId = 0;
 
-  const count = options?.particleCount ?? 90;
-  const originX = options?.origin?.x ?? window.innerWidth / 2;
-  const originY = options?.origin?.y ?? window.innerHeight * 0.4;
-  const spread = options?.spread ?? 70;
-
-  // Create or reuse canvas
+function getCanvas(): HTMLCanvasElement {
   let canvas = document.getElementById("confetti-canvas") as HTMLCanvasElement | null;
   if (!canvas) {
     canvas = document.createElement("canvas");
@@ -54,15 +46,92 @@ export function triggerConfetti(options?: {
     canvas.style.zIndex = "99999";
     document.body.appendChild(canvas);
   }
+  if (canvas.width !== window.innerWidth) canvas.width = window.innerWidth;
+  if (canvas.height !== window.innerHeight) canvas.height = window.innerHeight;
+  return canvas;
+}
 
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+function drawStar(ctx: CanvasRenderingContext2D, outerRadius: number, innerRadius: number) {
+  const spikes = 5;
+  const step = Math.PI / spikes;
+  let rot = (Math.PI / 2) * 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -outerRadius);
+  for (let s = 0; s < spikes; s++) {
+    ctx.lineTo(Math.cos(rot) * outerRadius, Math.sin(rot) * outerRadius);
+    rot += step;
+    ctx.lineTo(Math.cos(rot) * innerRadius, Math.sin(rot) * innerRadius);
+    rot += step;
+  }
+  ctx.lineTo(0, -outerRadius);
+  ctx.closePath();
+  ctx.fill();
+}
 
-  const particles: Particle[] = [];
+function render() {
+  const canvas = document.getElementById("confetti-canvas") as HTMLCanvasElement | null;
+  const ctx = canvas?.getContext("2d");
+  if (!canvas || !ctx) {
+    animationFrameId = 0;
+    particles.length = 0;
+    return;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]!;
+    if (p.alpha <= 0.01) {
+      particles.splice(i, 1);
+      continue;
+    }
+
+    p.vx *= p.drag;
+    p.vy = p.vy * p.drag + p.gravity;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rotation += p.vRot;
+    p.alpha -= 0.009;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rotation * Math.PI) / 180);
+    ctx.globalAlpha = Math.max(0, p.alpha);
+    ctx.fillStyle = p.color;
+    if (p.shape === "rect") {
+      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+    } else if (p.shape === "circle") {
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      drawStar(ctx, p.size, p.size / 2);
+    }
+    ctx.restore();
+  }
+
+  if (particles.length > 0) {
+    animationFrameId = requestAnimationFrame(render);
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    animationFrameId = 0;
+  }
+}
+
+export function triggerConfetti(options?: {
+  particleCount?: number;
+  origin?: { x: number; y: number };
+  spread?: number;
+}) {
+  if (typeof window === "undefined") return;
+
+  const count = options?.particleCount ?? 90;
+  const originX = options?.origin?.x ?? window.innerWidth / 2;
+  const originY = options?.origin?.y ?? window.innerHeight * 0.4;
+  const spread = options?.spread ?? 70;
+
+  getCanvas();
+
   const shapes: Array<"rect" | "circle" | "star"> = ["rect", "circle", "star"];
-
   for (let i = 0; i < count; i++) {
     const angle = (Math.random() * spread - spread / 2 - 90) * (Math.PI / 180);
     const speed = Math.random() * 14 + 6;
@@ -82,75 +151,7 @@ export function triggerConfetti(options?: {
     });
   }
 
-  let animationFrameId: number;
-
-  function render() {
-    if (!ctx || !canvas) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    let activeCount = 0;
-
-    for (const p of particles) {
-      if (p.alpha <= 0.01) continue;
-      activeCount++;
-
-      p.vx *= p.drag;
-      p.vy = p.vy * p.drag + p.gravity;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rotation += p.vRot;
-      p.alpha -= 0.009;
-
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate((p.rotation * Math.PI) / 180);
-      ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.fillStyle = p.color;
-
-      if (p.shape === "rect") {
-        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-      } else if (p.shape === "circle") {
-        ctx.beginPath();
-        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Star shape
-        ctx.beginPath();
-        const spikes = 5;
-        const outerRadius = p.size;
-        const innerRadius = p.size / 2;
-        let rot = (Math.PI / 2) * 3;
-        const step = Math.PI / spikes;
-
-        ctx.moveTo(0, -outerRadius);
-        for (let s = 0; s < spikes; s++) {
-          let sx = Math.cos(rot) * outerRadius;
-          let sy = Math.sin(rot) * outerRadius;
-          ctx.lineTo(sx, sy);
-          rot += step;
-
-          sx = Math.cos(rot) * innerRadius;
-          sy = Math.sin(rot) * innerRadius;
-          ctx.lineTo(sx, sy);
-          rot += step;
-        }
-        ctx.lineTo(0, -outerRadius);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      ctx.restore();
-    }
-
-    if (activeCount > 0) {
-      animationFrameId = requestAnimationFrame(render);
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      cancelAnimationFrame(animationFrameId);
-    }
-  }
-
-  render();
+  if (!animationFrameId) animationFrameId = requestAnimationFrame(render);
 }
 
 /** Double celebratory firework bursts */

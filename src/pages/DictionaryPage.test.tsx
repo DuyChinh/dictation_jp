@@ -9,6 +9,7 @@ vi.mock("../shared/api/dictionary", async (orig) => ({
   ...(await orig<typeof import("../shared/api/dictionary")>()),
   searchDictionary: (...a: unknown[]) => searchDictionary(...a),
 }));
+vi.mock("../features/handwriting/templates", () => ({ loadTemplates: () => new Promise(() => undefined) }));
 vi.mock("../shared/ui/AppShell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -151,5 +152,20 @@ describe("DictionaryPage microphone", () => {
     vi.unstubAllGlobals();
     renderPage("/dictionary");
     expect(screen.queryByRole("button", { name: "Nói tiếng Nhật để tra" })).toBeNull();
+  });
+});
+
+describe("DictionaryPage handwriting", () => {
+  it("opens and closes the drawing board from the search box", () => {
+    // jsdom has no canvas
+    HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    renderPage("/dictionary");
+    expect(screen.queryByRole("region", { name: "Viết tay" })).toBeNull();
+    const open = screen.getByRole("button", { name: "Viết tay chữ Hán, kana để tra" });
+    fireEvent.click(open);
+    expect(screen.getByRole("region", { name: "Viết tay" })).toBeTruthy();
+    expect(open.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: /Đóng/ }));
+    expect(screen.queryByRole("region", { name: "Viết tay" })).toBeNull();
   });
 });

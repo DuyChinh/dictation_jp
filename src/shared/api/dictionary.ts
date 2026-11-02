@@ -20,6 +20,8 @@ export type DictEntry = {
     examples: Array<{ ja: string; en: string; vi: string | null }>;
   }>;
   viSource: "ai" | "reviewed" | "manual" | null;
+  /** Sino-Vietnamese reading of each kanji spelling that has one, e.g. { "以前": "DĨ TIỀN" } */
+  hanViet?: Record<string, string>;
 };
 
 export type DictKanji = {
