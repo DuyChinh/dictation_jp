@@ -11,6 +11,7 @@ import {
 } from "../../shared/api/evaluate";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { loadSettings, saveSettings, type MascotType } from "../../shared/storage/settingsStore";
+import { setLastMondai } from "../../shared/storage/lastMondaiStore";
 import { saveResume } from "../../shared/storage/resumeStore";
 import {
   getLessonProgress,
@@ -244,6 +245,9 @@ export function DictationWorkspace({
 
   // Pin the sentence we are on in the URL, so a reload comes back to it instead of the first one.
   const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (sectionId) setLastMondai(lessonId, "dictation", sectionId);
+  }, [lessonId, sectionId]);
   const pinnedQuestionId = items[index]?.question.id;
   const pinnedSegmentId = items[index]?.segment.id;
   useEffect(() => {

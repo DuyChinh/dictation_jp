@@ -1196,6 +1196,32 @@
 }
 .part-card > p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
 .part-card__progress { margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-muted); }
+.part-card__picks { display: flex; flex-direction: column; gap: 8px; }
+.part-card__picks-label { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-muted); }
+.part-card__picks > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.part-pick {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  border: 1px solid var(--card-border);
+  /* The chip fills from the left as far as the part is done. */
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tone, var(--primary-color)) 32%, transparent) var(--pct, 0%),
+    transparent var(--pct, 0%)
+  );
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.part-pick:hover { border-color: var(--tone, var(--primary-color)); color: var(--tone, var(--primary-color)); }
+/* Opened last: a coloured border marks where to carry on. */
+.part-pick.is-current {
+  border-color: var(--tone, var(--primary-color));
+  box-shadow: inset 0 0 0 1px var(--tone, var(--primary-color));
+  color: var(--tone, var(--primary-color));
+}
 .part-card__cta { display: flex; flex-direction: column; gap: 10px; }
 .part-card__cta > .btn { width: 100%; }
 .part-card__extra { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text-muted); }

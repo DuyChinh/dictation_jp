@@ -15,6 +15,7 @@ import {
   recordListeningAnswer,
   type ListeningAnswer,
 } from "../../shared/storage/listeningScoreStore";
+import { setLastMondai } from "../../shared/storage/lastMondaiStore";
 import { saveListeningAttempt } from "../../shared/storage/listeningAttemptStore";
 import { fmt } from "../../shared/i18n/format";
 import { buildAttempt } from "./attempts";
@@ -90,6 +91,10 @@ export function ListeningWorkspace({
 
   // Pin the question we are on in the URL, so a reload comes back to it instead of the first one.
   const unitId = current?.unitId;
+  const currentSectionId = current?.section.id;
+  useEffect(() => {
+    if (currentSectionId) setLastMondai(lessonId, "listening", currentSectionId);
+  }, [lessonId, currentSectionId]);
   useEffect(() => {
     if (!unitId || params.get("question") === unitId) return;
     const next = new URLSearchParams(params);
@@ -323,6 +328,26 @@ export function ListeningWorkspace({
             </h1>
           </div>
           <div className="dict-head__tools">
+            {!onlyQuestionIds && practice.sections.length > 1 && (
+              <label className="listen-lang">
+                {t("lesson.pickMondai")}
+                <select
+                  className="select"
+                  value={current.section.id}
+                  onChange={(e) => navigate(`${basePath}?section=${encodeURIComponent(e.target.value)}`)}
+                >
+                  {practice.sections.map((s) => {
+                    const type = partType(practice.source, s.order);
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {sectionNo(s)}
+                        {type ? ` · ${partLabel(type, uiLang)}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            )}
             <label className="listen-lang">
               {t("listening.contentLang")}
               <select

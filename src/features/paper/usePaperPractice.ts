@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { getPaperPractice, type PaperPractice } from "../../shared/api/paper";
 
-export function usePaperPractice(lessonId: string) {
+/** `enabled` false skips the request, e.g. for a lesson that has no written part. */
+export function usePaperPractice(lessonId: string, enabled = true) {
   const [paper, setPaper] = useState<PaperPractice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -23,7 +25,7 @@ export function usePaperPractice(lessonId: string) {
     return () => {
       cancelled = true;
     };
-  }, [lessonId]);
+  }, [lessonId, enabled]);
 
   return { paper, error, loading };
 }

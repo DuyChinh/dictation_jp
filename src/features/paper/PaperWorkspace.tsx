@@ -10,6 +10,7 @@ import {
   type PaperProgress,
   type SentenceStatus,
 } from "../../shared/storage/paperProgressStore";
+import { setLastMondai } from "../../shared/storage/lastMondaiStore";
 import { PassageStage } from "./PassageStage";
 import { PaperItemCard } from "./PaperItemCard";
 import { mondaiLabel, mondaiNo } from "./paperLabels";
@@ -82,6 +83,10 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
     setRound((r) => r + 1);
     if (groups[0]) go(groups[0][0]);
   }
+
+  useEffect(() => {
+    if (active !== undefined) setLastMondai(lessonId, part, String(active));
+  }, [lessonId, part, active]);
 
   // Pin the question we are on in the URL. Without this, "the first unanswered question" is a moving
   // target: answering the current one would make the page jump to the next one before it can be read.

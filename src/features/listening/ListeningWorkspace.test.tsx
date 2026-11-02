@@ -168,4 +168,32 @@ describe("ListeningWorkspace", () => {
     render(ui("/lessons/fixture/listening?question=q2"));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/2\s*\/\s*2/);
   });
+
+  it("lets the learner jump to another 問題 from the header", () => {
+    const first = practice.sections[0]!;
+    const two: PracticePackage = {
+      ...practice,
+      sections: [first, { ...first, id: "sec2", order: 2, questions: [{ ...first.questions[0]!, id: "q9" }] }],
+    };
+    const Where = () => <output data-testid="where">{useLocation().search}</output>;
+    render(
+      <MemoryRouter initialEntries={["/lessons/fixture/listening?section=sec1"]}>
+        <UiLanguageProvider>
+          <LanguageProvider>
+            <ListeningWorkspace
+              lessonId="fixture"
+              practice={two}
+              sectionId="sec1"
+              basePath="/lessons/fixture/listening"
+              lessonHref="/lessons/fixture"
+            />
+            <Where />
+          </LanguageProvider>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: /Chọn 問題/ }), { target: { value: "sec2" } });
+    // The page remounts on the new section (its key), which then pins its first question.
+    expect(new URLSearchParams(screen.getByTestId("where").textContent!).get("section")).toBe("sec2");
+  });
 });

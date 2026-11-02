@@ -24,9 +24,11 @@ import { clearResume, loadResume } from "../shared/storage/resumeStore";
 import { useSyncedListeningAnswers } from "../features/listening/useSyncedListeningAnswers";
 import { scoreBySection } from "../features/listening/listeningUnits";
 import { ExamEntry } from "../features/paper/ExamEntry";
-import { PART_KANJI } from "../features/paper/paperLabels";
+import { mondaiLabel, mondaiNo, PART_KANJI } from "../features/paper/paperLabels";
 import type { PaperPart } from "../shared/api/paper";
 import { getPaperProgress, resetPaperPart } from "../shared/storage/paperProgressStore";
+import { getLastMondai } from "../shared/storage/lastMondaiStore";
+import { usePaperPractice } from "../features/paper/usePaperPractice";
 
 export function LessonPage() {
   const { lessonId = "" } = useParams();
@@ -34,6 +36,8 @@ export function LessonPage() {
   const { lesson, error, loading } = useLesson(lessonId);
   // Segment → section mapping, so progress can be shown per part.
   const { practice } = usePractice(lessonId);
+  // The written part's questions give each 問題 its size, for the chips on the part cards.
+  const { paper } = usePaperPractice(lessonId, !!lesson?.paper);
   const [progressMap, setProgressMap] = useState<Record<string, SegmentProgressData>>(() =>
     getLessonProgress(lessonId),
   );
@@ -119,6 +123,41 @@ export function LessonPage() {
   }`;
 
   const paperCounts = lesson.paper?.counts;
+  const paperProgress = getPaperProgress(lessonId);
+  const listeningBySection = new Map((listeningScore?.sections ?? []).map((x) => [x.section.id, x.right + x.wrong]));
+  /** One chip per 問題 of a listening/dictation part, opening that section. */
+  const sectionPicks = (kind: "listening" | "dictation"): Pick[] =>
+    lesson.sections
+      .filter((s) => (kind === "listening" ? s.question_count : s.dictation_segment_count) > 0)
+      .map((s) => {
+        const type = partType(lesson.source, s.order);
+        return {
+          label: `問${s.order}`,
+          title: type ? partLabel(type, uiLang) : getLocalizedText(s.title, uiLang),
+          href: `${base}/${kind}?section=${encodeURIComponent(s.id)}`,
+          done: kind === "listening" ? (listeningBySection.get(s.id) ?? 0) : (correctBySection[s.id] ?? 0),
+          total: kind === "listening" ? s.question_count : s.dictation_segment_count,
+          current: getLastMondai(lesson.id, kind) === s.id,
+        };
+      });
+  /** The 問題 of one written part, sized from its questions. */
+  const paperPicks = (part: PaperPart): Pick[] => {
+    const items = (paper?.items ?? []).filter((i) => i.part === part);
+    return [...new Set(items.map((i) => i.mondai))]
+      .sort((x, y) => x - y)
+      .map((m) => {
+        const inMondai = items.filter((i) => i.mondai === m);
+        return {
+          label: `問${mondaiNo(m, lesson.id)}`,
+          title: mondaiLabel(m, uiLang, lesson.id),
+          href: `${base}/paper/${part}?mondai=${m}`,
+          done: inMondai.filter((i) => paperProgress.answers[i.id]).length,
+          total: inMondai.length,
+          current: getLastMondai(lesson.id, part) === String(m),
+        };
+      });
+  };
+
   const cards: PartCardProps[] = [
     ...(lesson.counts.questions > 0
       ? [
@@ -131,6 +170,7 @@ export function LessonPage() {
             done: listeningDone,
             total: lesson.counts.questions,
             href: `${base}/listening`,
+            picks: sectionPicks("listening"),
           },
         ]
       : []),
@@ -146,6 +186,7 @@ export function LessonPage() {
             total,
             unit: t("lesson.sentencesUnit"),
             href: resumeHref,
+            picks: sectionPicks("dictation"),
           },
         ]
       : []),
@@ -159,6 +200,7 @@ export function LessonPage() {
           done: paperDone(part),
           total: paperCounts[part],
           href: `${base}/paper/${part}`,
+          picks: paperPicks(part),
         }))
       : []),
   ];
@@ -303,6 +345,16 @@ export function LessonPage() {
   );
 }
 
+type Pick = {
+  label: string;
+  title: string;
+  href: string;
+  done: number;
+  total: number;
+  /** The 問題 of this part opened last. */
+  current: boolean;
+};
+
 type PartCardProps = {
   key: string;
   kanji: string;
@@ -315,6 +367,8 @@ type PartCardProps = {
   done: number;
   total: number;
   href: string;
+  /** Jump straight to one 問題 of this part. */
+  picks?: Pick[];
   extra?: ReactNode;
   /** Start this part over; offered once something in it has been done. */
   onReset?: () => void;
@@ -354,7 +408,7 @@ function ResetButton({ label, confirm, onConfirm }: { label: string; confirm: st
   );
 }
 
-function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra, onReset }: Omit<PartCardProps, "key">) {
+function PartCard({ kanji, tone, unit, title, desc, done, total, href, picks, extra, onReset }: Omit<PartCardProps, "key">) {
   const { t } = useUiLanguage();
   const shown = Math.min(done, total);
   const pct = total ? Math.round((shown / total) * 100) : 0;
@@ -375,6 +429,25 @@ function PartCard({ kanji, tone, unit, title, desc, done, total, href, extra, on
           {shown} / {total} {unit ?? t("paper.questionsUnit")}
         </span>
       </div>
+      {picks && picks.length > 1 && (
+        <nav className="part-card__picks" aria-label={`${title} · ${t("lesson.pickMondai")}`}>
+          <span className="part-card__picks-label">{t("lesson.pickMondai")}</span>
+          <div>
+            {picks.map((p) => (
+              <Link
+                key={p.href}
+                to={p.href}
+                className={`part-pick jp${p.current ? " is-current" : ""}`}
+                style={{ ["--pct" as string]: `${p.total ? Math.round((Math.min(p.done, p.total) / p.total) * 100) : 0}%` }}
+                title={`${p.title} · ${Math.min(p.done, p.total)}/${p.total}`}
+                aria-current={p.current ? "true" : undefined}
+              >
+                {p.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
       <div className="part-card__cta">
         <Link to={href} className={`btn ${shown > 0 ? "btn--primary" : "btn--outline"}`}>
           {shown > 0 && shown < total ? t("paper.continue") : t("paper.start")}
