@@ -660,6 +660,7 @@ export function DictationWorkspace({
                 : null
             }
             onReplay={() => void onReplay()}
+            sticky
           />
         )}
 

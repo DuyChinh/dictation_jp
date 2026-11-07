@@ -39,6 +39,7 @@ export function SegmentPlayer({
   clock = "absolute",
   replayLabel,
   seekKeys = false,
+  sticky = false,
 }: {
   audio: ReturnType<typeof useAudioEngine>;
   range: { startMs: number; endMs: number } | null;
@@ -47,6 +48,8 @@ export function SegmentPlayer({
   replayLabel?: string;
   /** ←/→ anywhere on the page (outside text boxes) seek by 5 seconds. */
   seekKeys?: boolean;
+  /** Keep the player under the header while the page scrolls (not where another sticky player already follows). */
+  sticky?: boolean;
 }) {
   const { t } = useUiLanguage();
   const [nowMs, setNowMs] = useState(range?.startMs ?? 0);
@@ -116,7 +119,7 @@ export function SegmentPlayer({
   const replay = replayLabel ?? `${t("dictation.replay")} (Alt+R)`;
 
   return (
-    <section className="panel player" aria-label={t("dictation.play")}>
+    <section className={`panel player${sticky ? " player--sticky" : ""}`} aria-label={t("dictation.play")}>
       <button
         type="button"
         className="player__play"

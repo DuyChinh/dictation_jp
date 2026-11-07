@@ -1359,20 +1359,24 @@
 .dict-head h1 small { font-size: inherit; font-weight: 500; color: var(--text-muted); }
 .dict-head__tools { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* Stays under the header while the page scrolls, so the learner can replay or seek after scrolling down to the answer. */
 .player {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Stays under the header while the page scrolls, so the learner can replay or seek after scrolling down to the answer. */
+.player--sticky {
   position: sticky;
   top: calc(var(--header-h) + 8px);
   z-index: 20;
   padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
 }
 
 @media (max-width: 1023px) {
-  .player { top: 72px; padding: 12px 16px; }
+  .player--sticky { top: 72px; padding: 12px 16px; }
 }
 
 .player__play {
