@@ -7,6 +7,7 @@ import { Burst, SoundToggle, Stars, playFx } from "./GameBits";
 import { getBest, submitBest } from "./prefs";
 import { buildMatchRound, memoryStars, type MatchTile } from "./quiz";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { formatSeconds } from "./MatchMode";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
@@ -19,6 +20,7 @@ const REVEAL_MS = 900;
 /** Memory: every tile starts face down; turn two at a time and keep the pairs where a word meets its meaning. */
 export function MemoryMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [tiles, setTiles] = useState<MatchTile[] | null>(null);
   const [up, setUp] = useState<string[]>([]);
   const [matched, setMatched] = useState<Set<string>>(new Set());
@@ -106,7 +108,7 @@ export function MemoryMode({ deckId, cards, direction }: Props) {
         {record && !record.improved && record.best !== null && <p className="fc-note">{fmt(ft("memory.best"), { time: formatSeconds(record.best) })}</p>}
         <div className="fc-actions">
           <button type="button" className="btn btn--primary" onClick={play}>{ft("common.playAgain")}</button>
-          <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+          <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );

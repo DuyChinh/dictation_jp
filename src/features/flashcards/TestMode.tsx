@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { useFt, type Ft } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import {
   QUESTION_KINDS,
   buildTest,
@@ -23,6 +24,7 @@ const DEFAULT_KINDS: Record<QuestionKind, boolean> = { mc: true, tf: true, write
 /** A Quizlet-style test: pick the question types and length, answer everything on one page, then submit for a score. */
 export function TestMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [count, setCount] = useState(Math.min(20, cards.length));
   const [kinds, setKinds] = useState(DEFAULT_KINDS);
   const [questions, setQuestions] = useState<Question[] | null>(null);
@@ -111,7 +113,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
             <button type="button" className="btn btn--outline" onClick={() => setQuestions(null)}>
               {ft("test.newTest")}
             </button>
-            <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+            <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
           </div>
         </section>
         {questions.map((q, i) => (

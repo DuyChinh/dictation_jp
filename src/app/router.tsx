@@ -12,6 +12,7 @@ import { FlashcardsPage } from "../pages/FlashcardsPage";
 import { FlashcardCreatePage } from "../pages/FlashcardCreatePage";
 import { FlashcardDeckPage } from "../pages/FlashcardDeckPage";
 import { FlashcardStudyPage } from "../pages/FlashcardStudyPage";
+import { FlashcardSharedPage, FlashcardSharedStudyPage } from "../pages/FlashcardSharedPage";
 import { PricingPage } from "../pages/PricingPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { FeedbackPage } from "../pages/FeedbackPage";
@@ -79,6 +80,8 @@ export function AppRouter() {
                 <Route path="/dictionary" element={<DictionaryPage />} />
                 <Route path="/flashcards" element={<FlashcardsPage />} />
                 <Route path="/flashcards/create" element={<FlashcardCreatePage />} />
+                <Route path="/flashcards/shared/:shareId" element={<FlashcardSharedPage />} />
+                <Route path="/flashcards/shared/:shareId/:mode" element={<FlashcardSharedStudyPage />} />
                 <Route path="/flashcards/:deckId" element={<FlashcardDeckPage />} />
                 <Route path="/flashcards/:deckId/:mode" element={<FlashcardStudyPage />} />
                 <Route path="/pricing" element={<PricingPage />} />

@@ -69,7 +69,7 @@ export function FlashcardsPage() {
                 return (
                   <li key={d.id}>
                     <Link to={`/flashcards/${d.id}`} className="fc-deck">
-                      <span className="fc-deck__name">{d.name}</span>
+                      <span className="fc-deck__name">{d.name}{d.shareId && <span className="fc-badge fc-badge--inline">{ft("share.badge")}</span>}</span>
                       <span className="fc-deck__meta">
                         {fmt(ft("page.cardsCount"), { n: s.total })}
                         {s.due > 0 && <span className="fc-deck__due"> · {fmt(ft("page.dueCount"), { n: s.due })}</span>}

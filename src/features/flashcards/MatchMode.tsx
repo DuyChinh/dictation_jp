@@ -6,6 +6,7 @@ import { Burst, SoundToggle, Stars, playFx } from "./GameBits";
 import { getBest, submitBest } from "./prefs";
 import { buildMatchRound, matchStars, type MatchTile } from "./quiz";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -19,6 +20,7 @@ export const formatSeconds = (ms: number): string => `${(ms / 1000).toFixed(1)}s
 /** Timed matching: pair every term with its definition as fast as possible. */
 export function MatchMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [tiles, setTiles] = useState<MatchTile[] | null>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export function MatchMode({ deckId, cards, direction }: Props) {
           )}
           <div className="fc-actions">
             <button type="button" className="btn btn--primary" onClick={play}>{ft("common.playAgain")}</button>
-            <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+            <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
           </div>
         </div>
       ) : (

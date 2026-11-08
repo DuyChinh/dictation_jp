@@ -4,6 +4,7 @@ import { Icon } from "../../shared/ui/Icon";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
 import { fmt } from "../../shared/i18n/format";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { pickFlip, shuffle, sidesOf } from "./quiz";
 import { AUTO_FLIP_CHOICES, loadAutoFlip, saveAutoFlip, type AutoFlip } from "./prefs";
 import { clearLearn, resumeLearn, saveLearn } from "./learnProgress";
@@ -27,6 +28,7 @@ const TURN_MS = 600;
 /** Flip-through study: see one side, think, flip, then say whether you knew it. Answers move cards between boxes. */
 export function LearnMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const now = Date.now();
   const due = useMemo(() => cards.filter((c) => c.due <= now), [cards, now]);
   const [scope, setScope] = useState<Scope>(due.length > 0 && due.length < cards.length ? "due" : "all");
@@ -230,7 +232,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
           <button type="button" className="btn btn--outline" onClick={() => start(cards)}>
             {ft("learn.again")}
           </button>
-          <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+          <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );

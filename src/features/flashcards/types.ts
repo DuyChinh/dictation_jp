@@ -6,6 +6,10 @@ export type Deck = {
   name: string;
   createdAt: number;
   updatedAt: number;
+  /** Set while the deck is public: the id in its share link. */
+  shareId?: string;
+  /** The deck that used to be called "default", before decks got real ids. */
+  legacyId?: string;
   deleted?: true;
 };
 

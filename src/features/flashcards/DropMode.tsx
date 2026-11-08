@@ -7,6 +7,7 @@ import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./Ga
 import { getBest, submitBest } from "./prefs";
 import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, fallSeconds, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -20,6 +21,7 @@ type Feedback = { chosen: string | null; correct: boolean };
 /** Falling words: a word drops from the top; pick its meaning before it hits the ground. Three lives. */
 export function DropMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [items, setItems] = useState<DropItem[] | null>(null);
   const [game, setGame] = useState<DropState | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -108,7 +110,7 @@ export function DropMode({ deckId, cards, direction }: Props) {
         )}
         <div className="fc-actions">
           <button type="button" className="btn btn--primary" onClick={play}>{ft("common.playAgain")}</button>
-          <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+          <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );

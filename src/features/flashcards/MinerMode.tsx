@@ -8,6 +8,7 @@ import { PIVOT, SCENES, W, layoutNuggets, launch, newClaw, stepClaw, type Box, t
 import { getBest, submitBest } from "./prefs";
 import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -44,6 +45,7 @@ function useNarrow(): boolean {
 /** Gold miner: the claw swings, you drop it, and it hauls up the nugget it touches. Haul up the right answer. */
 export function MinerMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [items, setItems] = useState<DropItem[] | null>(null);
   const [game, setGame] = useState<DropState | null>(null);
   const [nuggets, setNuggets] = useState<Nugget[]>([]);
@@ -236,7 +238,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         {highScore && !highScore.improved && highScore.best !== null && <p className="fc-note">{fmt(ft("drop.best"), { score: highScore.best })}</p>}
         <div className="fc-actions">
           <button type="button" className="btn btn--primary" onClick={begin}>{ft("common.playAgain")}</button>
-          <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+          <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );

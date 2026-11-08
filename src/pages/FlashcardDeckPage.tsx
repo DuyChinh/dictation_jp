@@ -15,6 +15,7 @@ import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import { MODES } from "../features/flashcards/modes";
+import { DeckShare } from "../features/flashcards/DeckShare";
 
 export function FlashcardDeckPage() {
   const { t } = useUiLanguage();
@@ -86,7 +87,7 @@ export function FlashcardDeckPage() {
             </form>
           ) : (
             <div>
-              <h1>{deck.name}</h1>
+              <h1>{deck.name}{deck.shareId && <span className="fc-badge fc-badge--inline">{ft("share.badge")}</span>}</h1>
               <p className="fc-stats">
                 <span>{fmt(ft("page.cardsCount"), { n: stats.total })}</span>
                 <span>{ft("deck.stats.new")}: {stats.fresh}</span>
@@ -103,6 +104,8 @@ export function FlashcardDeckPage() {
             </div>
           )}
         </header>
+
+        <DeckShare deck={deck} />
 
         <h2 className="fc-section">{ft("deck.modes")}</h2>
         <DirectionPicker value={direction} onChange={setDirection} />

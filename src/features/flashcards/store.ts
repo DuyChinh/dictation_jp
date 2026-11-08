@@ -74,7 +74,8 @@ export function writeState(state: FlashState, { fromServer = false } = {}): void
 export function mergeIntoLocal(remote: FlashState): FlashState {
   const merged = mergeState(readState(), remote);
   writeState(merged, { fromServer: true });
-  return merged;
+  migrateLegacyDefault();
+  return readState();
 }
 
 function subscribe(l: () => void): () => void {
@@ -120,11 +121,33 @@ export function createDeck(name: string, id: string = newId()): Deck {
   return deck;
 }
 
-/** The deck new cards go to when none is chosen; made on first use. */
+/** The deck new cards go to when none is chosen; made on first use, with an id of its own like any deck. */
 export function ensureDefaultDeck(name: string): Deck {
+  const live = liveDecks(readState());
+  return live.find((d) => d.legacyId === DEFAULT_DECK_ID) ?? live[0] ?? createDeck(name);
+}
+
+/**
+ * Decks used to share one fixed id, "default", for the deck made on first use. It gets an id of its own now:
+ * the cards move to a new deck (remembering where it came from) and the old one is marked deleted. Cards that
+ * still point at "default", such as ones another device sent later, are moved the same way.
+ */
+export function migrateLegacyDefault(): void {
   const s = readState();
-  const found = s.decks.find((d) => d.id === DEFAULT_DECK_ID && !d.deleted);
-  return found ?? createDeck(name, DEFAULT_DECK_ID);
+  const old = s.decks.find((d) => d.id === DEFAULT_DECK_ID && !d.deleted);
+  const stray = s.cards.some((c) => c.deckId === DEFAULT_DECK_ID && !c.deleted);
+  if (!old && !stray) return;
+  const now = Date.now();
+  let target = s.decks.find((d) => d.legacyId === DEFAULT_DECK_ID && !d.deleted);
+  let decks = s.decks;
+  if (!target) {
+    target = { id: newId(), name: old?.name ?? "Từ của tôi", createdAt: old?.createdAt ?? now, updatedAt: now, legacyId: DEFAULT_DECK_ID };
+    decks = [...decks, target];
+  }
+  const to = target.id;
+  decks = decks.map((d) => (d.id === DEFAULT_DECK_ID && !d.deleted ? { ...d, deleted: true as const, updatedAt: now } : d));
+  const cards = s.cards.map((c) => (c.deckId === DEFAULT_DECK_ID && !c.deleted ? { ...c, deckId: to, updatedAt: now } : c));
+  writeState({ decks, cards });
 }
 
 export function renameDeck(id: string, name: string): void {
@@ -221,6 +244,8 @@ export function recordAnswers(results: Array<{ cardId: string; correct: boolean 
   if (!results.length) return;
   const byCard = new Map(results.map((r) => [r.cardId, r.correct]));
   const s = readState();
+  // answers about cards that are not here (a shared deck studied from its link) change nothing
+  if (!s.cards.some((c) => byCard.has(c.id))) return;
   const now = Date.now();
   writeState({ ...s, cards: s.cards.map((c) => (byCard.has(c.id) && !c.deleted ? reviewed(c, byCard.get(c.id)!, now) : c)) });
 }
@@ -262,4 +287,61 @@ export function applyHanViet(byEntry: Record<number, string>): void {
     return { ...c, hanViet: hv.slice(0, 100), updatedAt: now };
   });
   if (changed) writeState({ ...s, cards });
+}
+
+/** Records that a deck is public (with its share id) or private again. */
+export function setDeckShare(id: string, shareId: string | undefined): void {
+  const s = readState();
+  const now = Date.now();
+  writeState({
+    ...s,
+    decks: s.decks.map((d) => {
+      if (d.id !== id) return d;
+      const { shareId: _old, ...rest } = d;
+      return shareId ? { ...rest, shareId, updatedAt: now } : { ...rest, updatedAt: now };
+    }),
+  });
+}
+
+export type SharedCardData = {
+  id: string;
+  term: string;
+  termLang: CardLang;
+  definition: string;
+  definitionLang: CardLang;
+  reading?: string;
+  hanViet?: string;
+};
+
+/** Keeps a copy of a shared deck in this browser, as a deck of its own with fresh cards and no study progress. */
+export function importSharedDeck(name: string, shared: SharedCardData[]): Deck {
+  const now = Date.now();
+  const deck: Deck = { id: newId(), name: clean(name).slice(0, 80) || "Flashcard", createdAt: now, updatedAt: now };
+  const cards: Card[] = shared.map((c, i) => ({
+    id: newId(),
+    deckId: deck.id,
+    term: c.term,
+    termLang: c.termLang,
+    definition: c.definition,
+    definitionLang: c.definitionLang,
+    ...(c.reading ? { reading: c.reading } : {}),
+    ...(c.hanViet ? { hanViet: c.hanViet } : {}),
+    box: 0,
+    due: 0,
+    right: 0,
+    wrong: 0,
+    // keep the order they were shared in
+    createdAt: now + i,
+    updatedAt: now,
+  }));
+  const s = readState();
+  writeState({ decks: [...s.decks, deck], cards: [...s.cards, ...cards] });
+  return deck;
+}
+
+// decks made before they had ids of their own
+try {
+  migrateLegacyDefault();
+} catch {
+  /* storage blocked: nothing to move */
 }

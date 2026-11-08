@@ -17,6 +17,7 @@ import {
   type DropItem,
 } from "./quiz";
 import { useFt } from "./flashText";
+import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -27,6 +28,7 @@ type Feedback = { chosen: string; correct: boolean };
 /** Speed round: 60 seconds of multiple choice. Right answers in a row build a combo; a wrong one costs time. */
 export function BlitzMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const backTo = useBackTo(deckId);
   const [running, setRunning] = useState(false);
   const [over, setOver] = useState(false);
   const [state, setState] = useState<BlitzState>(startBlitz);
@@ -140,7 +142,7 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
         {record && !record.improved && record.best !== null && <p className="fc-note">{fmt(ft("blitz.best"), { score: record.best })}</p>}
         <div className="fc-actions">
           <button type="button" className="btn btn--primary" onClick={start}>{ft("common.playAgain")}</button>
-          <Link className="btn btn--ghost" to={`/flashcards/${deckId}`}>{ft("common.backToDeck")}</Link>
+          <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );

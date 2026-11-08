@@ -50,6 +50,7 @@ vi.mock("./miner", async (orig) => {
   ];
   return { ...real, layoutNuggets: (n: number) => boxes.slice(0, n) };
 });
+vi.mock("../auth/AuthContext", () => ({ useAuth: () => ({ user: null, loading: false }) }));
 vi.mock("../../shared/ui/AppShell", () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("../../shared/utils/confetti", () => ({ triggerConfetti: () => undefined, triggerFireworks: () => undefined }));
 
