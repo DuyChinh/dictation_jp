@@ -432,7 +432,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-miner__nugget .fc-side { gap: 0 6px; }
 .fc-miner__nugget .fc-side__reading { font-size: 0.7em; color: #7a4a05; }
 .fc-miner__nugget.is-taken { visibility: hidden; }
-.fc-miner__carry { left: 50%; top: 100%; width: 170px; width: 25cqw; height: 11cqw; margin-top: 12px; z-index: 2; transform: translate(-50%, 0); }
+.fc-miner__carry { left: 50%; top: 100%; width: 170px; height: 64px; width: var(--nw, 25cqw); height: var(--nh, 11cqw); margin-top: 12px; z-index: 2; transform: translate(-50%, 0); }
 .fc-miner__carry.is-right { background: radial-gradient(circle at 30% 28%, #f0fdf4, #86efac 45%, #22c55e); border-color: var(--ok); }
 .fc-miner__carry.is-wrong { background: radial-gradient(circle at 30% 28%, #fef2f2, #fca5a5 45%, #ef4444); border-color: var(--bad); color: #450a0a; }
 .fc-miner__hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, 0.75); pointer-events: none; }
@@ -447,4 +447,152 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 @media (prefers-reduced-motion: reduce) {
   .fc-bubble { animation-duration: 12s !important; }
   .fc-shoot__prompt, .fc-shoot__flash, .fc-shoot__hole { animation: none; }
+}
+
+
+/* =========================================================================
+   Phones and tablets
+   Breakpoints: 1023px and below is a tablet (the sidebar becomes a drawer), 640px and below a phone,
+   480px and below a small phone. "pointer: coarse" is any touch screen, whatever its width.
+   ========================================================================= */
+
+/* every game surface: no double-tap zoom delay, no text-selection or callout while tapping fast */
+.fc-bubble, .fc-tile, .fc-mem, .fc-q__option, .fc-miner__scene, .fc-shoot__range, .fc-flash__face, .fc-learn__answers .btn, .fc-dots__item {
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.fc-bubble, .fc-tile, .fc-mem, .fc-miner__scene, .fc-shoot__range, .fc-drop__sky, .fc-blitz__stage, .fc-flash__face { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+.fc-page { padding-bottom: calc(48px + var(--safe-bottom)); }
+.fc-shoot__range { height: clamp(320px, 55vw, 480px); }
+.fc-drop__sky { height: clamp(260px, 42vw, 360px); }
+.fc-selpanel { max-height: min(80vh, 640px); max-height: min(80dvh, 640px); }
+
+/* tablet, and a phone on its side */
+@media (max-width: 1023px) {
+  .fc-page { gap: 14px; }
+  .fc-modes { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .fc-decks { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .fc-flash__face { min-height: 300px; }
+  .fc-miner__scene { border-radius: 14px; }
+}
+
+/* keyboard shortcuts mean nothing on a touch screen */
+@media (hover: none) {
+  .fc-keys, .fc-kbd { display: none; }
+  a.fc-mode:hover { transform: none; }
+}
+
+/* fingers: at least 44px to hit, and 16px text in fields so iOS does not zoom the page when one is focused */
+@media (pointer: coarse) {
+  .fc-field__lang select, .fc-deckpick select, .fc-q__match select, .fc-search input, .fc-count input, .fc-selpanel .fc-input, .fc-listhead__search { font-size: 16px; }
+  .fc-field__lang select, .fc-deckpick select { min-height: 44px; }
+  .fc-choice__item, .fc-dir__item { min-height: 44px; }
+  .fc-swap { width: 44px; height: 44px; }
+  .fc-add { width: 38px; height: 38px; }
+  .fc-selbtn { height: 44px; padding: 0 18px; font-size: 14.5px; }
+  .fc-dots__item { min-width: 40px; height: 40px; }
+  .fc-search__clear { width: 36px; height: 36px; }
+  .fc-row__tools .icon-btn { width: 44px; height: 44px; }
+  .btn--sm { height: 44px; }
+  .fc-check { min-height: 44px; }
+  .fc-check input { width: 22px; height: 22px; }
+}
+
+/* phone */
+@media (max-width: 640px) {
+  .fc-page__head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .fc-page__head h1 { font-size: 22px; }
+  .fc-page__head > .btn { width: 100%; }
+  .fc-page__actions { width: 100%; }
+  .fc-page__actions .btn { flex: 1 1 auto; justify-content: center; }
+  .fc-newdeck .fc-input, .fc-rename .fc-input { flex: 1 1 100%; }
+  .fc-panel { padding: 16px; border-radius: 14px; }
+  .fc-stats { gap: 2px 12px; font-size: 14px; }
+
+  /* the form */
+  .fc-editor__actions .btn { flex: 1; }
+  .fc-suggest__item { flex-wrap: wrap; row-gap: 2px; }
+  .fc-suggest__main { max-width: none; }
+  .fc-suggest__sub { flex: 1 1 100%; }
+  .fc-suggest__arrow { display: none; }
+  .fc-selpanel { padding: 14px; max-height: 78vh; max-height: 78dvh; }
+
+  /* deck: modes two to a row, each card's two sides stacked with the tools on the right */
+  .fc-modes { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fc-mode { padding: 12px; gap: 4px; }
+  .fc-mode__title { font-size: 15px; }
+  .fc-mode__sub { font-size: 12.5px; }
+  .fc-decks { grid-template-columns: 1fr; }
+  .fc-listhead { align-items: stretch; }
+  .fc-search { flex: 1 1 100%; max-width: none; }
+  .fc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 10px 12px; }
+  .fc-row > .fc-side { grid-column: 1; flex: none; }
+  .fc-row__sep { display: none; }
+  .fc-row > .fc-side + .fc-row__sep + .fc-side { margin-top: 2px; color: var(--ink-2); }
+  .fc-row__tools { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin-left: 0; }
+  .fc-row__tag { grid-column: 2; grid-row: 1; margin-left: 0; align-self: start; }
+  .fc-modal { padding: 4vh 12px 16px; }
+  .fc-modal__box { padding: 16px; border-radius: 14px; }
+
+  /* learn */
+  .fc-flash__face { min-height: 240px; padding: 20px 14px; border-radius: 16px; }
+  .fc-learn__answers .btn { height: 56px; }
+
+  /* test */
+  .fc-q { padding: 14px; border-radius: 14px; }
+  .fc-q__prompt .fc-side--big { font-size: 26px; }
+  .fc-dots { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .fc-dots__item { flex: none; }
+  .fc-test__head { flex-wrap: wrap; gap: 0 12px; }
+  .fc-test--single .fc-q__option { min-height: 56px; }
+
+  /* games: tiles smaller, answers two to a row so everything fits one screen */
+  .fc-tile { min-height: 76px; font-size: 15px; padding: 8px; }
+  .fc-memory__grid { gap: 8px; }
+  .fc-mem { aspect-ratio: 1 / 1; }
+  .fc-mem__face { padding: 4px; font-size: 13px; line-height: 1.25; }
+  .fc-mem__back .fc-side { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+  .fc-drop__options, .fc-blitz .fc-drop__options { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fc-drop__options .fc-q__option { min-height: 52px; padding: 8px; font-size: 14.5px; }
+  .fc-drop__word { padding: 8px 16px; }
+  .fc-drop__word .fc-side--big, .fc-blitz__prompt .fc-side--big { font-size: 24px; }
+  .fc-blitz__stage { min-height: 140px; padding: 14px; }
+  .fc-blitz__prompt { padding: 10px 18px; }
+  .fc-shoot__prompt .fc-side--big { font-size: 24px; }
+  .fc-bubble { padding: 10px 16px 10px 12px; }
+  .fc-combo { top: 6px; right: 8px; font-size: 12.5px; padding: 3px 10px; }
+  .fc-result__big { font-size: 40px; }
+  .fc-stars svg { width: 38px; height: 38px; }
+  .fc-miner__scene.is-tall .fc-miner__nugget { font-size: 13px; font-size: clamp(12px, 3.6cqw, 16px); padding: 4px 8px; }
+  .fc-miner__scene.is-tall .fc-miner__hint { font-size: 12px; }
+  .fc-miner__drop { width: 100%; }
+}
+
+/* small phone */
+@media (max-width: 480px) {
+  .fc-modes { gap: 8px; }
+  .fc-mode > svg { width: 22px; height: 22px; }
+  .fc-drop__bar, .fc-blitz__bar { gap: 10px; }
+  .fc-drop__score, .fc-blitz__score { font-size: 16px; }
+  .fc-blitz__time { font-size: 22px; }
+  .fc-match__time { font-size: 20px; }
+  .fc-match__grid { gap: 8px; }
+  .fc-learn__answers { gap: 8px; }
+  .fc-choice { flex-direction: column; align-items: stretch; }
+  .fc-choice__item { border-radius: 12px; text-align: center; }
+  .fc-test__nav .btn { padding: 0 12px; }
+  .fc-actions .btn { flex: 1 1 auto; }
+}
+@media (max-width: 360px) {
+  .fc-drop__options, .fc-blitz .fc-drop__options { grid-template-columns: 1fr; }
+  .fc-memory__grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* a phone on its side is short: keep the games within the screen */
+@media (max-height: 520px) and (orientation: landscape) {
+  .fc-shoot__range { height: 62vh; height: 62dvh; min-height: 220px; }
+  .fc-drop__sky { height: 38vh; height: 38dvh; min-height: 170px; }
+  .fc-flash__face { min-height: 180px; }
+  .fc-blitz__stage { min-height: 100px; }
+  .fc-miner__scene { max-width: calc((100dvh - 190px) * 100 / 62); margin: 0 auto; }
 }

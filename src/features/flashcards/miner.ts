@@ -6,6 +6,7 @@ import { shuffle, type Rng } from "./quiz";
  * is pulled back with whatever it touched. Nothing here touches the page, so it can be tested directly.
  */
 export const W = 100;
+/** The wide scene (tablet and desktop); a phone gets the taller one from `SCENES.tall`. */
 export const H = 62;
 export const PIVOT = { x: 50, y: 7 };
 export const MIN_LEN = 6;
@@ -15,8 +16,23 @@ export const SWING_PERIOD_MS = 2800;
 export const EXTEND_SPEED = 0.052;
 export const RETRACT_SPEED = 0.042;
 const WALL = 2;
-const FLOOR = H - 2;
 const CLAW_REACH = 2.2;
+
+/**
+ * A scene is the playing field in its own units: always 100 wide, `H` tall. The tall one suits a phone held
+ * upright, with two columns of bigger nuggets so their text stays readable.
+ */
+export type Scene = {
+  H: number;
+  cols: number[];
+  rows: number[];
+  nugget: { w: number; h: number };
+};
+
+export const SCENES = {
+  wide: { H: 62, cols: [19, 50, 81], rows: [30, 45], nugget: { w: 25, h: 11 } },
+  tall: { H: 100, cols: [26, 74], rows: [36, 56, 76], nugget: { w: 44, h: 14 } },
+} as const satisfies Record<string, Scene>;
 
 export type Box = { x: number; y: number; w: number; h: number };
 export type Phase = "swing" | "extend" | "retract";
@@ -38,19 +54,24 @@ export function hits(p: { x: number; y: number }, b: Box, reach = CLAW_REACH): b
 }
 
 /** How far the rope can go along this angle before the claw leaves the scene. */
-export function maxLen(angle: number): number {
+export function maxLen(angle: number, scene: Scene = SCENES.wide): number {
   const a = (angle * Math.PI) / 180;
   const sin = Math.sin(a);
   const cos = Math.cos(a);
   const toWall = sin > 1e-6 ? (W - WALL - PIVOT.x) / sin : sin < -1e-6 ? (WALL - PIVOT.x) / sin : Infinity;
-  const toFloor = cos > 1e-6 ? (FLOOR - PIVOT.y) / cos : Infinity;
+  const toFloor = cos > 1e-6 ? (scene.H - 2 - PIVOT.y) / cos : Infinity;
   return Math.min(toWall, toFloor);
 }
 
 export const launch = (c: Claw): Claw => (c.phase === "swing" ? { ...c, phase: "extend" } : c);
 
 /** Advances the claw by `dt` ms. `boxes` are the things that can be caught (null once taken). */
-export function stepClaw(c: Claw, dt: number, boxes: ReadonlyArray<Box | null>): { claw: Claw; event: ClawEvent } {
+export function stepClaw(
+  c: Claw,
+  dt: number,
+  boxes: ReadonlyArray<Box | null>,
+  scene: Scene = SCENES.wide,
+): { claw: Claw; event: ClawEvent } {
   if (c.phase === "swing") {
     const t = c.t + dt;
     return { claw: { ...c, t, angle: swingAngle(t) }, event: null };
@@ -59,7 +80,7 @@ export function stepClaw(c: Claw, dt: number, boxes: ReadonlyArray<Box | null>):
     const len = c.len + EXTEND_SPEED * dt;
     const index = boxes.findIndex((b) => b !== null && hits(tipOf(c.angle, len), b));
     if (index >= 0) return { claw: { ...c, len, phase: "retract", caught: index }, event: { type: "caught", index } };
-    if (len >= maxLen(c.angle)) return { claw: { ...c, len: maxLen(c.angle), phase: "retract" }, event: null };
+    if (len >= maxLen(c.angle, scene)) return { claw: { ...c, len: maxLen(c.angle, scene), phase: "retract" }, event: null };
     return { claw: { ...c, len }, event: null };
   }
   const len = c.len - RETRACT_SPEED * dt;
@@ -69,17 +90,14 @@ export function stepClaw(c: Claw, dt: number, boxes: ReadonlyArray<Box | null>):
   return { claw: { ...c, len }, event: null };
 }
 
-export const NUGGET = { w: 25, h: 11 };
-const COLS = [19, 50, 81];
-const ROWS = [30, 45];
-
 /** Places `count` nuggets in separate spots of the digging area, nudged a little so no round looks the same. */
-export function layoutNuggets(count: number, rng: Rng = Math.random): Box[] {
-  const slots = shuffle(COLS.flatMap((cx) => ROWS.map((cy) => ({ cx, cy }))), rng).slice(0, count);
+export function layoutNuggets(count: number, rng: Rng = Math.random, scene: Scene = SCENES.wide): Box[] {
+  const { cols, rows, nugget } = scene;
+  const slots = shuffle(cols.flatMap((cx) => rows.map((cy) => ({ cx, cy }))), rng).slice(0, count);
   return slots.map(({ cx, cy }) => ({
-    x: cx - NUGGET.w / 2 + (rng() - 0.5) * 6,
-    y: cy - NUGGET.h / 2 + (rng() - 0.5) * 6,
-    w: NUGGET.w,
-    h: NUGGET.h,
+    x: cx - nugget.w / 2 + (rng() - 0.5) * 6,
+    y: cy - nugget.h / 2 + (rng() - 0.5) * 6,
+    w: nugget.w,
+    h: nugget.h,
   }));
 }

@@ -4,7 +4,7 @@ import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
-import { H, PIVOT, W, layoutNuggets, launch, newClaw, stepClaw, type Box, type Claw } from "./miner";
+import { PIVOT, SCENES, W, layoutNuggets, launch, newClaw, stepClaw, type Box, type Claw, type Scene } from "./miner";
 import { getBest, submitBest } from "./prefs";
 import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
@@ -20,12 +20,26 @@ const RESULT_MS = 900;
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box };
 type Feedback = { correct: boolean };
 
-function nuggetsFor(item: DropItem): Nugget[] {
-  const boxes = layoutNuggets(item.options.length);
+function nuggetsFor(item: DropItem, scene: Scene): Nugget[] {
+  const boxes = layoutNuggets(item.options.length, Math.random, scene);
   return item.options.map((o, i) => ({ cardId: o.cardId, side: o.side, box: boxes[i]! }));
 }
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+
+/** A phone held upright gets the tall field with bigger nuggets; anything wider gets the wide one. */
+function useNarrow(): boolean {
+  const query = "(max-width: 640px)";
+  const [narrow, setNarrow] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const on = () => setNarrow(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return narrow;
+}
 
 /** Gold miner: the claw swings, you drop it, and it hauls up the nugget it touches. Haul up the right answer. */
 export function MinerMode({ deckId, cards, direction }: Props) {
@@ -50,6 +64,11 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const { pops, pop } = usePops();
   const { shaking, shake } = useShake();
+  const narrow = useNarrow();
+  // the field is chosen when a round starts, so turning the phone mid-round does not move the nuggets
+  const [scene, setScene] = useState<Scene>(narrow ? SCENES.tall : SCENES.wide);
+  const sceneRef = useRef<Scene>(scene);
+  sceneRef.current = scene;
 
   nuggetsRef.current = nuggets;
   gameRef.current = game;
@@ -64,7 +83,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     const c = clawRef.current;
     const rope = ropeRef.current;
     if (rope) {
-      rope.style.height = pct(c.len, H);
+      rope.style.height = pct(c.len, sceneRef.current.H);
       rope.style.transform = `rotate(${-c.angle}deg)`;
     }
     const carry = carryRef.current;
@@ -76,7 +95,10 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     const round = buildDropRound(cards, ROUND, direction);
     setItems(round);
     setGame(startDrop(round.length));
-    setNuggets(nuggetsFor(round[0]!));
+    const field = narrow ? SCENES.tall : SCENES.wide;
+    sceneRef.current = field;
+    setScene(field);
+    setNuggets(nuggetsFor(round[0]!, field));
     setCarried(null);
     setFeedback(null);
     setHighScore(null);
@@ -122,7 +144,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         setCarried(null);
         clawRef.current = newClaw();
         pausedRef.current = false;
-        if (next.status === "playing") setNuggets(nuggetsFor(its[next.index]!));
+        if (next.status === "playing") setNuggets(nuggetsFor(its[next.index]!, sceneRef.current));
         else finish(next);
       }, correct ? 500 : RESULT_MS),
     );
@@ -137,7 +159,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       const dt = Math.min(50, now - last);
       last = now;
       if (!pausedRef.current) {
-        const { claw, event } = stepClaw(clawRef.current, dt, nuggetsRef.current.map((n) => n.box));
+        const { claw, event } = stepClaw(clawRef.current, dt, nuggetsRef.current.map((n) => n.box), sceneRef.current);
         clawRef.current = claw;
         paint();
         if (event?.type === "caught") {
@@ -242,10 +264,16 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         <span className="fc-note tabular">{game.index + 1} / {game.total}</span>
       </div>
 
-      <div className={`fc-miner__scene${shaking ? " is-shaking" : ""}`} role="application" aria-label={ft("miner.scene")} onClick={drop}>
+      <div
+        className={`fc-miner__scene${scene === SCENES.tall ? " is-tall" : ""}${shaking ? " is-shaking" : ""}`}
+        style={{ aspectRatio: `${W} / ${scene.H}`, ["--nw" as string]: `${scene.nugget.w}cqw`, ["--nh" as string]: `${scene.nugget.h}cqw` }}
+        role="application"
+        aria-label={ft("miner.scene")}
+        onClick={drop}
+      >
         <span className="fc-miner__ground" aria-hidden="true" />
-        <span className="fc-miner__cart" aria-hidden="true" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, H) }} />
-        <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, H), height: pct(clawRef.current.len, H) }} aria-hidden="true">
+        <span className="fc-miner__cart" aria-hidden="true" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H) }} />
+        <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H), height: pct(clawRef.current.len, scene.H) }} aria-hidden="true">
           <span className="fc-miner__claw" />
           {hold && (
             <div ref={carryRef} className={`fc-miner__nugget fc-miner__carry${feedback ? (feedback.correct ? " is-right" : " is-wrong") : ""}`}>
@@ -258,7 +286,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           <div
             key={`${game.index}-${n.cardId}`}
             className={`fc-miner__nugget${carried === i ? " is-taken" : ""}`}
-            style={{ left: pct(n.box.x, W), top: pct(n.box.y, H), width: pct(n.box.w, W), height: pct(n.box.h, H) }}
+            style={{ left: pct(n.box.x, W), top: pct(n.box.y, scene.H), width: pct(n.box.w, W), height: pct(n.box.h, scene.H) }}
             aria-label={fmt(ft("miner.nugget"), { text: n.side.text })}
           >
             <SideView side={n.side} speak={false} />

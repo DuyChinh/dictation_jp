@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ANGLE, MIN_LEN, PIVOT, H, W, hits, launch, layoutNuggets, maxLen, newClaw, stepClaw, swingAngle, tipOf, type Box, type Claw } from "./miner";
+import { MAX_ANGLE, MIN_LEN, PIVOT, H, SCENES, W, hits, launch, layoutNuggets, maxLen, newClaw, stepClaw, swingAngle, tipOf, type Box, type Claw, type Scene } from "./miner";
 
-const run = (c: Claw, boxes: Array<Box | null>, steps: number, dt = 16) => {
+const run = (c: Claw, boxes: Array<Box | null>, steps: number, dt = 16, scene: Scene = SCENES.wide) => {
   let claw = c;
   const events = [];
   for (let i = 0; i < steps; i++) {
-    const r = stepClaw(claw, dt, boxes);
+    const r = stepClaw(claw, dt, boxes, scene);
     claw = r.claw;
     if (r.event) events.push(r.event);
   }
@@ -75,6 +75,39 @@ describe("stepClaw", () => {
   it("will not launch again while the claw is out", () => {
     const out = launch(newClaw());
     expect(launch(out)).toBe(out);
+  });
+});
+
+describe("scenes", () => {
+  it("the tall scene lets the rope go further down than the wide one", () => {
+    expect(maxLen(0, SCENES.tall)).toBeCloseTo(SCENES.tall.H - 2 - PIVOT.y);
+    expect(maxLen(0, SCENES.tall)).toBeGreaterThan(maxLen(0, SCENES.wide));
+  });
+
+  it("catches in the tall scene too, with a box far down the field", () => {
+    const deep: Box = { x: 30, y: 70, w: 40, h: 14 };
+    const { events } = run(launch(newClaw()), [deep], 900, 16, SCENES.tall);
+    expect(events).toEqual([{ type: "caught", index: 0 }, { type: "arrived", index: 0 }]);
+  });
+
+  it("lays out separate, in-bounds nuggets on either scene", () => {
+    for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
+      for (let n = 2; n <= 4; n++) {
+        const boxes = layoutNuggets(n, Math.random, scene);
+        expect(boxes).toHaveLength(n);
+        for (const b of boxes) {
+          expect(b.x).toBeGreaterThan(0);
+          expect(b.x + b.w).toBeLessThan(W);
+          expect(b.y).toBeGreaterThan(PIVOT.y + MIN_LEN + 4);
+          expect(b.y + b.h).toBeLessThan(scene.H - 2);
+        }
+        boxes.forEach((a, i) =>
+          boxes.slice(i + 1).forEach((b) => {
+            expect(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y).toBe(true);
+          }),
+        );
+      }
+    }
   });
 });
 
