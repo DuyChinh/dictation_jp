@@ -200,6 +200,19 @@ const paths = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  target: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5" />
+    </>
+  ),
+  gem: (
+    <>
+      <path d="M6.5 4h11l4 5.5L12 21 2.5 9.5z" />
+      <path d="M2.5 9.5h19M9 4l-2 5.5L12 21l5-11.5L15 4" />
+    </>
+  ),
   users: (
     <>
       <circle cx="9" cy="8" r="3.5" />

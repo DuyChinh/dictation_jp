@@ -4,6 +4,8 @@ import { DirectionPicker } from "../features/flashcards/DirectionPicker";
 import { BlitzMode } from "../features/flashcards/BlitzMode";
 import { DropMode } from "../features/flashcards/DropMode";
 import { MemoryMode } from "../features/flashcards/MemoryMode";
+import { MinerMode } from "../features/flashcards/MinerMode";
+import { ShootMode } from "../features/flashcards/ShootMode";
 import { modeById, type ModeId } from "../features/flashcards/modes";
 import { LearnMode } from "../features/flashcards/LearnMode";
 import { MatchMode } from "../features/flashcards/MatchMode";
@@ -64,6 +66,8 @@ export function FlashcardStudyPage() {
         {mode === "match" && <MatchMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
         {mode === "memory" && <MemoryMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
         {mode === "blitz" && <BlitzMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
+        {mode === "shoot" && <ShootMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
+        {mode === "miner" && <MinerMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
         {mode === "drop" && <DropMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
       </>
     );

@@ -9,6 +9,8 @@ import { LearnMode } from "./LearnMode";
 import { MatchMode } from "./MatchMode";
 import { MemoryMode } from "./MemoryMode";
 import { BlitzMode } from "./BlitzMode";
+import { ShootMode } from "./ShootMode";
+import { MinerMode } from "./MinerMode";
 import { TestMode } from "./TestMode";
 import { AddEntryButton } from "./AddEntryButton";
 import { addCard, createDeck, readState } from "./store";
@@ -21,6 +23,17 @@ vi.mock("../../shared/api/dictionary", async (orig) => ({
   searchDictionary: (...a: unknown[]) => searchDictionary(...a),
   lookupWord: (...a: unknown[]) => lookupWord(...a),
 }));
+vi.mock("./miner", async (orig) => {
+  const real = await orig<typeof import("./miner")>();
+  // four nuggets with the first one straight under the claw
+  const boxes = [
+    { x: 37.5, y: 30, w: 25, h: 11 },
+    { x: 4, y: 30, w: 25, h: 11 },
+    { x: 71, y: 30, w: 25, h: 11 },
+    { x: 4, y: 46, w: 25, h: 11 },
+  ];
+  return { ...real, layoutNuggets: (n: number) => boxes.slice(0, n) };
+});
 vi.mock("../../shared/ui/AppShell", () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("../../shared/utils/confetti", () => ({ triggerConfetti: () => undefined, triggerFireworks: () => undefined }));
 
@@ -461,6 +474,103 @@ describe("BlitzMode", () => {
   });
 });
 
+describe("ShootMode", () => {
+  const bubble = (text: string) => [...document.querySelectorAll(".fc-bubble")].find((b) => b.textContent?.includes(text)) as HTMLElement;
+  const prompt = () => document.querySelector(".fc-shoot__prompt .fc-side__text")!.textContent!;
+  const settle = () => act(async () => void vi.advanceTimersByTime(1100));
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+
+  it("scores a shot at the right bubble and leaves a bullet hole", async () => {
+    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(document.querySelectorAll(".fc-bubble")).toHaveLength(4);
+    fireEvent.click(bubble(MEANING[prompt()]!));
+    expect(document.querySelector(".fc-bubble.is-right")).toBeTruthy();
+    expect(document.querySelector(".fc-shoot__hole")).toBeTruthy();
+    await settle();
+    expect(screen.getByText("Điểm: 10")).toBeTruthy();
+    expect(screen.getByText("2 / 4")).toBeTruthy();
+  });
+
+  it("loses a life for a wrong bubble and for the right one escaping, and ends at no lives", async () => {
+    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    const wrong = () => Object.values(MEANING).find((m) => m !== MEANING[prompt()])!;
+    fireEvent.click(bubble(wrong()));
+    expect(document.querySelector(".fc-bubble.is-wrong")).toBeTruthy();
+    await settle();
+    expect(screen.getByLabelText("Còn 2 mạng")).toBeTruthy();
+
+    fireEvent.animationEnd(bubble(MEANING[prompt()]!));
+    await settle();
+    expect(screen.getByLabelText("Còn 1 mạng")).toBeTruthy();
+
+    fireEvent.click(bubble(wrong()));
+    await settle();
+    expect(screen.getByText("Hết mạng rồi")).toBeTruthy();
+  });
+
+  it("a shot at empty water costs nothing, and the number keys shoot", async () => {
+    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    fireEvent.click(document.querySelector(".fc-shoot__range")!);
+    expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
+    expect(document.querySelectorAll(".fc-shoot__hole")).toHaveLength(1);
+    const right = MEANING[prompt()]!;
+    const index = [...document.querySelectorAll(".fc-bubble")].findIndex((b) => b.textContent?.includes(right));
+    fireEvent.keyDown(window, { key: String(index + 1) });
+    await settle();
+    expect(screen.getByText("Điểm: 10")).toBeTruthy();
+  });
+});
+
+describe("MinerMode", () => {
+  const nuggetTexts = () => [...document.querySelectorAll(".fc-miner__scene > .fc-miner__nugget")].map((n) => n.querySelector(".fc-side__text")!.textContent!);
+  const prompt = () => document.querySelector(".fc-shoot__prompt .fc-side__text")!.textContent!;
+  const frames = (ms: number) => act(async () => void vi.advanceTimersByTime(ms));
+  beforeEach(() => vi.useFakeTimers());
+
+  it("drops the claw, hauls up the nugget under it, and judges it", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    // the nugget straight under the claw is the first one
+    const underClaw = nuggetTexts()[0]!;
+    const right = underClaw === MEANING[prompt()];
+    expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: " " });
+    await frames(300);
+    // on the way back with it
+    expect(document.querySelector(".fc-miner__carry")?.textContent).toContain(underClaw);
+    expect(document.querySelector(".fc-miner__nugget.is-taken")).toBeTruthy();
+    await frames(900);
+    expect(document.querySelector(".fc-miner__carry")?.className).toContain(right ? "is-right" : "is-wrong");
+    await frames(1100);
+    expect(screen.getByText(right ? "Điểm: 10" : "Điểm: 0")).toBeTruthy();
+    expect(screen.getByLabelText(right ? "Còn 3 mạng" : "Còn 2 mạng")).toBeTruthy();
+    expect(screen.getByText("2 / 4")).toBeTruthy();
+  });
+
+  it("misses cost nothing: an empty claw comes back and the question stays", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    // let it swing to the far left, where the left column of nuggets is, then past it to the empty wall
+    await frames(2100);
+    fireEvent.click(document.querySelector(".fc-miner__scene")!);
+    await frames(2500);
+    expect(screen.getByText(/^\d \/ 4$/)).toBeTruthy();
+    expect(screen.getByLabelText(/Còn \d mạng/)).toBeTruthy();
+  });
+
+  it("ends when the 90 seconds are up", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await frames(91000);
+    expect(screen.getByText("Hết giờ!")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Chơi lại" })).toBeTruthy();
+  });
+});
+
 describe("pages", () => {
   const AppShellMock = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
   void AppShellMock;
@@ -503,6 +613,8 @@ describe("pages", () => {
     expect(screen.getByText("4 từ")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Lật hình/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Đua thời gian/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Bắn chữ/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Đào vàng/ })).toBeTruthy();
     const search = screen.getByRole("searchbox", { name: "Tìm từ trong bộ" });
     fireEvent.change(search, { target: { value: "mèo" } });
     expect(screen.getByText("猫")).toBeTruthy();

@@ -51,7 +51,7 @@ export const saveRightLang = (lang: CardLang) => set(RIGHT_KEY, lang);
 export const lastDeckId = (): string | null => get(DECK_KEY);
 export const saveLastDeck = (id: string) => set(DECK_KEY, id);
 
-export type GameName = "match" | "drop" | "memory" | "blitz";
+export type GameName = "match" | "drop" | "memory" | "blitz" | "shoot" | "miner";
 type Best = Record<string, number>;
 
 function readBest(): Best {

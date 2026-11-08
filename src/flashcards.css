@@ -369,3 +369,82 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-tile, .fc-row.is-new, .fc-test__stage, .fc-blitz__prompt, .fc-combo, .fc-burst i, .fc-pop, .is-shaking, .fc-tile.is-wrong, .fc-drop__sky::before, .fc-drop__sky::after, .fc-blitz__time.is-low { animation: none; }
   .fc-burst { display: none; }
 }
+
+/* =========================================================================
+   Bubble shooter and gold miner
+   ========================================================================= */
+
+.fc-shoot, .fc-miner { display: flex; flex-direction: column; gap: 12px; }
+.fc-shoot__prompt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 16px; border-radius: 16px; background: var(--card-bg); border: 2px solid var(--primary-color); box-shadow: var(--card-shadow); animation: fc-drop-in 0.3s cubic-bezier(0.2, 1.3, 0.4, 1); transition: background 0.15s ease, border-color 0.15s ease; }
+.fc-shoot__prompt.is-hit { background: var(--ok-soft); border-color: var(--ok); }
+.fc-shoot__prompt.is-miss { background: var(--bad-soft); border-color: var(--bad); }
+
+/* shooting range */
+.fc-shoot__range {
+  position: relative; height: 380px; overflow: hidden; border-radius: 18px; cursor: crosshair; user-select: none;
+  background: radial-gradient(80% 60% at 50% 0%, rgba(255, 255, 255, 0.35), transparent 70%), linear-gradient(180deg, #38bdf8, #0ea5e9 45%, #0369a1);
+  border: 1px solid #0369a1; box-shadow: inset 0 -30px 60px rgba(3, 105, 161, 0.5);
+}
+.fc-shoot__range::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(40px 14px at 15% 20%, rgba(255, 255, 255, 0.55), transparent), radial-gradient(60px 18px at 70% 12%, rgba(255, 255, 255, 0.5), transparent), radial-gradient(50px 14px at 90% 32%, rgba(255, 255, 255, 0.4), transparent); }
+.fc-shoot__flash { position: absolute; inset: 0; pointer-events: none; background: rgba(255, 255, 255, 0.55); animation: fc-flash 0.18s ease-out forwards; z-index: 4; }
+@keyframes fc-flash { to { opacity: 0; } }
+.fc-shoot__hole { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; pointer-events: none; z-index: 3; background: radial-gradient(circle, #111 0 28%, rgba(0, 0, 0, 0.35) 30% 55%, transparent 58%); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5); animation: fc-hole 1.4s ease-out forwards; }
+@keyframes fc-hole { 0% { transform: scale(0.3); opacity: 1; } 15% { transform: scale(1.2); } 25% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+.fc-bubble {
+  position: absolute; left: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 46%; min-height: 64px; padding: 12px 22px 12px 14px; box-sizing: border-box;
+  font: inherit; font-size: 16px; font-weight: 700; text-align: center; line-height: 1.3; cursor: crosshair; color: #0c2a4a; border-radius: 999px;
+  background: radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55) 45%, rgba(186, 230, 253, 0.55));
+  border: 2px solid rgba(255, 255, 255, 0.9); box-shadow: 0 8px 22px rgba(3, 60, 110, 0.35), inset 0 -8px 14px rgba(56, 189, 248, 0.35);
+  animation: fc-drift-ltr linear forwards; transform: translateX(-120%);
+}
+.fc-bubble.is-rtl { left: auto; right: 0; animation-name: fc-drift-rtl; transform: translateX(120%); }
+.fc-bubble--1 { background: radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55) 45%, rgba(254, 215, 170, 0.6)); }
+.fc-bubble--2 { background: radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55) 45%, rgba(187, 247, 208, 0.6)); }
+.fc-bubble--3 { background: radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55) 45%, rgba(251, 207, 232, 0.6)); }
+.fc-bubble:hover:not(:disabled) { filter: brightness(1.06); border-color: #fff; }
+.fc-bubble:disabled { cursor: default; color: #0c2a4a; }
+.fc-bubble .fc-kbd { background: rgba(12, 42, 74, 0.12); color: #0c2a4a; }
+.fc-bubble .fc-side__reading { color: #35577a; }
+.fc-bubble.is-right { background: #bbf7d0; border-color: var(--ok); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.45); animation-play-state: paused; }
+.fc-bubble.is-wrong { background: #fecaca; border-color: var(--bad); animation-play-state: paused; }
+.fc-bubble.is-away { opacity: 0.45; }
+@keyframes fc-drift-ltr { 0% { left: 0; transform: translate(-105%, 0); } 25% { transform: translate(0, -10px); } 50% { transform: translate(0, 6px); } 75% { transform: translate(0, -8px); } 100% { left: 100%; transform: translate(0, 0); } }
+@keyframes fc-drift-rtl { 0% { right: 0; transform: translate(105%, 0); } 25% { transform: translate(0, -10px); } 50% { transform: translate(0, 6px); } 75% { transform: translate(0, -8px); } 100% { right: 100%; transform: translate(0, 0); } }
+.fc-shoot__range .fc-pops { z-index: 5; }
+
+/* gold miner */
+.fc-miner__scene {
+  position: relative; width: 100%; aspect-ratio: 100 / 62; overflow: hidden; container-type: inline-size; cursor: pointer; user-select: none; border-radius: 18px; border: 1px solid #5b3b1a;
+  background: linear-gradient(180deg, #7dd3fc 0 11%, #a16207 11.4%, #854d0e 40%, #5b3410 100%);
+}
+.fc-miner__ground { position: absolute; left: 0; right: 0; top: 10%; height: 2.4%; background: #4d7c0f; box-shadow: 0 2px 0 #365314; }
+.fc-miner__cart { position: absolute; width: 8%; height: 7%; transform: translate(-50%, -78%); border-radius: 6px 6px 12px 12px; background: linear-gradient(180deg, #ef4444, #b91c1c); border: 2px solid #7f1d1d; box-shadow: 0 3px 0 #450a0a; }
+.fc-miner__rope { position: absolute; width: 3px; margin-left: -1.5px; transform-origin: 50% 0; background: #292524; will-change: transform; }
+.fc-miner__claw { position: absolute; left: 50%; top: 100%; width: 22px; height: 18px; transform: translateX(-50%); border: 4px solid #44403c; border-top: 0; border-radius: 0 0 50% 50%; background: transparent; }
+.fc-miner__claw::before { content: ""; position: absolute; left: 50%; top: -6px; width: 10px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: #57534e; }
+.fc-miner__nugget {
+  position: absolute; display: flex; align-items: center; justify-content: center; padding: 4px 10px; box-sizing: border-box; overflow: hidden; text-align: center;
+  font-size: 15px; font-size: clamp(11px, 2.5cqw, 17px); font-weight: 800; line-height: 1.2; color: #3b2300;
+  border-radius: 38% 62% 54% 46% / 52% 44% 56% 48%; border: 2px solid #b45309;
+  background: radial-gradient(circle at 30% 28%, #fff7c2, #fcd34d 40%, #f59e0b 80%, #d97706); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), inset -4px -6px 10px rgba(180, 83, 9, 0.35);
+}
+.fc-miner__nugget .fc-side { gap: 0 6px; }
+.fc-miner__nugget .fc-side__reading { font-size: 0.7em; color: #7a4a05; }
+.fc-miner__nugget.is-taken { visibility: hidden; }
+.fc-miner__carry { left: 50%; top: 100%; width: 170px; width: 25cqw; height: 11cqw; margin-top: 12px; z-index: 2; transform: translate(-50%, 0); }
+.fc-miner__carry.is-right { background: radial-gradient(circle at 30% 28%, #f0fdf4, #86efac 45%, #22c55e); border-color: var(--ok); }
+.fc-miner__carry.is-wrong { background: radial-gradient(circle at 30% 28%, #fef2f2, #fca5a5 45%, #ef4444); border-color: var(--bad); color: #450a0a; }
+.fc-miner__hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, 0.75); pointer-events: none; }
+.fc-miner__scene .fc-pops { z-index: 5; }
+.fc-miner__time { margin-left: 0; font-size: 20px; }
+.fc-miner__drop { min-width: 160px; }
+
+@media (max-width: 640px) {
+  .fc-shoot__range { height: 340px; }
+  .fc-bubble { max-width: 64%; font-size: 14.5px; min-height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fc-bubble { animation-duration: 12s !important; }
+  .fc-shoot__prompt, .fc-shoot__flash, .fc-shoot__hole { animation: none; }
+}
