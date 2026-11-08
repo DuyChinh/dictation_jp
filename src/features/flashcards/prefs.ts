@@ -51,7 +51,7 @@ export const saveRightLang = (lang: CardLang) => set(RIGHT_KEY, lang);
 export const lastDeckId = (): string | null => get(DECK_KEY);
 export const saveLastDeck = (id: string) => set(DECK_KEY, id);
 
-export type GameName = "match" | "drop" | "memory" | "blitz" | "shoot" | "miner";
+export type GameName = "match" | "drop" | "memory" | "blitz" | "millionaire" | "miner";
 type Best = Record<string, number>;
 
 function readBest(): Best {
@@ -123,3 +123,8 @@ export function loadAutoFlip(): AutoFlip {
   }
 }
 export const saveAutoFlip = (a: AutoFlip) => set(AUTO_KEY, JSON.stringify(a));
+
+const MIL_TIMER_KEY = "jd.flash_mil_timer.v1";
+/** Whether each question in the quiz show has a clock; on unless turned off. */
+export const loadQuizTimer = (): boolean => get(MIL_TIMER_KEY) !== "off";
+export const saveQuizTimer = (on: boolean) => set(MIL_TIMER_KEY, on ? "on" : "off");

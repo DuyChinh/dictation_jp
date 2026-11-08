@@ -9,7 +9,7 @@ import { LearnMode } from "./LearnMode";
 import { MatchMode } from "./MatchMode";
 import { MemoryMode } from "./MemoryMode";
 import { BlitzMode } from "./BlitzMode";
-import { ShootMode } from "./ShootMode";
+import { MillionaireMode } from "./MillionaireMode";
 import { MinerMode } from "./MinerMode";
 import { TestMode } from "./TestMode";
 import { AddEntryButton } from "./AddEntryButton";
@@ -708,53 +708,206 @@ describe("BlitzMode", () => {
   });
 });
 
-describe("ShootMode", () => {
-  const bubble = (text: string) => [...document.querySelectorAll(".fc-bubble")].find((b) => b.textContent?.includes(text)) as HTMLElement;
-  const prompt = () => document.querySelector(".fc-shoot__prompt .fc-side__text")!.textContent!;
-  const settle = () => act(async () => void vi.advanceTimersByTime(1100));
-  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+describe("MillionaireMode", () => {
+  const MORE: Array<[string, string]> = [["犬", "chó"], ["猫", "mèo"], ["水", "nước"], ["火", "lửa"], ["木", "cây"], ["山", "núi"]];
+  const deck = () => seed(MORE);
+  const MEANINGS: Record<string, string> = Object.fromEntries(MORE);
+  const answers = () => [...document.querySelectorAll<HTMLButtonElement>(".fc-mil__ans")];
+  const promptNow = () => document.querySelector(".fc-mil__question .fc-side__text")!.textContent!;
+  const rightIndex = () => answers().findIndex((b) => b.querySelector(".fc-side__text")!.textContent === MEANINGS[promptNow()]);
+  const wrongIndex = () => answers().findIndex((b, i) => i !== rightIndex() && !b.className.includes("is-removed"));
+  const frames = (ms: number) => act(async () => void vi.advanceTimersByTime(ms));
+  const play = () => fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+  /** Picks an answer and sits through the suspense and the reveal. */
+  const answer = async (i: number, then = 1800) => {
+    fireEvent.click(answers()[i]!);
+    await frames(1400);
+    await frames(then);
+  };
+  const life = (name: RegExp) => screen.getByRole("button", { name }) as HTMLButtonElement;
+  beforeEach(() => vi.useFakeTimers());
 
-  it("scores a shot at the right bubble and leaves a bullet hole", async () => {
-    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    expect(document.querySelectorAll(".fc-bubble")).toHaveLength(4);
-    fireEvent.click(bubble(MEANING[prompt()]!));
-    expect(document.querySelector(".fc-bubble.is-right")).toBeTruthy();
-    expect(document.querySelector(".fc-shoot__hole")).toBeTruthy();
-    await settle();
-    expect(screen.getByText("Điểm: 10")).toBeTruthy();
-    expect(screen.getByText("2 / 4")).toBeTruthy();
+  it("explains the show, with the clock on by default and a way to turn it off", () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    expect(screen.getByText(/Câu 5 và câu 10 là mốc an toàn/)).toBeTruthy();
+    const timer = screen.getByLabelText("Tính giờ 30 giây cho mỗi câu") as HTMLInputElement;
+    expect(timer.checked).toBe(true);
+    fireEvent.click(timer);
+    expect(localStorage.getItem("jd.flash_mil_timer.v1")).toBe("off");
+    play();
+    expect(document.querySelector(".fc-mil__clock")).toBeNull();
   });
 
-  it("loses a life for a wrong bubble and for the right one escaping, and ends at no lives", async () => {
-    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    const wrong = () => Object.values(MEANING).find((m) => m !== MEANING[prompt()])!;
-    fireEvent.click(bubble(wrong()));
-    expect(document.querySelector(".fc-bubble.is-wrong")).toBeTruthy();
-    await settle();
-    expect(screen.getByLabelText("Còn 2 mạng")).toBeTruthy();
-
-    fireEvent.animationEnd(bubble(MEANING[prompt()]!));
-    await settle();
-    expect(screen.getByLabelText("Còn 1 mạng")).toBeTruthy();
-
-    fireEvent.click(bubble(wrong()));
-    await settle();
-    expect(screen.getByText("Hết mạng rồi")).toBeTruthy();
+  it("shows question 1 of 15 with four lettered answers, the lifelines and the prize ladder", () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    expect(screen.getByText("Câu 1/15")).toBeTruthy();
+    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("100");
+    expect(answers().map((b) => b.querySelector(".fc-mil__letter")!.textContent)).toEqual(["A", "B", "C", "D"]);
+    expect(screen.getAllByRole("button", { name: /50:50|khán giả|người thân|Đổi câu hỏi/ })).toHaveLength(4);
+    const rungs = [...document.querySelectorAll(".fc-mil__ladder li")];
+    expect(rungs).toHaveLength(15);
+    expect(rungs[0]!.textContent).toContain("1.000.000");
+    expect(document.querySelector(".fc-mil__ladder .is-current")!.textContent).toContain("100");
+    expect(document.querySelectorAll(".fc-mil__ladder .is-safe")).toHaveLength(2);
+    expect(document.querySelector(".fc-mil__clock")!.textContent).toBe("30");
   });
 
-  it("a shot at empty water costs nothing, and the number keys shoot", async () => {
-    render(wrap(<ShootMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    fireEvent.click(document.querySelector(".fc-shoot__range")!);
-    expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
-    expect(document.querySelectorAll(".fc-shoot__hole")).toHaveLength(1);
-    const right = MEANING[prompt()]!;
-    const index = [...document.querySelectorAll(".fc-bubble")].findIndex((b) => b.textContent?.includes(right));
-    fireEvent.keyDown(window, { key: String(index + 1) });
-    await settle();
-    expect(screen.getByText("Điểm: 10")).toBeTruthy();
+  it("locks an answer with a moment's suspense, then shows it right and climbs to question 2", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    const right = rightIndex();
+    fireEvent.click(answers()[right]!);
+    expect(answers()[right]!.className).toContain("is-locked");
+    expect(screen.getByRole("status").textContent).toContain("Khóa đáp án");
+    // nothing else can be picked meanwhile
+    expect(answers().every((b) => b.disabled)).toBe(true);
+    await frames(1400);
+    expect(answers()[right]!.className).toContain("is-right");
+    expect(screen.getByRole("status").textContent).toBe("Chính xác!");
+    await frames(1800);
+    expect(screen.getByText("Câu 2/15")).toBeTruthy();
+    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("200");
+    expect(document.querySelector(".fc-mil__ladder .is-done")).toBeTruthy();
+  });
+
+  it("answers from the keyboard", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    fireEvent.keyDown(window, { key: String(rightIndex() + 1) });
+    await frames(1400);
+    expect(document.querySelector(".fc-mil__ans.is-right")).toBeTruthy();
+    await frames(1800);
+    fireEvent.keyDown(window, { key: "abcd"[rightIndex()]! });
+    expect(document.querySelector(".fc-mil__ans.is-locked")).toBeTruthy();
+  });
+
+  it("a wrong answer shows the right one, then ends with no prize before the first safe level", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    const right = rightIndex();
+    const wrong = wrongIndex();
+    fireEvent.click(answers()[wrong]!);
+    await frames(1400);
+    expect(answers()[wrong]!.className).toContain("is-wrong");
+    expect(answers()[right]!.className).toContain("is-right");
+    expect(screen.getByRole("status").textContent).toContain("đáp án đúng là");
+    await frames(2500);
+    expect(screen.getByText("Rất tiếc, bạn đã trả lời sai")).toBeTruthy();
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("0");
+    expect(screen.getByText("Trả lời đúng 0/15 câu.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Chơi lại" })).toBeTruthy();
+  });
+
+  it("keeps the safe prize after question 5 when a later answer is wrong", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    for (let q = 0; q < 5; q++) await answer(rightIndex());
+    expect(screen.getByText("Câu 6/15")).toBeTruthy();
+    await answer(wrongIndex(), 2600);
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("1.000");
+    expect(screen.getByText("Bạn nhận được 1.000 điểm thưởng.")).toBeTruthy();
+    expect(screen.getByText("Trả lời đúng 5/15 câu.")).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem("jd.flash_best.v1")!)["deck1:millionaire"]).toBe(1000);
+  });
+
+  it("50:50 takes away two wrong answers and never the right one, once", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    const right = rightIndex();
+    fireEvent.click(life(/50:50/));
+    const gone = answers().filter((b) => b.className.includes("is-removed"));
+    expect(gone).toHaveLength(2);
+    expect(answers()[right]!.className).not.toContain("is-removed");
+    expect(life(/50:50/).disabled).toBe(true);
+    expect(life(/50:50/).getAttribute("aria-label")).toContain("đã dùng");
+    // the next question has all four again, and the lifeline stays used
+    await answer(right);
+    expect(answers().filter((b) => b.className.includes("is-removed"))).toHaveLength(0);
+    expect(life(/50:50/).disabled).toBe(true);
+  });
+
+  it("ask the audience shows votes that add up to 100 and pauses the clock while it is open", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    await frames(5000);
+    fireEvent.click(life(/khán giả/));
+    const dialog = screen.getByRole("dialog", { name: "Khán giả bình chọn" });
+    const votes = [...dialog.querySelectorAll(".fc-mil__bar b")].map((b) => Number(b.textContent!.replace("%", "")));
+    expect(votes).toHaveLength(4);
+    expect(votes.reduce((a, b) => a + b, 0)).toBe(100);
+    expect(Math.max(...votes)).toBe(votes[rightIndex()]);
+    const shown = document.querySelector(".fc-mil__clock")!.textContent;
+    await frames(10000);
+    expect(document.querySelector(".fc-mil__clock")!.textContent).toBe(shown);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đóng" }));
+    await frames(1000);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(Number(document.querySelector(".fc-mil__clock")!.textContent)).toBeGreaterThan(Number(shown) - 3);
+  });
+
+  it("phone a friend: thinking dots first, then a lettered answer", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    fireEvent.click(life(/người thân/));
+    const dialog = screen.getByRole("dialog", { name: "Người thân của bạn nói" });
+    expect(within(dialog).getByLabelText("Đang suy nghĩ")).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "Đóng" }) as HTMLButtonElement).disabled).toBe(true);
+    await frames(1700);
+    expect(dialog.querySelector(".fc-mil__speech")!.textContent).toMatch(/[ABCD]/);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đóng" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("swap gives another question at the same prize", () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    const before = promptNow();
+    fireEvent.click(life(/Đổi câu hỏi/));
+    expect(promptNow()).not.toBe(before);
+    expect(screen.getByText("Câu 1/15")).toBeTruthy();
+    expect(life(/Đổi câu hỏi/).disabled).toBe(true);
+  });
+
+  it("walking away asks first, then pays what is in hand", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    expect((screen.getByRole("button", { name: /Dừng cuộc chơi/ }) as HTMLButtonElement).disabled).toBe(true);
+    await answer(rightIndex());
+    await answer(rightIndex());
+    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 200/ }));
+    const dialog = screen.getByRole("dialog", { name: "Dừng cuộc chơi?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Chơi tiếp" }));
+    expect(screen.getByText("Câu 3/15")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 200/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Dừng và nhận thưởng" }));
+    expect(screen.getByText("Bạn đã dừng cuộc chơi")).toBeTruthy();
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("200");
+  });
+
+  it("runs out of time: the answer is shown and the game ends", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    await frames(31000);
+    expect(document.querySelector(".fc-mil__ans.is-right")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Hết giờ rồi!");
+    await frames(2600);
+    expect(screen.getByText("Hết giờ!")).toBeTruthy();
+  });
+
+  it("a deck smaller than fifteen words still gives fifteen questions, never the same card twice running", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    let last = "";
+    for (let q = 0; q < 15; q++) {
+      const p = promptNow();
+      if (q > 0) expect(p).not.toBe(last);
+      last = p;
+      await answer(rightIndex(), 1800);
+    }
+    expect(screen.getByText("Chúc mừng! Bạn là triệu phú!")).toBeTruthy();
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("1.000.000");
+    expect(screen.getByRole("img", { name: /3/ })).toBeTruthy();
   });
 });
 
@@ -985,7 +1138,7 @@ describe("pages", () => {
     expect(screen.getByText("4 từ")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Lật hình/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Đua thời gian/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Bắn chữ/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Ai là triệu phú/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Đào vàng/ })).toBeTruthy();
     const search = screen.getByRole("searchbox", { name: "Tìm từ trong bộ" });
     fireEvent.change(search, { target: { value: "mèo" } });

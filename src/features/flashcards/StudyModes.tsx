@@ -5,7 +5,7 @@ import { LearnMode } from "./LearnMode";
 import { MatchMode } from "./MatchMode";
 import { MemoryMode } from "./MemoryMode";
 import { MinerMode } from "./MinerMode";
-import { ShootMode } from "./ShootMode";
+import { MillionaireMode } from "./MillionaireMode";
 import { TestMode } from "./TestMode";
 import { BackToContext } from "./StudyContext";
 import type { ModeId } from "./modes";
@@ -33,7 +33,7 @@ export function StudyModes({ deckId, cards, mode, backTo }: { deckId: string; ca
       {mode === "match" && <MatchMode {...props} />}
       {mode === "memory" && <MemoryMode {...props} />}
       {mode === "blitz" && <BlitzMode {...props} />}
-      {mode === "shoot" && <ShootMode {...props} />}
+      {mode === "millionaire" && <MillionaireMode {...props} />}
       {mode === "miner" && <MinerMode {...props} />}
       {mode === "drop" && <DropMode {...props} />}
     </BackToContext.Provider>
