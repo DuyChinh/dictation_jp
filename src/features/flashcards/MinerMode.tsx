@@ -4,9 +4,43 @@ import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
-import { PIVOT, SCENES, W, layoutNuggets, launch, newClaw, stepClaw, type Box, type Claw, type Scene } from "./miner";
+import {
+  MINER_LIVES,
+  PIVOT,
+  SCENES,
+  SKINS,
+  TIME_PER_RIGHT_MS,
+  W,
+  aimAt,
+  dropCatch,
+  igniteDynamite,
+  launch,
+  layoutNuggets,
+  levelCleared,
+  levelSeconds,
+  levelTarget,
+  minerOver,
+  minerRight,
+  minerStars,
+  minerWrong,
+  newClaw,
+  nextLevel,
+  payout,
+  pickSkin,
+  skinPoints,
+  startMiner,
+  stepClaw,
+  tipOf,
+  timeBonus,
+  type Box,
+  type Claw,
+  type MinerState,
+  type Scene,
+  type SkinId,
+} from "./miner";
+import { SkinArt } from "./MinerSkins";
 import { getBest, submitBest } from "./prefs";
-import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
+import { buildDropRound, type DropItem } from "./quiz";
 import { useFt } from "./flashText";
 import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
@@ -14,17 +48,13 @@ import type { Card, Direction } from "./types";
 
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
-const ROUND = 12;
-const SECONDS = 90;
-const RESULT_MS = 900;
-
-type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box };
+type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
+type Stage = "idle" | "playing" | "cleared" | "over";
+type Mood = "idle" | "cheer" | "oops";
 type Feedback = { correct: boolean };
 
-function nuggetsFor(item: DropItem, scene: Scene): Nugget[] {
-  const boxes = layoutNuggets(item.options.length, Math.random, scene);
-  return item.options.map((o, i) => ({ cardId: o.cardId, side: o.side, box: boxes[i]! }));
-}
+const RESULT_MS = 900;
+const CHEER_MS = 520;
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 
@@ -42,43 +72,73 @@ function useNarrow(): boolean {
   return narrow;
 }
 
-/** Gold miner: the claw swings, you drop it, and it hauls up the nugget it touches. Haul up the right answer. */
+function nuggetsFor(item: DropItem, scene: Scene): Nugget[] {
+  const boxes = layoutNuggets(item.options.length, Math.random, scene);
+  return item.options.map((o, i) => ({ cardId: o.cardId, side: o.side, box: boxes[i]!, skin: pickSkin() }));
+}
+
+function Dynamite() {
+  return (
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true" focusable="false">
+      <path d="M22 5c1 3 3 3 5 3" fill="none" stroke="#a16207" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="27.5" cy="8" r="2" fill="#fbbf24" />
+      <rect x="6" y="9" width="8" height="18" rx="1.5" transform="rotate(-18 10 18)" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1.4" />
+      <rect x="12" y="8" width="8" height="19" rx="1.5" fill="#ef4444" stroke="#7f1d1d" strokeWidth="1.4" />
+      <rect x="18" y="9" width="8" height="18" rx="1.5" transform="rotate(14 22 18)" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1.4" />
+      <path d="M5 17l7-2M12 20l8-1" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+    </svg>
+  );
+}
+
+/**
+ * Gold miner, a level at a time. Haul up the nugget with the right meaning (tap it and the claw flies straight
+ * there, or drop the claw yourself). Reach the target before the clock runs out; richer finds, combos and quick
+ * hauls earn more, and dynamite gets rid of a wrong haul.
+ */
 export function MinerMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
   const backTo = useBackTo(deckId);
-  const [items, setItems] = useState<DropItem[] | null>(null);
-  const [game, setGame] = useState<DropState | null>(null);
+  const narrow = useNarrow();
+  const [stage, setStage] = useState<Stage>("idle");
+  const [miner, setMiner] = useState<MinerState>(startMiner);
+  const [item, setItem] = useState<DropItem | null>(null);
   const [nuggets, setNuggets] = useState<Nugget[]>([]);
   const [carried, setCarried] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [left, setLeft] = useState(SECONDS * 1000);
-  const [timeUp, setTimeUp] = useState(false);
+  const [mood, setMood] = useState<Mood>("idle");
+  const [left, setLeft] = useState(0);
+  const [clearInfo, setClearInfo] = useState<{ bonus: number } | null>(null);
+  const [endedBy, setEndedBy] = useState<"time" | "lives">("lives");
   const [highScore, setHighScore] = useState<{ best: number | null; improved: boolean } | null>(null);
+  const [boom, setBoom] = useState<{ key: number; x: number; y: number } | null>(null);
+  // the field is chosen when a game starts, so turning the phone mid-game does not move the nuggets
+  const [scene, setScene] = useState<Scene>(narrow ? SCENES.tall : SCENES.wide);
 
   const clawRef = useRef<Claw>(newClaw());
   const ropeRef = useRef<HTMLDivElement>(null);
   const carryRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<Scene>(scene);
   const nuggetsRef = useRef<Nugget[]>([]);
-  const gameRef = useRef<DropState | null>(null);
-  const itemsRef = useRef<DropItem[] | null>(null);
+  const minerRef = useRef<MinerState>(miner);
+  const itemRef = useRef<DropItem | null>(null);
+  const queueRef = useRef<DropItem[]>([]);
   const pausedRef = useRef(false);
   const deadline = useRef(0);
+  const askedAt = useRef(0);
+  const clearedAt = useRef(0);
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const boomKey = useRef(0);
   const { pops, pop } = usePops();
   const { shaking, shake } = useShake();
-  const narrow = useNarrow();
-  // the field is chosen when a round starts, so turning the phone mid-round does not move the nuggets
-  const [scene, setScene] = useState<Scene>(narrow ? SCENES.tall : SCENES.wide);
-  const sceneRef = useRef<Scene>(scene);
-  sceneRef.current = scene;
 
   nuggetsRef.current = nuggets;
-  gameRef.current = game;
-  itemsRef.current = items;
-  const playing = game !== null && game.status === "playing" && !timeUp;
-  const item = items && game && game.status === "playing" ? items[game.index] : null;
+  minerRef.current = miner;
+  itemRef.current = item;
+  sceneRef.current = scene;
+  const playing = stage === "playing";
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
 
   /** Puts the rope and what hangs from it where the claw is. */
   const paint = useCallback(() => {
@@ -92,64 +152,98 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     if (carry) carry.style.transform = `translate(-50%, 0) rotate(${c.angle}deg)`;
   }, []);
 
-  function begin() {
+  function cheer(next: Mood) {
+    setMood(next);
+    later(() => setMood("idle"), next === "cheer" ? CHEER_MS : 700);
+  }
+
+  function ask() {
+    if (queueRef.current.length === 0) queueRef.current = buildDropRound(cards, cards.length, direction);
+    const next = queueRef.current.shift()!;
+    setItem(next);
+    setNuggets(nuggetsFor(next, sceneRef.current));
+    setCarried(null);
+    setFeedback(null);
+    askedAt.current = Date.now();
+    clawRef.current = newClaw();
+    pausedRef.current = false;
+    paint();
+  }
+
+  function beginLevel(state: MinerState) {
     timers.current.forEach(clearTimeout);
-    const round = buildDropRound(cards, ROUND, direction);
-    setItems(round);
-    setGame(startDrop(round.length));
+    timers.current = [];
+    setMiner(state);
+    setClearInfo(null);
+    setMood("idle");
+    deadline.current = Date.now() + levelSeconds(state.level) * 1000;
+    setLeft(levelSeconds(state.level) * 1000);
+    setStage("playing");
+    ask();
+  }
+
+  function newGame() {
     const field = narrow ? SCENES.tall : SCENES.wide;
     sceneRef.current = field;
     setScene(field);
-    setNuggets(nuggetsFor(round[0]!, field));
-    setCarried(null);
-    setFeedback(null);
     setHighScore(null);
-    setTimeUp(false);
-    setLeft(SECONDS * 1000);
-    deadline.current = Date.now() + SECONDS * 1000;
-    clawRef.current = newClaw();
-    pausedRef.current = false;
+    queueRef.current = [];
+    beginLevel(startMiner());
   }
 
-  function finish(state: DropState) {
+  function finish(by: "time" | "lives", state: MinerState) {
+    setEndedBy(by);
+    setStage("over");
     setHighScore({ best: getBest(deckId, "miner"), improved: submitBest(deckId, "miner", state.score, "high") });
-    if (state.status === "won") {
+    if (state.right > 0) {
       playFx("win");
-      triggerConfetti({ particleCount: 80 });
+      triggerConfetti({ particleCount: 70 });
     }
   }
 
-  /** The claw is back with `index` (or with nothing). */
+  /** The claw is back, with nugget `index` or with nothing. */
   function arrived(index: number | null) {
-    const g = gameRef.current;
-    const its = itemsRef.current;
-    if (!g || !its || g.status !== "playing") return;
     if (index === null) {
       playFx("flip");
       return;
     }
-    const picked = nuggetsRef.current[index]!;
-    const current = its[g.index]!;
+    const picked = nuggetsRef.current[index];
+    const current = itemRef.current;
+    if (!picked || !current) return;
+    const state = minerRef.current;
     const correct = picked.cardId === current.cardId;
     pausedRef.current = true;
     setFeedback({ correct });
     playFx(correct ? "correct" : "wrong");
+
     if (correct) {
-      pop(`+${10 + Math.min(g.streak, 5) * 2}`, "good", 50);
-      if (g.streak + 1 >= 3) pop(fmt(ft("game.combo"), { n: comboMultiplier(g.streak + 1) }), "info", 72);
-    } else shake();
-    timers.current.push(
-      setTimeout(() => {
-        const next = dropNext(g, correct);
-        setGame(next);
-        setFeedback(null);
-        setCarried(null);
-        clawRef.current = newClaw();
-        pausedRef.current = false;
-        if (next.status === "playing") setNuggets(nuggetsFor(its[next.index]!, sceneRef.current));
-        else finish(next);
-      }, correct ? 500 : RESULT_MS),
-    );
+      const pay = payout(picked.skin, state.streak, Date.now() - askedAt.current);
+      const next = minerRight(state, pay.points);
+      setMiner(next);
+      pop(`+${pay.points}`, "good", 50);
+      if (pay.combo > 0) pop(fmt(ft("miner.pop.combo"), { n: pay.combo }), "info", 24);
+      if (pay.speed > 0) pop(fmt(ft("miner.pop.fast"), { n: pay.speed }), "info", 76);
+      deadline.current += TIME_PER_RIGHT_MS;
+      cheer("cheer");
+      later(() => {
+        if (levelCleared(next)) {
+          clearedAt.current = Date.now();
+          setClearInfo({ bonus: timeBonus(deadline.current - clearedAt.current) });
+          setStage("cleared");
+          playFx("win");
+          triggerConfetti({ particleCount: 90 });
+        } else ask();
+      }, 650);
+    } else {
+      const next = minerWrong(state);
+      setMiner(next);
+      shake();
+      cheer("oops");
+      later(() => {
+        if (minerOver(next)) finish("lives", next);
+        else ask();
+      }, RESULT_MS);
+    }
   }
 
   // the claw's animation loop
@@ -185,20 +279,43 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       setLeft(Math.max(0, remaining));
       if (remaining <= 0) {
         clearInterval(id);
-        setTimeUp(true);
-        const g = gameRef.current;
-        if (g) finish(g);
+        finish("time", minerRef.current);
       }
     }, 200);
     return () => clearInterval(id);
-    // finish reads the current game through its argument
+    // finish takes the state it needs
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
 
+  const idle = () => clawRef.current.phase === "swing" && !pausedRef.current;
+
   function drop() {
-    if (!playing || pausedRef.current) return;
-    clawRef.current = launch(clawRef.current);
+    if (playing && idle()) clawRef.current = launch(clawRef.current);
   }
+
+  /** Tapping a nugget sends the claw straight to it. */
+  function aim(index: number) {
+    const target = nuggetsRef.current[index];
+    if (playing && target && idle()) clawRef.current = aimAt(clawRef.current, index, target.box);
+  }
+
+  const canBoom = playing && carried !== null && clawRef.current.phase === "retract" && !feedback && miner.dynamite > 0;
+
+  /** Blows up what the claw is hauling: no answer is given, so no life is lost, and the claw comes back empty. */
+  function blast() {
+    const c = clawRef.current;
+    if (!playing || feedback || carried === null || c.phase !== "retract" || minerRef.current.dynamite <= 0) return;
+    const tip = tipOf(c.angle, c.len);
+    setMiner(igniteDynamite(minerRef.current));
+    clawRef.current = dropCatch(c);
+    setCarried(null);
+    setBoom({ key: ++boomKey.current, x: tip.x, y: tip.y });
+    playFx("wrong");
+    shake();
+    pop(ft("miner.pop.boom"), "bad", pctX(tip.x));
+    later(() => setBoom(null), 700);
+  }
+  const pctX = (x: number) => Math.max(10, Math.min(90, x));
 
   useEffect(() => {
     if (!playing) return;
@@ -208,95 +325,185 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       if (e.key === " " || e.key === "ArrowDown") {
         e.preventDefault();
         drop();
-      }
+      } else if (e.key === "d" || e.key === "D") blast();
+      else if (item && Number(e.key) >= 1 && Number(e.key) <= nuggets.length) aim(Number(e.key) - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing]);
+    // drop, blast and aim read refs and the latest state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, item, nuggets.length, carried, feedback, miner.dynamite]);
 
-  if (!items || !game) {
+  // ---------- screens ----------
+
+  if (stage === "idle") {
     const best = getBest(deckId, "miner");
     return (
-      <section className="fc-panel fc-start">
+      <section className="fc-panel fc-start fc-miner-start">
         <h2>{ft("miner.title")}</h2>
         <p>{ft("miner.intro")}</p>
+        <ul className="fc-miner-rules">
+          {(["miner.rule1", "miner.rule2", "miner.rule3", "miner.rule4"] as const).map((k) => (
+            <li key={k}>{ft(k)}</li>
+          ))}
+        </ul>
+        <ul className="fc-skinlegend" aria-label={ft("miner.legend")}>
+          {SKINS.map((s) => (
+            <li key={s.id} title={ft(`miner.skin.${s.id}`)}>
+              <span className={`fc-skinlegend__art fc-skin--${s.id}`}><SkinArt skin={s.id} /></span>
+              <span>{ft(`miner.skin.${s.id}`)}</span>
+              <strong>+{s.points}</strong>
+            </li>
+          ))}
+        </ul>
         {best !== null && <p className="fc-note">{fmt(ft("drop.best"), { score: best })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={begin}>{ft("common.start")}</button>
+        <button type="button" className="btn btn--primary btn--lg" onClick={newGame}>{ft("common.start")}</button>
       </section>
     );
   }
 
-  if (game.status !== "playing" || timeUp) {
-    const won = game.status === "won";
+  if (stage === "over") {
+    const clearedLevels = miner.level - 1;
     return (
       <section className="fc-panel fc-result" aria-live="polite">
-        <Stars count={won ? Math.max(1, starsForRatio(game.right, game.total)) : game.right >= game.index / 2 && game.right > 0 ? 1 : 0} />
-        <h2>{won ? ft("drop.won") : timeUp ? ft("blitz.done") : ft("drop.lost")}</h2>
-        <p className="fc-result__big tabular">{game.score}</p>
-        <p className="fc-result__score">{fmt(ft("drop.summary"), { right: game.right, total: game.total, streak: game.bestStreak })}</p>
+        <Stars count={minerStars(miner, clearedLevels)} />
+        <h2>{endedBy === "time" ? ft("blitz.done") : ft("drop.lost")}</h2>
+        <p className="fc-result__big tabular">{miner.score}</p>
+        <p className="fc-result__score">
+          {fmt(ft("miner.summary"), { level: miner.level, right: miner.right, wrong: miner.wrong, streak: miner.bestStreak })}
+        </p>
         {highScore?.improved && <p className="fc-badge">{ft("drop.newBest")}</p>}
         {highScore && !highScore.improved && highScore.best !== null && <p className="fc-note">{fmt(ft("drop.best"), { score: highScore.best })}</p>}
         <div className="fc-actions">
-          <button type="button" className="btn btn--primary" onClick={begin}>{ft("common.playAgain")}</button>
+          <button type="button" className="btn btn--primary" onClick={newGame}>{ft("common.playAgain")}</button>
           <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
       </section>
     );
   }
 
+  const target = levelTarget(miner.level);
   const seconds = Math.ceil(left / 1000);
   const hold = carried !== null ? nuggets[carried] : null;
+  const manH = scene.H > 80 ? 14 : 11;
+  const manW = manH * 0.66;
+  const potential = (n: Nugget) => skinPoints(n.skin);
+
   return (
     <section className="fc-miner" aria-label={ft("miner.title")}>
-      <div className="fc-drop__bar">
-        <span className="fc-drop__lives" aria-label={fmt(ft("drop.lives"), { n: game.lives })}>
-          {Array.from({ length: DROP_LIVES }, (_, i) => (
-            <Icon key={i} name="heart" size={20} className={i < game.lives ? "is-full" : "is-empty"} />
+      <div className="fc-mhud">
+        <div className="fc-mhud__sign">
+          <span className="fc-mhud__signlabel">{ft("miner.target")}</span>
+          <strong className="tabular">
+            {Math.min(miner.levelScore, target)}<small>/{target}</small>
+          </strong>
+          <span className="fc-mhud__meter" aria-hidden="true">
+            <i style={{ width: `${Math.min(100, (miner.levelScore / target) * 100)}%` }} />
+          </span>
+        </div>
+        <span className="fc-mhud__level">{fmt(ft("miner.level"), { n: miner.level })}</span>
+        <span className={`fc-mhud__time tabular${seconds <= 10 ? " is-low" : ""}`} aria-label={fmt(ft("miner.time"), { s: seconds })}>
+          <Icon name="clock" size={20} /> {seconds}
+        </span>
+        <button
+          type="button"
+          className={`fc-mhud__tnt${canBoom ? " is-ready" : ""}`}
+          onClick={blast}
+          disabled={!canBoom}
+          aria-label={fmt(ft("miner.dynamite"), { n: miner.dynamite })}
+          title={fmt(ft("miner.dynamiteHint"), { n: miner.dynamite })}
+        >
+          <Dynamite /> <b>×{miner.dynamite}</b>
+        </button>
+      </div>
+      <div className="fc-mhud fc-mhud--sub">
+        <span className="fc-drop__lives" aria-label={fmt(ft("drop.lives"), { n: miner.lives })}>
+          {Array.from({ length: MINER_LIVES }, (_, i) => (
+            <Icon key={i} name="heart" size={20} className={i < miner.lives ? "is-full" : "is-empty"} />
           ))}
         </span>
-        <span className="fc-drop__score tabular">{fmt(ft("drop.score"), { score: game.score })}</span>
-        <span className={`fc-blitz__time tabular fc-miner__time${seconds <= 10 ? " is-low" : ""}`} aria-label={fmt(ft("miner.time"), { s: seconds })}>
-          <Icon name="clock" size={18} /> {seconds}
-        </span>
+        <span className="fc-drop__score tabular">{fmt(ft("drop.score"), { score: miner.score })}</span>
         <SoundToggle />
       </div>
 
-      <div className={`fc-shoot__prompt${feedback ? (feedback.correct ? " is-hit" : " is-miss") : ""}`} key={`p-${game.index}`}>
+      <div className={`fc-shoot__prompt${feedback ? (feedback.correct ? " is-hit" : " is-miss") : ""}`} key={`p-${miner.right}-${miner.wrong}`}>
         <SideView side={item!.prompt} big />
-        <span className="fc-note tabular">{game.index + 1} / {game.total}</span>
+        <span className="fc-note">{ft("miner.hint")}</span>
       </div>
 
       <div
         className={`fc-miner__scene${scene === SCENES.tall ? " is-tall" : ""}${shaking ? " is-shaking" : ""}`}
-        style={{ aspectRatio: `${W} / ${scene.H}`, ["--nw" as string]: `${scene.nugget.w}cqw`, ["--nh" as string]: `${scene.nugget.h}cqw` }}
+        style={{
+          aspectRatio: `${W} / ${scene.H}`,
+          ["--nw" as string]: `${scene.nugget.w}cqw`,
+          ["--nh" as string]: `${scene.nugget.h}cqw`,
+          ["--ground" as string]: pct(8, scene.H),
+          ["--grass" as string]: pct(3, scene.H),
+        }}
         role="application"
         aria-label={ft("miner.scene")}
         onClick={drop}
       >
-        <span className="fc-miner__ground" aria-hidden="true" />
-        <span className="fc-miner__cart" aria-hidden="true" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H) }} />
+        <span className="fc-miner__soil" aria-hidden="true" />
+        <div
+          className={`fc-miner__man is-${mood}`}
+          style={{ left: pct(PIVOT.x - 22 - manW / 2, W), top: pct(11 - manH, scene.H), height: pct(manH, scene.H) }}
+          aria-hidden="true"
+        >
+          <img src="/miner/old-miner.webp" alt="" draggable={false} />
+        </div>
         <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H), height: pct(clawRef.current.len, scene.H) }} aria-hidden="true">
           <span className="fc-miner__claw" />
           {hold && (
-            <div ref={carryRef} className={`fc-miner__nugget fc-miner__carry${feedback ? (feedback.correct ? " is-right" : " is-wrong") : ""}`}>
-              <SideView side={hold.side} speak={false} />
+            <div ref={carryRef} className={`fc-miner__nugget fc-miner__carry fc-skin--${hold.skin}${feedback ? (feedback.correct ? " is-right" : " is-wrong") : ""}`}>
+              <SkinArt skin={hold.skin} />
+              <span className="fc-miner__label"><SideView side={hold.side} speak={false} /></span>
               {feedback?.correct && <Burst />}
             </div>
           )}
         </div>
+        <span className="fc-miner__winch" style={{ left: pct(PIVOT.x - 6, W), top: pct(PIVOT.y - 4.8, scene.H), width: pct(12, W), height: pct(6.4, scene.H) }} aria-hidden="true">
+          <i className="fc-miner__drum" />
+        </span>
         {nuggets.map((n, i) => (
-          <div
-            key={`${game.index}-${n.cardId}`}
-            className={`fc-miner__nugget${carried === i ? " is-taken" : ""}`}
+          <button
+            key={`${miner.right + miner.wrong}-${miner.level}-${n.cardId}`}
+            type="button"
+            className={`fc-miner__nugget fc-skin--${n.skin}${carried === i ? " is-taken" : ""}`}
             style={{ left: pct(n.box.x, W), top: pct(n.box.y, scene.H), width: pct(n.box.w, W), height: pct(n.box.h, scene.H) }}
-            aria-label={fmt(ft("miner.nugget"), { text: n.side.text })}
+            aria-label={fmt(ft("miner.nugget"), { text: n.side.text, n: potential(n) })}
+            onClick={(e) => {
+              e.stopPropagation();
+              aim(i);
+            }}
           >
-            <SideView side={n.side} speak={false} />
-          </div>
+            <SkinArt skin={n.skin} />
+            <span className="fc-miner__label"><SideView side={n.side} speak={false} /></span>
+            <span className="fc-miner__value" aria-hidden="true">+{potential(n)}</span>
+          </button>
         ))}
+        {boom && (
+          <span key={boom.key} className="fc-miner__boom" style={{ left: pct(boom.x, W), top: pct(boom.y, scene.H) }} aria-hidden="true">
+            <Burst tone="bad" />
+          </span>
+        )}
         <Pops pops={pops} />
-        {game.streak >= 3 && <span key={`combo-${game.streak}`} className="fc-combo">{fmt(ft("game.combo"), { n: comboMultiplier(game.streak) })}</span>}
-        <span className="fc-miner__hint">{ft("miner.hint")}</span>
+        {miner.streak >= 2 && <span key={`combo-${miner.streak}`} className="fc-combo">{fmt(ft("game.combo"), { n: miner.streak })}</span>}
+
+        {stage === "cleared" && clearInfo && (
+          <div className="fc-miner__overlay" role="dialog" aria-label={fmt(ft("miner.cleared"), { n: miner.level })} onClick={(e) => e.stopPropagation()}>
+            <div className="fc-miner__levelcard">
+              <Stars count={3} />
+              <h3>{fmt(ft("miner.cleared"), { n: miner.level })}</h3>
+              <p>{fmt(ft("miner.clearScore"), { score: miner.levelScore })}</p>
+              <p className="fc-miner__bonus">{fmt(ft("miner.clearBonus"), { n: clearInfo.bonus })}</p>
+              <p className="fc-note">{ft("miner.clearPerks")}</p>
+              <button type="button" className="btn btn--primary btn--lg" onClick={() => beginLevel(nextLevel(miner, deadline.current - clearedAt.current))} autoFocus>
+                {fmt(ft("miner.next"), { n: miner.level + 1 })}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="fc-actions fc-actions--end">
         <button type="button" className="btn btn--primary btn--lg fc-miner__drop" onClick={drop}>{ft("miner.launch")}</button>

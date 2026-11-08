@@ -759,49 +759,168 @@ describe("ShootMode", () => {
 });
 
 describe("MinerMode", () => {
-  const nuggetTexts = () => [...document.querySelectorAll(".fc-miner__scene > .fc-miner__nugget")].map((n) => n.querySelector(".fc-side__text")!.textContent!);
+  const nuggetButtons = () => [...document.querySelectorAll<HTMLElement>("button.fc-miner__nugget:not(.fc-miner__carry)")];
+  const textOf = (b: Element) => b.querySelector(".fc-side__text")!.textContent!;
+  const valueOf = (b: Element) => Number(b.querySelector(".fc-miner__value")!.textContent!.replace("+", ""));
   const prompt = () => document.querySelector(".fc-shoot__prompt .fc-side__text")!.textContent!;
   const frames = (ms: number) => act(async () => void vi.advanceTimersByTime(ms));
+  const rightOne = () => nuggetButtons().find((b) => textOf(b) === MEANING[prompt()])!;
+  const wrongOne = () => nuggetButtons().find((b) => textOf(b) !== MEANING[prompt()])!;
+  const feedbackShown = () => !!document.querySelector(".fc-miner__carry.is-right, .fc-miner__carry.is-wrong");
+  /** Lets the claw run until it is back with something and the verdict shows (or until it is back empty). */
+  const untilJudged = async () => {
+    for (let i = 0; i < 60 && !feedbackShown(); i++) await frames(100);
+  };
+  const play = () => fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
   beforeEach(() => vi.useFakeTimers());
 
-  it("drops the claw, hauls up the nugget under it, and judges it", async () => {
+  it("explains the rules and what each treasure is worth before starting", () => {
     render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    // the nugget straight under the claw is the first one
-    const underClaw = nuggetTexts()[0]!;
-    const right = underClaw === MEANING[prompt()];
+    const legend = screen.getByRole("list", { name: "Các loại báu vật và điểm" });
+    expect([...legend.querySelectorAll("li")].map((li) => li.textContent)).toEqual([
+      "Vàng+10", "Bạc+12", "Ngọc lục bảo+16", "Hồng ngọc+20", "Rương báu+25", "Kim cương+30",
+    ]);
+    expect(screen.getByText(/Thuốc nổ \(phím D\)/)).toBeTruthy();
+  });
+
+  it("starts at level 1 with a target, a clock, three lives and three dynamite, and the old miner by the winch", () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    expect(screen.getByText("Mục tiêu")).toBeTruthy();
+    expect(document.querySelector(".fc-mhud__sign strong")!.textContent).toBe("0/100");
+    expect(screen.getByText("Màn 1")).toBeTruthy();
+    expect(screen.getByLabelText("Còn 50 giây")).toBeTruthy();
     expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
-
-    fireEvent.keyDown(window, { key: " " });
-    // the claw reaches the nugget after about 0.3s and needs about 0.35s more to bring it in
-    await frames(450);
-    expect(document.querySelector(".fc-miner__carry")?.textContent).toContain(underClaw);
-    expect(document.querySelector(".fc-miner__nugget.is-taken")).toBeTruthy();
-    await frames(350);
-    expect(document.querySelector(".fc-miner__carry")?.className).toContain(right ? "is-right" : "is-wrong");
-    await frames(1300);
-    expect(screen.getByText(right ? "Điểm: 10" : "Điểm: 0")).toBeTruthy();
-    expect(screen.getByLabelText(right ? "Còn 3 mạng" : "Còn 2 mạng")).toBeTruthy();
-    expect(screen.getByText("2 / 4")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Thuốc nổ, còn 3" })).toBeTruthy();
+    expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/old-miner.webp");
+    expect(document.querySelector(".fc-miner__winch")).toBeTruthy();
+    // four nuggets, each its own kind of treasure with its worth on it
+    expect(nuggetButtons()).toHaveLength(4);
+    for (const b of nuggetButtons()) expect([10, 12, 16, 20, 25, 30]).toContain(valueOf(b));
   });
 
-  it("misses cost nothing: an empty claw comes back and the question stays", async () => {
+  it("tapping a nugget sends the claw straight to it, even one off to the side, and pays what it is worth", async () => {
     render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    // let it swing to the far left, where the left column of nuggets is, then past it to the empty wall
-    await frames(2100);
-    fireEvent.click(document.querySelector(".fc-miner__scene")!);
+    play();
+    // the right answer, wherever it is, is reached with one tap
+    const right = rightOne();
+    const worth = valueOf(right);
+    fireEvent.click(right);
+    await untilJudged();
+    expect(document.querySelector(".fc-miner__carry.is-right")).toBeTruthy();
+    // worth + 10 for a quick haul
+    expect(screen.getByText(`Điểm: ${worth + 10}`)).toBeTruthy();
+    expect(document.querySelector(".fc-mhud__sign strong")!.textContent).toBe(`${worth + 10}/100`);
+    await frames(1000);
+    expect(document.querySelector(".fc-miner__carry")).toBeNull();
+  });
+
+  it("a wrong haul costs a life and no points", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    fireEvent.click(wrongOne());
+    await untilJudged();
+    expect(document.querySelector(".fc-miner__carry.is-wrong")).toBeTruthy();
+    expect(screen.getByLabelText("Còn 2 mạng")).toBeTruthy();
+    expect(screen.getByText("Điểm: 0")).toBeTruthy();
+  });
+
+  it("dynamite blows up a wrong haul in time: no life lost, one stick used, and the question stays", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    const before = prompt();
+    const boom = screen.getByRole("button", { name: "Thuốc nổ, còn 3" }) as HTMLButtonElement;
+    expect(boom.disabled).toBe(true);
+    fireEvent.click(wrongOne());
+    // wait until the claw has hold of it and is on its way back
+    for (let i = 0; i < 40 && !document.querySelector(".fc-miner__carry"); i++) await frames(50);
+    expect(document.querySelector(".fc-miner__carry")).toBeTruthy();
+    const ready = screen.getByRole("button", { name: "Thuốc nổ, còn 3" }) as HTMLButtonElement;
+    expect(ready.disabled).toBe(false);
+    fireEvent.click(ready);
+    expect(screen.getByRole("button", { name: "Thuốc nổ, còn 2" })).toBeTruthy();
+    expect(document.querySelector(".fc-miner__carry")).toBeNull();
+    expect(document.querySelector(".fc-miner__boom")).toBeTruthy();
     await frames(2500);
-    expect(screen.getByText(/^\d \/ 4$/)).toBeTruthy();
-    expect(screen.getByLabelText(/Còn \d mạng/)).toBeTruthy();
+    expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
+    expect(prompt()).toBe(before);
+    expect(nuggetButtons().every((b) => !b.className.includes("is-taken"))).toBe(true);
   });
 
-  it("ends when the 90 seconds are up", async () => {
+  it("dropping the claw yourself still works and catches what is under it", async () => {
     render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
-    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
-    await frames(91000);
+    play();
+    const underClaw = nuggetButtons()[0]!;
+    const right = textOf(underClaw) === MEANING[prompt()];
+    fireEvent.keyDown(window, { key: " " });
+    await untilJudged();
+    expect(document.querySelector(right ? ".fc-miner__carry.is-right" : ".fc-miner__carry.is-wrong")).toBeTruthy();
+  });
+
+  it("the number keys aim at a nugget and D uses dynamite", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    fireEvent.keyDown(window, { key: "2" });
+    await frames(700);
+    expect(document.querySelector(".fc-miner__carry")).toBeTruthy();
+    fireEvent.keyDown(window, { key: "d" });
+    expect(screen.getByRole("button", { name: "Thuốc nổ, còn 2" })).toBeTruthy();
+  });
+
+  it("clears a level on reaching the target, shows the bonus, and the next level asks for more with perks", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    for (let q = 0; q < 12 && !document.querySelector('[role="dialog"]'); q++) {
+      fireEvent.click(rightOne());
+      await untilJudged();
+      await frames(900);
+    }
+    const card = screen.getByRole("dialog", { name: "Qua màn 1!" });
+    expect(within(card).getByText(/Điểm màn này: \d+/)).toBeTruthy();
+    expect(within(card).getByText(/Thưởng thời gian: \+\d+ điểm/)).toBeTruthy();
+    const bonus = Number(within(card).getByText(/Thưởng thời gian/).textContent!.match(/\+(\d+)/)![1]);
+    expect(bonus).toBeGreaterThan(0);
+    fireEvent.click(within(card).getByRole("button", { name: "Sang màn 2" }));
+    expect(screen.getByText("Màn 2")).toBeTruthy();
+    expect(document.querySelector(".fc-mhud__sign strong")!.textContent).toBe("0/180");
+    expect(screen.getByRole("button", { name: "Thuốc nổ, còn 4" })).toBeTruthy();
+    expect(screen.getByLabelText("Còn 53 giây")).toBeTruthy();
+    // the total carries over: the first level's points plus the time bonus
+    const total = Number(screen.getByText(/^Điểm: \d+$/).textContent!.replace("Điểm: ", ""));
+    expect(total).toBeGreaterThanOrEqual(100 + bonus);
+  });
+
+  it("ends when the clock runs out short of the target", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    await frames(51000);
     expect(screen.getByText("Hết giờ!")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Chơi lại" })).toBeTruthy();
+    expect(screen.getByText(/Màn 1 · đúng 0 · sai 0/)).toBeTruthy();
+  });
+
+  it("ends at no lives and keeps the high score", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    for (let q = 0; q < 3; q++) {
+      fireEvent.click(wrongOne());
+      await untilJudged();
+      await frames(1100);
+    }
+    expect(screen.getByText("Hết mạng rồi")).toBeTruthy();
+    expect(screen.getByText(/sai 3/)).toBeTruthy();
+    expect(localStorage.getItem("jd.flash_best.v1")).toContain("deck1:miner");
+  });
+
+  it("an empty drop comes back and nothing is lost", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    // swing to the far edge where nothing hangs, and drop
+    await frames(700);
+    fireEvent.click(document.querySelector(".fc-miner__scene")!);
+    await frames(3500);
+    expect(screen.getByLabelText(/Còn \d mạng/)).toBeTruthy();
+    expect(screen.getByText(/^Điểm: \d+$/)).toBeTruthy();
   });
 });
 

@@ -1,5 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ANGLE, MIN_LEN, PIVOT, H, SCENES, W, hits, launch, layoutNuggets, maxLen, newClaw, stepClaw, swingAngle, tipOf, type Box, type Claw, type Scene } from "./miner";
+import {
+  AIM_SPEED,
+  EMPTY_RETRACT_BOOST,
+  EXTEND_SPEED,
+  H,
+  MAX_ANGLE,
+  MIN_LEN,
+  PIVOT,
+  RETRACT_SPEED,
+  SCENES,
+  SKINS,
+  W,
+  aimAt,
+  angleTo,
+  centerOf,
+  dropCatch,
+  hits,
+  igniteDynamite,
+  isBlocked,
+  launch,
+  layoutNuggets,
+  levelCleared,
+  levelSeconds,
+  levelTarget,
+  maxLen,
+  minerOver,
+  minerRight,
+  minerStars,
+  minerWrong,
+  newClaw,
+  nextLevel,
+  payout,
+  pickSkin,
+  startMiner,
+  stepClaw,
+  swingAngle,
+  timeBonus,
+  timeForAngle,
+  tipOf,
+  type Box,
+  type Claw,
+  type Scene,
+} from "./miner";
 
 const run = (c: Claw, boxes: Array<Box | null>, steps: number, dt = 16, scene: Scene = SCENES.wide) => {
   let claw = c;
@@ -24,14 +66,23 @@ describe("claw geometry", () => {
     expect(tipOf(45, 10).x).toBeGreaterThan(PIVOT.x);
     expect(tipOf(-45, 10).x).toBeLessThan(PIVOT.x);
   });
-  it("stops the rope at the walls and floor", () => {
-    for (const a of [-66, -30, 0, 30, 66]) {
-      const p = tipOf(a, maxLen(a));
-      expect(p.x).toBeGreaterThanOrEqual(0);
-      expect(p.x).toBeLessThanOrEqual(W);
-      expect(p.y).toBeLessThanOrEqual(H);
+  it("finds the angle to a point, and the swing time that has the claw at an angle", () => {
+    expect(angleTo({ x: PIVOT.x, y: 40 })).toBeCloseTo(0);
+    expect(angleTo({ x: PIVOT.x + 10, y: PIVOT.y + 10 })).toBeCloseTo(45);
+    expect(angleTo({ x: PIVOT.x - 10, y: PIVOT.y + 10 })).toBeCloseTo(-45);
+    for (const a of [-60, -20, 0, 33, 66]) expect(swingAngle(timeForAngle(a))).toBeCloseTo(a, 5);
+  });
+  it("stops the rope at the walls and floor of either field", () => {
+    for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
+      for (const a of [-66, -30, 0, 30, 66]) {
+        const p = tipOf(a, maxLen(a, scene));
+        expect(p.x).toBeGreaterThanOrEqual(0);
+        expect(p.x).toBeLessThanOrEqual(W);
+        expect(p.y).toBeLessThanOrEqual(scene.H);
+      }
     }
     expect(maxLen(0)).toBeCloseTo(H - 2 - PIVOT.y);
+    expect(maxLen(0, SCENES.tall)).toBeGreaterThan(maxLen(0));
   });
   it("hits a box with a little reach around it", () => {
     const b = { x: 40, y: 30, w: 20, h: 10 };
@@ -41,7 +92,7 @@ describe("claw geometry", () => {
   });
 });
 
-describe("stepClaw", () => {
+describe("a dropped claw", () => {
   const box: Box = { x: 40, y: 30, w: 20, h: 10 };
 
   it("keeps swinging until launched, then holds its angle while it goes out", () => {
@@ -54,52 +105,121 @@ describe("stepClaw", () => {
     expect(out.len).toBeGreaterThan(MIN_LEN);
   });
 
-  it("catches what it touches, brings it back, and reports it on arrival", () => {
+  it("catches the first thing it touches, brings it back, and reports it on arrival", () => {
     const { claw, events } = run(launch(newClaw()), [box], 400);
     expect(events).toEqual([{ type: "caught", index: 0 }, { type: "arrived", index: 0 }]);
     expect(claw.phase).toBe("swing");
     expect(claw.len).toBe(MIN_LEN);
   });
 
-  it("brings nothing back when it misses everything", () => {
+  it("brings nothing back when it misses everything, and an empty claw is quicker than a loaded one", () => {
     const away: Box = { x: 0, y: 40, w: 10, h: 10 };
     const { events } = run(launch(newClaw()), [away], 800);
     expect(events).toEqual([{ type: "arrived", index: null }]);
+    expect(RETRACT_SPEED * EMPTY_RETRACT_BOOST).toBeGreaterThan(RETRACT_SPEED);
+    const empty = stepClaw({ ...newClaw(), phase: "retract", len: 30 }, 100, []).claw.len;
+    const loaded = stepClaw({ ...newClaw(), phase: "retract", len: 30, caught: 0 }, 100, [box]).claw.len;
+    expect(30 - empty).toBeCloseTo(100 * RETRACT_SPEED * EMPTY_RETRACT_BOOST);
+    expect(30 - loaded).toBeCloseTo(100 * RETRACT_SPEED);
   });
 
-  it("ignores boxes that were already taken", () => {
-    const { events } = run(launch(newClaw()), [null], 800);
-    expect(events).toEqual([{ type: "arrived", index: null }]);
-  });
-
-  it("will not launch again while the claw is out", () => {
+  it("ignores boxes that were already taken, and will not launch again while out", () => {
+    expect(run(launch(newClaw()), [null], 800).events).toEqual([{ type: "arrived", index: null }]);
     const out = launch(newClaw());
     expect(launch(out)).toBe(out);
   });
+
+  it("can let go of what it hauls: it comes back empty and fast", () => {
+    const hauling = run(launch(newClaw()), [box], 25).claw;
+    expect(hauling).toMatchObject({ phase: "retract", caught: 0 });
+    const freed = dropCatch(hauling);
+    expect(freed.caught).toBeNull();
+    const { events } = run(freed, [box], 200);
+    expect(events).toEqual([{ type: "arrived", index: null }]);
+    expect(dropCatch(newClaw())).toEqual(newClaw());
+  });
 });
 
-describe("scenes", () => {
-  it("the tall scene lets the rope go further down than the wide one", () => {
-    expect(maxLen(0, SCENES.tall)).toBeCloseTo(SCENES.tall.H - 2 - PIVOT.y);
-    expect(maxLen(0, SCENES.tall)).toBeGreaterThan(maxLen(0, SCENES.wide));
+describe("a claw aimed at one nugget", () => {
+  const boxes: Box[] = [
+    { x: 40, y: 28, w: 20, h: 10 }, // straight below the winch
+    { x: 70, y: 40, w: 20, h: 10 },
+    { x: 5, y: 40, w: 20, h: 10 },
+  ];
+
+  it("turns to the nugget, goes straight to it and brings it back, whichever one is tapped", () => {
+    for (const index of [0, 1, 2]) {
+      const { events } = run(aimAt(newClaw(), index, boxes[index]!), boxes, 600);
+      expect(events).toEqual([{ type: "caught", index }, { type: "arrived", index }]);
+    }
   });
 
-  it("catches in the tall scene too, with a box far down the field", () => {
-    const deep: Box = { x: 30, y: 70, w: 40, h: 14 };
-    const { events } = run(launch(newClaw()), [deep], 900, 16, SCENES.tall);
-    expect(events).toEqual([{ type: "caught", index: 0 }, { type: "arrived", index: 0 }]);
+  it("is not stopped by a nugget in the way: it reaches the one it was sent to", () => {
+    const front: Box = { x: 40, y: 20, w: 20, h: 8 };
+    const behind: Box = { x: 40, y: 45, w: 20, h: 8 };
+    expect(isBlocked([front, behind], 1)).toBe(true);
+    // dropped, the claw meets the front one first
+    expect(run(launch(newClaw()), [front, behind], 400).events[0]).toEqual({ type: "caught", index: 0 });
+    // aimed, it goes through to the one behind
+    expect(run(aimAt(newClaw(), 1, behind), [front, behind], 600).events).toEqual([{ type: "caught", index: 1 }, { type: "arrived", index: 1 }]);
   });
 
-  it("lays out separate, in-bounds nuggets on either scene, however the nudges fall", () => {
-    for (let round = 0; round < 150; round++) for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
+  it("turns at a steady rate and carries the swing on from the new angle afterwards", () => {
+    const aimed = aimAt(newClaw(), 1, boxes[1]!);
+    const target = aimed.aim!.angle;
+    const part = stepClaw(aimed, 50, boxes).claw;
+    expect(part.phase).toBe("aim");
+    expect(part.angle).toBeCloseTo(AIM_SPEED * 50);
+    // step until the claw is back with the nugget, then look at where the swing picks up
+    let claw: Claw = aimed;
+    for (let i = 0; i < 2000; i++) {
+      const r = stepClaw(claw, 16, boxes);
+      claw = r.claw;
+      if (r.event?.type === "arrived") break;
+    }
+    expect(claw.phase).toBe("swing");
+    expect(claw.aim).toBeUndefined();
+    expect(swingAngle(claw.t)).toBeCloseTo(target, 3);
+  });
+
+  it("only starts from the swing", () => {
+    const out = launch(newClaw());
+    expect(aimAt(out, 0, boxes[0]!)).toBe(out);
+  });
+
+  it("works in the tall field too", () => {
+    const tall: Box[] = [{ x: 10, y: 60, w: 30, h: 16 }, { x: 60, y: 80, w: 30, h: 16 }];
+    for (const index of [0, 1]) {
+      const { events } = run(aimAt(newClaw(), index, tall[index]!), tall, 900, 16, SCENES.tall);
+      expect(events).toEqual([{ type: "caught", index }, { type: "arrived", index }]);
+    }
+  });
+});
+
+describe("layoutNuggets", () => {
+  it("never leaves one nugget in the way of another, on either field, for two to four nuggets", () => {
+    for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
       for (let n = 2; n <= 4; n++) {
-        const boxes = layoutNuggets(n, Math.random, scene);
-        expect(boxes).toHaveLength(n);
+        for (let round = 0; round < 60; round++) {
+          const boxes = layoutNuggets(n, Math.random, scene);
+          expect(boxes).toHaveLength(n);
+          boxes.forEach((_, i) => expect(isBlocked(boxes, i)).toBe(false));
+        }
+      }
+    }
+  });
+
+  it("keeps nuggets apart, inside the field and below the winch", () => {
+    for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
+      for (let round = 0; round < 80; round++) {
+        const boxes = layoutNuggets(4, Math.random, scene);
         for (const b of boxes) {
           expect(b.x).toBeGreaterThan(0);
           expect(b.x + b.w).toBeLessThan(W);
-          expect(b.y).toBeGreaterThan(PIVOT.y + MIN_LEN + 4);
-          expect(b.y + b.h).toBeLessThan(scene.H - 2);
+          expect(b.y).toBeGreaterThan(PIVOT.y + MIN_LEN);
+          expect(b.y + b.h).toBeLessThan(scene.H);
+          expect(angleTo(centerOf(b))).toBeLessThan(75);
+          expect(angleTo(centerOf(b))).toBeGreaterThan(-75);
         }
         boxes.forEach((a, i) =>
           boxes.slice(i + 1).forEach((b) => {
@@ -109,25 +229,96 @@ describe("scenes", () => {
       }
     }
   });
+
+  it("knows what blocking is", () => {
+    const a: Box = { x: 40, y: 20, w: 20, h: 8 };
+    const b: Box = { x: 40, y: 45, w: 20, h: 8 };
+    const c: Box = { x: 2, y: 26, w: 18, h: 8 };
+    expect(isBlocked([a, b], 1)).toBe(true);
+    expect(isBlocked([a, b], 0)).toBe(false);
+    expect(isBlocked([a, c], 1)).toBe(false);
+  });
 });
 
-describe("layoutNuggets", () => {
-  it("makes separate boxes that stay inside the scene and below the miner", () => {
-    for (let n = 2; n <= 6; n++) for (let round = 0; round < 150; round++) {
-      const boxes = layoutNuggets(n);
-      expect(boxes).toHaveLength(n);
-      for (const b of boxes) {
-        expect(b.x).toBeGreaterThan(0);
-        expect(b.x + b.w).toBeLessThan(W);
-        expect(b.y).toBeGreaterThan(PIVOT.y + MIN_LEN + 4);
-        expect(b.y + b.h).toBeLessThan(H - 2);
-      }
-      boxes.forEach((a, i) =>
-        boxes.slice(i + 1).forEach((b) => {
-          const apart = a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y;
-          expect(apart).toBe(true);
-        }),
-      );
+describe("items and points", () => {
+  it("has six kinds of item, each worth at least 10, the diamond the most and the rarest", () => {
+    expect(SKINS.map((s) => s.id).sort()).toEqual(["chest", "diamond", "emerald", "gold", "ruby", "silver"]);
+    expect(Math.min(...SKINS.map((s) => s.points))).toBe(10);
+    const diamond = SKINS.find((s) => s.id === "diamond")!;
+    expect(diamond.points).toBe(Math.max(...SKINS.map((s) => s.points)));
+    expect(diamond.weight).toBe(Math.min(...SKINS.map((s) => s.weight)));
+  });
+  it("picks kinds by weight", () => {
+    const seen = new Set<string>();
+    const counts: Record<string, number> = {};
+    let seed = 11;
+    const rng = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    for (let i = 0; i < 4000; i++) {
+      const id = pickSkin(rng);
+      seen.add(id);
+      counts[id] = (counts[id] ?? 0) + 1;
     }
+    expect(seen.size).toBe(6);
+    expect(counts.gold!).toBeGreaterThan(counts.diamond! * 3);
+    expect(pickSkin(() => 0)).toBe("gold");
+    expect(pickSkin(() => 0.999999)).toBe("diamond");
+  });
+  it("pays the item's worth plus a combo bonus and a speed bonus", () => {
+    expect(payout("gold", 0, 9000)).toEqual({ points: 10, base: 10, combo: 0, speed: 0 });
+    expect(payout("diamond", 0, 3000)).toEqual({ points: 40, base: 30, combo: 0, speed: 10 });
+    expect(payout("ruby", 3, 5000)).toEqual({ points: 40, base: 20, combo: 15, speed: 5 });
+    expect(payout("gold", 99, 99999).combo).toBe(25);
+    expect(payout("gold", -2, 1000).combo).toBe(0);
+  });
+});
+
+describe("levels", () => {
+  it("asks for more points each level, and gives a little more time up to a limit", () => {
+    expect([1, 2, 3, 5].map(levelTarget)).toEqual([100, 180, 260, 420]);
+    expect(levelSeconds(1)).toBe(50);
+    expect(levelSeconds(3)).toBe(56);
+    expect(levelSeconds(50)).toBe(70);
+  });
+  it("pays 5 points for every full second left", () => {
+    expect(timeBonus(12_900)).toBe(60);
+    expect(timeBonus(0)).toBe(0);
+    expect(timeBonus(-500)).toBe(0);
+  });
+  it("counts right answers toward the goal and clears the level when it is reached", () => {
+    let s = startMiner();
+    expect(s).toMatchObject({ level: 1, lives: 3, dynamite: 3 });
+    s = minerRight(s, 40);
+    s = minerRight(s, 40);
+    expect(levelCleared(s)).toBe(false);
+    s = minerRight(s, 30);
+    expect(s).toMatchObject({ score: 110, levelScore: 110, streak: 3, bestStreak: 3, right: 3 });
+    expect(levelCleared(s)).toBe(true);
+  });
+  it("loses a life and the streak on a wrong haul, and ends at no lives", () => {
+    let s = minerRight(startMiner(), 10);
+    s = minerWrong(s);
+    expect(s).toMatchObject({ lives: 2, streak: 0, bestStreak: 1, wrong: 1 });
+    s = minerWrong(minerWrong(s));
+    expect(minerOver(s)).toBe(true);
+  });
+  it("uses dynamite while there is some", () => {
+    let s = startMiner();
+    for (let i = 0; i < 3; i++) s = igniteDynamite(s);
+    expect(s.dynamite).toBe(0);
+    expect(igniteDynamite(s)).toBe(s);
+  });
+  it("moves on with the time bonus, one more dynamite and a life back, to the caps", () => {
+    let s = { ...startMiner(), score: 120, levelScore: 120, lives: 1, dynamite: 4, streak: 5, bestStreak: 5 };
+    s = nextLevel(s, 20_000);
+    expect(s).toMatchObject({ level: 2, score: 220, levelScore: 0, lives: 2, dynamite: 5, streak: 5 });
+    s = nextLevel(s, 0);
+    expect(s).toMatchObject({ level: 3, score: 220, lives: 3, dynamite: 5 });
+    expect(nextLevel(s, 0).lives).toBe(3);
+  });
+  it("gives stars for how far the miner got", () => {
+    expect([minerStars(startMiner(), 0), minerStars({ ...startMiner(), score: 5 }, 0), minerStars(startMiner(), 2), minerStars(startMiner(), 4)]).toEqual([0, 1, 2, 3]);
+  });
+  it("is reachable: extending at the rate the game uses gets to the far wall in a few seconds", () => {
+    expect(maxLen(0, SCENES.tall) / EXTEND_SPEED).toBeLessThan(2500);
   });
 });

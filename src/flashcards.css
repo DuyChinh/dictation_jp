@@ -422,30 +422,96 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 
 /* gold miner */
 .fc-miner__scene {
-  position: relative; width: 100%; aspect-ratio: 100 / 62; overflow: hidden; container-type: inline-size; cursor: pointer; user-select: none; border-radius: 18px; border: 1px solid #5b3b1a;
-  background: linear-gradient(180deg, #7dd3fc 0 11%, #a16207 11.4%, #854d0e 40%, #5b3410 100%);
+  --ground: 13%; --grass: 5%;
+  position: relative; width: 100%; aspect-ratio: 100 / 62; overflow: hidden; container-type: inline-size; cursor: pointer; user-select: none; border-radius: 18px; border: 1px solid #4a2e12;
+  background: linear-gradient(180deg, #7dd3fc 0, #cdeeff var(--ground), #4d7c0f var(--ground), #3f6212 calc(var(--ground) + var(--grass)), #8b5a2b calc(var(--ground) + var(--grass)), #6b4220 45%, #4a2c12 100%);
 }
-.fc-miner__ground { position: absolute; left: 0; right: 0; top: 10%; height: 2.4%; background: #4d7c0f; box-shadow: 0 2px 0 #365314; }
-.fc-miner__cart { position: absolute; width: 8%; height: 7%; transform: translate(-50%, -78%); border-radius: 6px 6px 12px 12px; background: linear-gradient(180deg, #ef4444, #b91c1c); border: 2px solid #7f1d1d; box-shadow: 0 3px 0 #450a0a; }
-.fc-miner__rope { position: absolute; width: 3px; margin-left: -1.5px; transform-origin: 50% 0; background: #292524; will-change: transform; }
-.fc-miner__claw { position: absolute; left: 50%; top: 100%; width: 22px; height: 18px; transform: translateX(-50%); border: 4px solid #44403c; border-top: 0; border-radius: 0 0 50% 50%; background: transparent; }
-.fc-miner__claw::before { content: ""; position: absolute; left: 50%; top: -6px; width: 10px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: #57534e; }
+/* stones and flecks in the earth */
+.fc-miner__soil { position: absolute; inset: calc(var(--ground) + var(--grass)) 0 0 0; pointer-events: none; opacity: 0.55;
+  background:
+    radial-gradient(5px 4px at 12% 22%, #3b2410, transparent 70%), radial-gradient(7px 5px at 33% 64%, #2e1b0b, transparent 70%), radial-gradient(4px 3px at 58% 30%, #3b2410, transparent 70%),
+    radial-gradient(8px 6px at 81% 52%, #2e1b0b, transparent 70%), radial-gradient(5px 4px at 91% 18%, #3b2410, transparent 70%), radial-gradient(6px 4px at 47% 84%, #2e1b0b, transparent 70%),
+    radial-gradient(4px 3px at 7% 76%, #c9a26a, transparent 70%), radial-gradient(3px 3px at 69% 90%, #c9a26a, transparent 70%), radial-gradient(3px 2px at 22% 42%, #c9a26a, transparent 70%); }
+.fc-miner__man { position: absolute; z-index: 3; pointer-events: none; transform-origin: 50% 100%; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.35)); }
+.fc-miner__man img { display: block; height: 100%; width: auto; }
+.fc-miner__man.is-cheer { animation: fc-man-cheer 0.5s ease-out; }
+.fc-miner__man.is-oops { animation: fc-man-oops 0.6s ease-in-out; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.35)) hue-rotate(-18deg) saturate(1.3); }
+@keyframes fc-man-cheer { 0% { transform: none; } 30% { transform: translateY(-12%) scale(1.06, 0.97); } 55% { transform: translateY(0) scale(0.97, 1.04); } 100% { transform: none; } }
+@keyframes fc-man-oops { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-5deg); } 40% { transform: rotate(4deg); } 60% { transform: rotate(-3deg); } 80% { transform: rotate(2deg); } }
+/* the winch the rope comes off: a wooden stand with a drum of rope */
+.fc-miner__winch { position: absolute; z-index: 4; pointer-events: none; border-radius: 12% 12% 22% 22%; background: linear-gradient(180deg, #b7793a, #7a4a1c); border: 2px solid #3f2308; box-shadow: 0 3px 0 #2b1704, inset 0 2px 0 rgba(255, 220, 160, 0.35); }
+.fc-miner__drum { position: absolute; left: 12%; right: 12%; top: -26%; height: 74%; border-radius: 999px / 50%; border: 2px solid #5a3a14;
+  background: repeating-linear-gradient(90deg, #e7d2a4 0 3px, #bd9a62 3px 6px); box-shadow: inset 0 -4px 6px rgba(80, 50, 10, 0.4), 0 2px 0 #3f2308; }
+.fc-miner__rope { position: absolute; z-index: 2; width: 3px; margin-left: -1.5px; transform-origin: 50% 0; background: linear-gradient(90deg, #3b2a14, #8a6a3a); will-change: transform; }
+.fc-miner__claw { position: absolute; left: 50%; top: 100%; width: 26px; height: 22px; transform: translateX(-50%); border: 4px solid #3f3f46; border-top: 0; border-radius: 0 0 50% 50%; background: transparent; }
+.fc-miner__claw::before { content: ""; position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #a1a1aa, #52525b); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+
+/* nuggets: a picture (gold, silver, emerald, ruby, chest, diamond) with the meaning on top */
 .fc-miner__nugget {
-  position: absolute; display: flex; align-items: center; justify-content: center; padding: 4px 10px; box-sizing: border-box; overflow: hidden; text-align: center;
-  font-size: 15px; font-size: clamp(11px, 2.5cqw, 17px); font-weight: 800; line-height: 1.2; color: #3b2300;
-  border-radius: 38% 62% 54% 46% / 52% 44% 56% 48%; border: 2px solid #b45309;
-  background: radial-gradient(circle at 30% 28%, #fff7c2, #fcd34d 40%, #f59e0b 80%, #d97706); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), inset -4px -6px 10px rgba(180, 83, 9, 0.35);
+  --ink: #3b2300; --glow: rgba(252, 211, 77, 0.6);
+  position: absolute; z-index: 1; display: block; padding: 0; border: 0; background: transparent; cursor: pointer; font: inherit; color: var(--ink);
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); transition: transform 0.15s ease, filter 0.15s ease;
 }
-.fc-miner__nugget .fc-side { gap: 0 6px; }
-.fc-miner__nugget .fc-side__reading { font-size: 0.7em; color: #7a4a05; }
+.fc-miner__nugget:hover:not(.is-taken):not(.fc-miner__carry), .fc-miner__nugget:focus-visible { transform: scale(1.06); filter: drop-shadow(0 0 10px var(--glow)) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); }
+.fc-miner__nugget:active:not(.fc-miner__carry) { transform: scale(0.97); }
+.fc-miner__art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fc-miner__label { position: absolute; inset: 6% 11%; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
+  font-size: 15px; font-size: clamp(11px, 2.35cqw, 16px); font-weight: 800; line-height: 1.2; text-shadow: var(--ink-shadow, none); }
+.fc-miner__label .fc-side { gap: 0 6px; justify-content: center; }
+.fc-miner__label .fc-side__reading { color: inherit; opacity: 0.7; }
+.fc-miner__value { position: absolute; right: -2%; top: -14%; z-index: 2; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 1.5; color: #fff; background: #1f2937; border: 1.5px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
+.fc-skin--emerald, .fc-skin--ruby, .fc-skin--chest { --ink: #fff; --ink-shadow: 0 1px 2px rgba(0, 0, 0, 0.75); }
+.fc-skin--emerald { --glow: rgba(52, 211, 153, 0.7); }
+.fc-skin--ruby { --glow: rgba(248, 113, 113, 0.75); }
+.fc-skin--diamond { --ink: #0c2a4a; --glow: rgba(125, 211, 252, 0.9); }
+.fc-skin--silver { --ink: #1f2937; --glow: rgba(229, 231, 235, 0.8); }
+.fc-skin--diamond .fc-miner__nugget, .fc-miner__nugget.fc-skin--diamond { animation: fc-gleam 2.6s ease-in-out infinite; }
+@keyframes fc-gleam { 0%, 100% { filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); } 50% { filter: drop-shadow(0 0 9px rgba(186, 230, 253, 0.95)) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); } }
 .fc-miner__nugget.is-taken { visibility: hidden; }
-.fc-miner__carry { left: 50%; top: 100%; width: 170px; height: 64px; width: var(--nw, 25cqw); height: var(--nh, 11cqw); margin-top: 12px; z-index: 2; transform: translate(-50%, 0); }
-.fc-miner__carry.is-right { background: radial-gradient(circle at 30% 28%, #f0fdf4, #86efac 45%, #22c55e); border-color: var(--ok); }
-.fc-miner__carry.is-wrong { background: radial-gradient(circle at 30% 28%, #fef2f2, #fca5a5 45%, #ef4444); border-color: var(--bad); color: #450a0a; }
-.fc-miner__hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, 0.75); pointer-events: none; }
-.fc-miner__scene .fc-pops { z-index: 5; }
-.fc-miner__time { margin-left: 0; font-size: 20px; }
+.fc-miner__carry { left: 50%; top: 100%; width: 170px; height: 64px; width: var(--nw, 25cqw); height: var(--nh, 11cqw); margin-top: 12px; z-index: 3; transform: translate(-50%, 0); cursor: default; }
+.fc-miner__carry.is-right { filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); }
+.fc-miner__carry.is-wrong { filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.95)) saturate(0.5) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); }
+.fc-miner__scene .fc-pops { z-index: 6; }
+.fc-miner__boom { position: absolute; z-index: 6; width: 0; height: 0; pointer-events: none; }
+.fc-miner__boom::before { content: ""; position: absolute; left: -34px; top: -34px; width: 68px; height: 68px; border-radius: 50%; background: radial-gradient(circle, #fff7ae, #fb923c 45%, rgba(239, 68, 68, 0.65) 70%, transparent 72%); animation: fc-boom 0.55s ease-out forwards; }
+.fc-miner__boom .fc-burst i { width: 10px; height: 10px; background: #fb923c; }
+@keyframes fc-boom { from { transform: scale(0.2); opacity: 1; } to { transform: scale(2); opacity: 0; } }
 .fc-miner__drop { min-width: 160px; }
+
+/* the board across the top: target sign, level, clock, dynamite */
+.fc-mhud { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fc-mhud--sub { justify-content: space-between; }
+.fc-mhud__sign { position: relative; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 10px; row-gap: 4px; padding: 8px 16px 10px; border-radius: 8px; color: #fff4d6;
+  background: linear-gradient(180deg, #a8692c, #7c4a1d); border: 2px solid #4a2a0c; box-shadow: 0 3px 0 #2e1906, inset 0 1px 0 rgba(255, 230, 180, 0.4); }
+.fc-mhud__sign::before, .fc-mhud__sign::after { content: ""; position: absolute; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: #3a2208; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.fc-mhud__sign::before { left: 5px; } .fc-mhud__sign::after { right: 5px; }
+.fc-mhud__signlabel { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.9; }
+.fc-mhud__sign strong { font-size: 22px; line-height: 1; color: #ffe08a; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.fc-mhud__sign small { font-size: 14px; color: #fff4d6; font-weight: 700; }
+.fc-mhud__meter { grid-column: 1 / -1; height: 6px; border-radius: 999px; overflow: hidden; background: rgba(0, 0, 0, 0.35); }
+.fc-mhud__meter i { display: block; height: 100%; background: linear-gradient(90deg, #fde047, #f59e0b); border-radius: inherit; transition: width 0.35s ease; }
+.fc-mhud__level { padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; color: var(--primary-color); background: var(--primary-light); }
+.fc-mhud__time { display: inline-flex; align-items: center; gap: 8px; min-width: 88px; justify-content: center; padding: 6px 16px 6px 12px; border-radius: 999px; font-size: 22px; font-weight: 800; color: #fff; background: linear-gradient(180deg, #ef4444, #b91c1c); border: 2px solid #7f1d1d; box-shadow: 0 3px 0 #450a0a; }
+.fc-mhud__time.is-low { animation: fc-pulse 0.6s ease-in-out infinite; background: linear-gradient(180deg, #f97316, #c2410c); }
+.fc-mhud__tnt { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px 5px 8px; border-radius: 999px; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; color: var(--text-main); background: var(--card-bg); border: 2px solid var(--card-border); }
+.fc-mhud__tnt:disabled { opacity: 0.45; cursor: not-allowed; }
+.fc-mhud__tnt.is-ready { border-color: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25); animation: fc-pulse 0.9s ease-in-out infinite; }
+.fc-mhud--sub .fc-drop__score { margin-left: 0; }
+
+/* the start screen: what each treasure is worth */
+.fc-miner-rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.fc-skinlegend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.fc-skinlegend li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; font-size: 13.5px; background: var(--surface-2); border: 1px solid var(--card-border); }
+.fc-skinlegend li strong { margin-left: auto; color: var(--acc); }
+.fc-skinlegend__art { position: relative; flex: none; width: 46px; height: 22px; }
+.fc-skinlegend__art svg { width: 100%; height: 100%; }
+
+/* the level-cleared card over the field */
+.fc-miner__overlay { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; padding: 12px; background: rgba(8, 12, 24, 0.55); backdrop-filter: blur(2px); cursor: default; }
+.fc-miner__levelcard { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 28px; max-width: 92%; text-align: center; border-radius: 20px; color: var(--text-main); background: var(--card-bg); border: 2px solid #f59e0b; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); animation: fc-drop-in 0.35s cubic-bezier(0.2, 1.3, 0.4, 1); }
+.fc-miner__levelcard h3 { margin: 0; font-size: 24px; }
+.fc-miner__levelcard p { margin: 0; font-size: 15px; color: var(--ink-2); }
+.fc-miner__levelcard .fc-miner__bonus { font-weight: 800; color: var(--acc); font-size: 17px; }
 
 @media (max-width: 640px) {
   .fc-shoot__range { height: 340px; }
@@ -571,8 +637,11 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-combo { top: 6px; right: 8px; font-size: 12.5px; padding: 3px 10px; }
   .fc-result__big { font-size: 40px; }
   .fc-stars svg { width: 38px; height: 38px; }
-  .fc-miner__scene.is-tall .fc-miner__nugget { font-size: 13px; font-size: clamp(12px, 3.6cqw, 16px); padding: 4px 8px; }
-  .fc-miner__scene.is-tall .fc-miner__hint { font-size: 12px; }
+  .fc-miner__scene.is-tall .fc-miner__label { font-size: 12px; font-size: clamp(11px, 3.3cqw, 15px); inset: 6% 9%; }
+  .fc-mhud { gap: 8px; }
+  .fc-mhud__sign strong { font-size: 19px; }
+  .fc-mhud__time { font-size: 19px; min-width: 76px; }
+  .fc-miner__levelcard { padding: 16px 18px; }
   .fc-miner__drop { width: 100%; }
 }
 
