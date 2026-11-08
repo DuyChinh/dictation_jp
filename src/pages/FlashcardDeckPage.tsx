@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CardEditor, type CardValue } from "../features/flashcards/CardEditor";
-import { DirectionPicker } from "../features/flashcards/DirectionPicker";
+import { DirectionPicker, HanVietPicker } from "../features/flashcards/DirectionPicker";
 import { useFt } from "../features/flashcards/flashText";
-import { useDirection } from "../features/flashcards/prefs";
+import { useDirection, useShowHanViet } from "../features/flashcards/prefs";
 import { SideView } from "../features/flashcards/SideView";
 import { cardsOf, deckStats, deleteCard, deleteDeck, renameDeck, updateCard, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
-import { acceptedAnswers } from "../features/flashcards/quiz";
+import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
+import { acceptedAnswers, sidesOf } from "../features/flashcards/quiz";
 import type { Card } from "../features/flashcards/types";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
@@ -24,6 +25,8 @@ export function FlashcardDeckPage() {
   const deck = decks.find((d) => d.id === deckId);
   const cards = useMemo(() => cardsOf(state, deckId), [state, deckId]);
   const [direction, setDirection] = useDirection();
+  const [hanViet, setHanViet] = useShowHanViet();
+  useHanVietBackfill(cards);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
@@ -51,7 +54,7 @@ export function FlashcardDeckPage() {
   const stats = deckStats(cards);
   const q = query.trim().toLowerCase();
   const shown = q
-    ? cards.filter((c) => c.term.toLowerCase().includes(q) || c.definition.toLowerCase().includes(q) || (c.reading ?? "").includes(q) || acceptedAnswers({ text: c.term, lang: c.termLang, reading: c.reading }).some((a) => a.includes(q)))
+    ? cards.filter((c) => c.term.toLowerCase().includes(q) || c.definition.toLowerCase().includes(q) || (c.reading ?? "").includes(q) || (c.hanViet ?? "").toLowerCase().includes(q) || acceptedAnswers({ text: c.term, lang: c.termLang, reading: c.reading }).some((a) => a.includes(q)))
     : cards;
 
   function rename(e: FormEvent) {
@@ -67,7 +70,7 @@ export function FlashcardDeckPage() {
   }
   function saveEdit(v: CardValue): void {
     if (!editing) return;
-    updateCard(editing.id, { term: v.term, termLang: v.termLang, definition: v.definition, definitionLang: v.definitionLang, reading: v.reading, entryId: v.entryId });
+    updateCard(editing.id, { term: v.term, termLang: v.termLang, definition: v.definition, definitionLang: v.definitionLang, reading: v.reading, hanViet: v.hanViet, entryId: v.entryId });
     setEditing(null);
   }
 
@@ -103,6 +106,7 @@ export function FlashcardDeckPage() {
 
         <h2 className="fc-section">{ft("deck.modes")}</h2>
         <DirectionPicker value={direction} onChange={setDirection} />
+        <HanVietPicker value={hanViet} onChange={setHanViet} />
         <ul className="fc-modes">
           {MODES.map((m) => {
             const ok = cards.length >= m.min;
@@ -147,9 +151,9 @@ export function FlashcardDeckPage() {
           <ul className="fc-cardlist">
             {shown.map((c) => (
               <li key={c.id} className="fc-row">
-                <SideView side={{ text: c.term, lang: c.termLang, reading: c.termLang === "ja" ? c.reading : undefined }} />
+                <SideView side={sidesOf(c).prompt} />
                 <span className="fc-row__sep" aria-hidden="true">→</span>
-                <SideView side={{ text: c.definition, lang: c.definitionLang, reading: c.definitionLang === "ja" ? c.reading : undefined }} speak={c.definitionLang === "ja"} />
+                <SideView side={sidesOf(c).answer} speak={c.definitionLang === "ja"} />
                 <span className="fc-row__tools">
                   <button type="button" className="icon-btn icon-btn--ghost" onClick={() => setEditing(c)} aria-label={`${ft("deck.edit")}: ${c.term}`} title={ft("deck.edit")}>
                     <Icon name="pencil" size={18} />
@@ -169,7 +173,7 @@ export function FlashcardDeckPage() {
           <div className="fc-modal__box" role="dialog" aria-modal="true" aria-label={ft("deck.edit")}>
             <h2>{ft("deck.edit")}</h2>
             <CardEditor
-              initial={{ term: editing.term, termLang: editing.termLang, definition: editing.definition, definitionLang: editing.definitionLang, reading: editing.reading, entryId: editing.entryId }}
+              initial={{ term: editing.term, termLang: editing.termLang, definition: editing.definition, definitionLang: editing.definitionLang, reading: editing.reading, hanViet: editing.hanViet, entryId: editing.entryId }}
               submitLabel={ft("common.save")}
               onSubmit={saveEdit}
               onCancel={() => setEditing(null)}

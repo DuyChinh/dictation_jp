@@ -5,6 +5,7 @@ import { DeckPicker, resolveDeck } from "../features/flashcards/DeckPicker";
 import { useFt } from "../features/flashcards/flashText";
 import { DEFAULT_DECK_ID, addCard, cardsOf, isDuplicate, useFlashcards } from "../features/flashcards/store";
 import { lastDeckId, saveLastDeck } from "../features/flashcards/prefs";
+import { sidesOf } from "../features/flashcards/quiz";
 import { SideView } from "../features/flashcards/SideView";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { fmt } from "../shared/i18n/format";
@@ -34,7 +35,7 @@ export function FlashcardCreatePage() {
   function save(v: CardValue): string | void {
     const target = resolveDeck(decks, effective, ft("deck.default"));
     if (isDuplicate(cards, target, v.term, v.definition)) return ft("create.duplicate");
-    const card = addCard({ deckId: target, ...v, reading: v.reading || undefined });
+    const card = addCard({ deckId: target, ...v, reading: v.reading || undefined, hanViet: v.hanViet || undefined });
     saveLastDeck(target);
     setDeckId(target);
     setAdded((a) => new Set(a).add(card.id));
@@ -79,9 +80,9 @@ export function FlashcardCreatePage() {
             <ul className="fc-cardlist" aria-live="polite">
               {deckCards.slice(0, LIST_MAX).map((c) => (
                 <li key={c.id} className={`fc-row${added.has(c.id) ? " is-new" : ""}`}>
-                  <SideView side={{ text: c.term, lang: c.termLang, reading: c.termLang === "ja" ? c.reading : undefined }} />
+                  <SideView side={sidesOf(c).prompt} />
                   <span className="fc-row__sep" aria-hidden="true">→</span>
-                  <SideView side={{ text: c.definition, lang: c.definitionLang, reading: c.definitionLang === "ja" ? c.reading : undefined }} speak={c.definitionLang === "ja"} />
+                  <SideView side={sidesOf(c).answer} speak={c.definitionLang === "ja"} />
                   {added.has(c.id) && <span className="fc-row__tag">{ft("create.justAdded")}</span>}
                 </li>
               ))}

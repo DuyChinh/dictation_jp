@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { DirectionPicker } from "../features/flashcards/DirectionPicker";
+import { DirectionPicker, HanVietPicker } from "../features/flashcards/DirectionPicker";
 import { BlitzMode } from "../features/flashcards/BlitzMode";
 import { DropMode } from "../features/flashcards/DropMode";
 import { MemoryMode } from "../features/flashcards/MemoryMode";
@@ -11,9 +11,10 @@ import { LearnMode } from "../features/flashcards/LearnMode";
 import { MatchMode } from "../features/flashcards/MatchMode";
 import { TestMode } from "../features/flashcards/TestMode";
 import { useFt } from "../features/flashcards/flashText";
-import { useDirection } from "../features/flashcards/prefs";
+import { useDirection, useShowHanViet } from "../features/flashcards/prefs";
 import { cardsOf, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
+import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
@@ -29,6 +30,8 @@ export function FlashcardStudyPage() {
   const deck = decks.find((d) => d.id === deckId);
   const cards = useMemo(() => cardsOf(state, deckId), [state, deckId]);
   const [direction, setDirection] = useDirection();
+  const [hanViet, setHanViet] = useShowHanViet();
+  useHanVietBackfill(cards);
 
   useEffect(() => {
     void syncFlashcards();
@@ -60,7 +63,10 @@ export function FlashcardStudyPage() {
     const key = `${deck.id}:${direction}`;
     body = (
       <>
-        <DirectionPicker value={direction} onChange={setDirection} />
+        <div className="fc-pickers">
+          <DirectionPicker value={direction} onChange={setDirection} />
+          <HanVietPicker value={hanViet} onChange={setHanViet} />
+        </div>
         {mode === "learn" && <LearnMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
         {mode === "test" && <TestMode key={key} deckId={deck.id} cards={cards} direction={direction} />}
         {mode === "match" && <MatchMode key={key} deckId={deck.id} cards={cards} direction={direction} />}

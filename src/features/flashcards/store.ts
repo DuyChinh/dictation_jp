@@ -149,6 +149,7 @@ export type NewCard = {
   definition: string;
   definitionLang: CardLang;
   reading?: string;
+  hanViet?: string;
   entryId?: number;
 };
 
@@ -170,6 +171,8 @@ export function addCard(input: NewCard): Card {
   };
   const reading = input.reading ? clean(input.reading).slice(0, 200) : "";
   if (reading) card.reading = reading;
+  const hanViet = input.hanViet ? clean(input.hanViet).slice(0, 100) : "";
+  if (hanViet) card.hanViet = hanViet;
   if (input.entryId) card.entryId = input.entryId;
   const s = readState();
   writeState({ ...s, cards: [...s.cards, card] });
@@ -187,6 +190,8 @@ export function updateCard(id: string, patch: Partial<Omit<NewCard, "deckId">> &
       next.term = clean(next.term).slice(0, 200);
       next.definition = clean(next.definition).slice(0, 400);
       if (!next.reading?.trim()) delete next.reading;
+      if (!next.hanViet?.trim()) delete next.hanViet;
+      else next.hanViet = clean(next.hanViet).slice(0, 100);
       return next;
     }),
   });
@@ -243,4 +248,18 @@ const sameText = (a: string, b: string) => clean(a).toLowerCase() === clean(b).t
 /** A card with this term and definition is already in the deck. */
 export function isDuplicate(cards: Card[], deckId: string, term: string, definition: string): boolean {
   return cards.some((c) => c.deckId === deckId && !c.deleted && sameText(c.term, term) && sameText(c.definition, definition));
+}
+
+/** Fills in the Sino-Vietnamese reading of every card made from these dictionary entries that has none yet. */
+export function applyHanViet(byEntry: Record<number, string>): void {
+  const s = readState();
+  const now = Date.now();
+  let changed = false;
+  const cards = s.cards.map((c) => {
+    const hv = c.entryId ? byEntry[c.entryId] : undefined;
+    if (!hv || c.deleted || c.hanViet) return c;
+    changed = true;
+    return { ...c, hanViet: hv.slice(0, 100), updatedAt: now };
+  });
+  if (changed) writeState({ ...s, cards });
 }

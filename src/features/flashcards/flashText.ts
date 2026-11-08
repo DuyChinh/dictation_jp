@@ -197,6 +197,11 @@ const vi = {
   "miner.scene": "Khu đào vàng",
   "miner.nugget": "Cục vàng: {text}",
   "miner.time": "Còn {s} giây",
+  "editor.hanViet": "Âm Hán Việt (không bắt buộc)",
+  "editor.hanVietPlaceholder": "CẤU NHẬP",
+  "deck.hanViet": "Âm Hán Việt",
+  "deck.hanViet.on": "Có Hán Việt",
+  "deck.hanViet.off": "Không Hán Việt",
 } as const;
 
 export type FtKey = keyof typeof vi;
@@ -396,6 +401,11 @@ const en: Table = {
   "miner.scene": "Mining area",
   "miner.nugget": "Nugget: {text}",
   "miner.time": "{s} seconds left",
+  "editor.hanViet": "Sino-Vietnamese reading (optional)",
+  "editor.hanVietPlaceholder": "CẤU NHẬP",
+  "deck.hanViet": "Sino-Vietnamese reading",
+  "deck.hanViet.on": "With Sino-Vietnamese",
+  "deck.hanViet.off": "Without",
 };
 
 const ja: Table = {
@@ -592,6 +602,11 @@ const ja: Table = {
   "miner.scene": "採掘エリア",
   "miner.nugget": "金塊：{text}",
   "miner.time": "残り{s}秒",
+  "editor.hanViet": "ベトナム漢字音（任意）",
+  "editor.hanVietPlaceholder": "CẤU NHẬP",
+  "deck.hanViet": "ベトナム漢字音",
+  "deck.hanViet.on": "漢字音あり",
+  "deck.hanViet.off": "漢字音なし",
 };
 
 const tables = { vi: vi as Table, en, ja } as const;

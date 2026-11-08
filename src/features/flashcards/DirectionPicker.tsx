@@ -17,3 +17,18 @@ export function DirectionPicker({ value, onChange }: { value: Direction; onChang
     </div>
   );
 }
+
+/** Whether meanings end with their Sino-Vietnamese reading: with it, or without it. */
+export function HanVietPicker({ value, onChange }: { value: boolean; onChange: (on: boolean) => void }) {
+  const ft = useFt();
+  return (
+    <div className="fc-dir" role="radiogroup" aria-label={ft("deck.hanViet")}>
+      <span className="fc-dir__label">{ft("deck.hanViet")}</span>
+      {[true, false].map((on) => (
+        <button key={String(on)} type="button" role="radio" aria-checked={value === on} className={`fc-dir__item${value === on ? " is-on" : ""}`} onClick={() => onChange(on)}>
+          {ft(on ? "deck.hanViet.on" : "deck.hanViet.off")}
+        </button>
+      ))}
+    </div>
+  );
+}

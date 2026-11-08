@@ -90,8 +90,8 @@ describe("scenes", () => {
     expect(events).toEqual([{ type: "caught", index: 0 }, { type: "arrived", index: 0 }]);
   });
 
-  it("lays out separate, in-bounds nuggets on either scene", () => {
-    for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
+  it("lays out separate, in-bounds nuggets on either scene, however the nudges fall", () => {
+    for (let round = 0; round < 150; round++) for (const scene of [SCENES.wide, SCENES.tall] as Scene[]) {
       for (let n = 2; n <= 4; n++) {
         const boxes = layoutNuggets(n, Math.random, scene);
         expect(boxes).toHaveLength(n);
@@ -113,7 +113,7 @@ describe("scenes", () => {
 
 describe("layoutNuggets", () => {
   it("makes separate boxes that stay inside the scene and below the miner", () => {
-    for (let n = 2; n <= 6; n++) {
+    for (let n = 2; n <= 6; n++) for (let round = 0; round < 150; round++) {
       const boxes = layoutNuggets(n);
       expect(boxes).toHaveLength(n);
       for (const b of boxes) {

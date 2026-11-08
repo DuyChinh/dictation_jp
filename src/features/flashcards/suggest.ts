@@ -11,6 +11,8 @@ export type Suggestion = {
   en: string;
   /** The Vietnamese meaning is missing, so `vi` holds the English one. */
   viFallback: boolean;
+  /** Sino-Vietnamese reading of the headword, when it has one, e.g. "CẤU NHẬP". */
+  hanViet: string;
   jlpt: number | null;
 };
 
@@ -28,7 +30,7 @@ export function suggestionFromEntry(entry: DictEntry): Suggestion {
   const { word, reading } = headword(entry);
   const en = entry.senses.flatMap((s) => s.glosses.slice(0, 2)).slice(0, MAX_PARTS).join("; ");
   const vi = entry.senses.flatMap((s) => s.vi.slice(0, 2)).slice(0, MAX_PARTS).join("; ");
-  return { entryId: entry.id, reading, ja: word, vi: vi || en, en, viFallback: !vi && !!en, jlpt: entry.jlpt };
+  return { entryId: entry.id, reading, ja: word, vi: vi || en, en, viFallback: !vi && !!en, hanViet: entry.hanViet?.[word] ?? "", jlpt: entry.jlpt };
 }
 
 export const suggestionsFromEntries = (entries: DictEntry[], max = 6): Suggestion[] =>

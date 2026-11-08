@@ -48,3 +48,12 @@ describe("guessLang", () => {
     expect(guessLang("to eat")).toBe("en");
   });
 });
+
+describe("Sino-Vietnamese reading in suggestions", () => {
+  it("takes the reading of the headword spelling", () => {
+    const e = entry();
+    e.hanViet = { 食べる: "THỰC" };
+    expect(suggestionFromEntry(e).hanViet).toBe("THỰC");
+    expect(suggestionFromEntry(entry()).hanViet).toBe("");
+  });
+});

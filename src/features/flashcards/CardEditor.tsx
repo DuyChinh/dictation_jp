@@ -13,6 +13,7 @@ export type CardValue = {
   definition: string;
   definitionLang: CardLang;
   reading: string;
+  hanViet: string;
   entryId?: number;
 };
 
@@ -48,6 +49,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   const [right, setRight] = useState(initial?.definition ?? "");
   const [rightLang, setRightLang] = useState<CardLang>(initial?.definitionLang ?? loadRightLang(uiLang));
   const [reading, setReading] = useState(initial?.reading ?? "");
+  const [hanViet, setHanViet] = useState(initial?.hanViet ?? "");
   const [entryId, setEntryId] = useState<number | undefined>(initial?.entryId);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [picked, setPicked] = useState<number | null>(null);
@@ -65,6 +67,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     setRight(textFor(s, lang));
     setEntryId(s.entryId);
     setReading(s.reading);
+    setHanViet(s.hanViet);
   }
 
   // Look the left box up as the learner types.
@@ -146,6 +149,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       definition: right.trim(),
       definitionLang: rightLang,
       reading: hasJapanese ? reading.trim() : "",
+      hanViet: hasJapanese ? hanViet.trim() : "",
       entryId,
     });
     setMessage(problem ?? "");
@@ -153,6 +157,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       setLeft("");
       setRight("");
       setReading("");
+      setHanViet("");
       setEntryId(undefined);
       setSuggestions([]);
       setPicked(null);
@@ -227,6 +232,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       </div>
 
       {hasJapanese && (
+        <div className="fc-reading-row">
         <label className="fc-reading">
           <span>{ft("editor.reading")}</span>
           <input
@@ -240,6 +246,19 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
             maxLength={200}
           />
         </label>
+        <label className="fc-reading">
+          <span>{ft("editor.hanViet")}</span>
+          <input
+            className="fc-input"
+            value={hanViet}
+            onChange={(e) => setHanViet(e.target.value)}
+            placeholder={ft("editor.hanVietPlaceholder")}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={100}
+          />
+        </label>
+        </div>
       )}
 
       <div className="fc-suggest" aria-live="polite">

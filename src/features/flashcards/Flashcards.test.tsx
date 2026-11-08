@@ -18,10 +18,12 @@ import type { Card } from "./types";
 
 const searchDictionary = vi.fn();
 const lookupWord = vi.fn();
+const fetchEntry = vi.fn();
 vi.mock("../../shared/api/dictionary", async (orig) => ({
   ...(await orig<typeof import("../../shared/api/dictionary")>()),
   searchDictionary: (...a: unknown[]) => searchDictionary(...a),
   lookupWord: (...a: unknown[]) => lookupWord(...a),
+  fetchEntry: (...a: unknown[]) => fetchEntry(...a),
 }));
 vi.mock("./miner", async (orig) => {
   const real = await orig<typeof import("./miner")>();
@@ -66,6 +68,7 @@ beforeEach(() => {
   localStorage.clear();
   searchDictionary.mockReset();
   lookupWord.mockReset();
+  fetchEntry.mockReset();
 });
 afterEach(() => {
   cleanup();
@@ -539,13 +542,13 @@ describe("MinerMode", () => {
     expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
 
     fireEvent.keyDown(window, { key: " " });
-    await frames(300);
-    // on the way back with it
+    // the claw reaches the nugget after about 0.3s and needs about 0.35s more to bring it in
+    await frames(450);
     expect(document.querySelector(".fc-miner__carry")?.textContent).toContain(underClaw);
     expect(document.querySelector(".fc-miner__nugget.is-taken")).toBeTruthy();
-    await frames(900);
+    await frames(350);
     expect(document.querySelector(".fc-miner__carry")?.className).toContain(right ? "is-right" : "is-wrong");
-    await frames(1100);
+    await frames(1300);
     expect(screen.getByText(right ? "Điểm: 10" : "Điểm: 0")).toBeTruthy();
     expect(screen.getByLabelText(right ? "Còn 3 mạng" : "Còn 2 mạng")).toBeTruthy();
     expect(screen.getByText("2 / 4")).toBeTruthy();
@@ -598,6 +601,25 @@ describe("pages", () => {
     expect(screen.getByRole("link", { name: "Mở bộ thẻ" })).toBeTruthy();
   });
 
+  it("the deck list shows the kanji alone and the reading in front of its meaning", async () => {
+    const { FlashcardDeckPage } = await import("../../pages/FlashcardDeckPage");
+    const d = createDeck("Bộ đọc", "deck1");
+    addCard({ deckId: d.id, term: "購入", definition: "mua; mua sắm", reading: "こうにゅう", ...base });
+    render(
+      <MemoryRouter initialEntries={["/flashcards/deck1"]}>
+        <UiLanguageProvider>
+          <Routes>
+            <Route path="/flashcards/:deckId" element={<FlashcardDeckPage />} />
+          </Routes>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    const row = document.querySelector(".fc-row")!;
+    expect(row.querySelectorAll(".fc-side__text")[0]!.textContent).toBe("購入");
+    expect(row.querySelectorAll(".fc-side__text")[1]!.textContent).toBe("こうにゅう: mua; mua sắm");
+    expect(row.querySelector(".fc-side__reading")).toBeNull();
+  });
+
   it("the deck page counts words and searches them", async () => {
     const { FlashcardDeckPage } = await import("../../pages/FlashcardDeckPage");
     seed();
@@ -623,6 +645,127 @@ describe("pages", () => {
     expect(screen.getByText("Không có từ nào khớp “zzz”.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Xóa tìm kiếm" }));
     expect(screen.getByText("犬")).toBeTruthy();
+  });
+});
+
+describe("readings next to the meaning", () => {
+  const withReading = () => {
+    const d = createDeck("Bộ đọc", "deck1");
+    addCard({ deckId: d.id, term: "購入", definition: "mua; mua sắm", reading: "こうにゅう", ...base });
+    return readState().cards;
+  };
+
+  it("the study card hides the reading on the kanji question and shows it with the meaning", () => {
+    render(wrap(<LearnMode deckId="deck1" cards={withReading()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(screen.getByText("購入")).toBeTruthy();
+    expect(screen.queryByText("こうにゅう")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(document.querySelector(".fc-flash .fc-side__text")!.textContent).toBe("こうにゅう: mua; mua sắm");
+  });
+
+  it("a multiple choice question shows the kanji alone and no reading among the choices", () => {
+    const d = readState().decks[0] ?? createDeck("Bộ", "deck1");
+    void d;
+    const cards = (() => {
+      const deck = createDeck("Bộ đọc 2", "deck2");
+      addCard({ deckId: deck.id, term: "購入", definition: "mua", reading: "こうにゅう", ...base });
+      addCard({ deckId: deck.id, term: "犬", definition: "chó", reading: "いぬ", ...base });
+      return readState().cards.filter((c) => c.deckId === "deck2");
+    })();
+    const { container } = render(wrap(<TestMode deckId="deck2" cards={cards} direction="term" />));
+    for (const name of ["Đúng / Sai", "Điền đáp án", "Nối cặp"]) fireEvent.click(screen.getByLabelText(name));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
+    expect(container.textContent).not.toContain("こうにゅう");
+    expect(container.textContent).not.toContain("いぬ");
+  });
+});
+
+describe("Sino-Vietnamese reading on cards", () => {
+  const withHv = () => {
+    const d = createDeck("Bộ Hán Việt", "deck1");
+    addCard({ deckId: d.id, term: "購入", definition: "mua; mua sắm", reading: "こうにゅう", hanViet: "CẤU NHẬP", ...base });
+    return readState().cards;
+  };
+  const deckPage = async () => {
+    const { FlashcardDeckPage } = await import("../../pages/FlashcardDeckPage");
+    return (
+      <MemoryRouter initialEntries={["/flashcards/deck1"]}>
+        <UiLanguageProvider>
+          <Routes>
+            <Route path="/flashcards/:deckId" element={<FlashcardDeckPage />} />
+          </Routes>
+        </UiLanguageProvider>
+      </MemoryRouter>
+    );
+  };
+
+  it("shows it at the end of the meaning, and the two options switch it off and on", async () => {
+    withHv();
+    render(await deckPage());
+    expect(document.querySelector(".fc-row .fc-side__trail")?.textContent).toBe("CẤU NHẬP");
+    expect(screen.getByRole("radio", { name: "Có Hán Việt" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("radio", { name: "Không Hán Việt" }));
+    expect(document.querySelector(".fc-side__trail")).toBeNull();
+    expect(localStorage.getItem("jd.flash_hv.v1")).toBe("off");
+    fireEvent.click(screen.getByRole("radio", { name: "Có Hán Việt" }));
+    expect(document.querySelector(".fc-side__trail")?.textContent).toBe("CẤU NHẬP");
+  });
+
+  it("the study card shows it on the answer side and respects the option", () => {
+    render(wrap(<LearnMode deckId="deck1" cards={withHv()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(document.querySelector(".fc-side__trail")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(document.querySelector(".fc-flash .fc-side__trail")?.textContent).toBe("CẤU NHẬP");
+  });
+
+  it("does not show it when the option is off", () => {
+    localStorage.setItem("jd.flash_hv.v1", "off");
+    render(wrap(<LearnMode deckId="deck1" cards={withHv()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(document.querySelector(".fc-side__trail")).toBeNull();
+  });
+
+  it("fills it in once for older cards made from a dictionary entry", async () => {
+    const d = createDeck("Cũ", "deck1");
+    addCard({ deckId: d.id, term: "購入", definition: "mua", reading: "こうにゅう", entryId: 77, ...base });
+    fetchEntry.mockResolvedValue({ ...TABERU, id: 77, kanji: [{ text: "購入", common: true, tags: [] }], kana: [{ text: "こうにゅう", common: true, tags: [], appliesToKanji: null }], hanViet: { 購入: "CẤU NHẬP" } });
+    const ui = await deckPage();
+    const { unmount } = render(ui);
+    await waitFor(() => expect(readState().cards[0]!.hanViet).toBe("CẤU NHẬP"));
+    expect(fetchEntry).toHaveBeenCalledTimes(1);
+    unmount();
+    render(ui);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it("remembers a word that has none, so it is not asked again", async () => {
+    const d = createDeck("Cũ", "deck1");
+    addCard({ deckId: d.id, term: "ありがとう", definition: "cảm ơn", entryId: 88, ...base });
+    fetchEntry.mockResolvedValue({ ...TABERU, id: 88 });
+    const ui = await deckPage();
+    const { unmount } = render(ui);
+    await waitFor(() => expect(fetchEntry).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(localStorage.getItem("jd.flash_hv_tried.v1")).toContain("88"));
+    unmount();
+    render(ui);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchEntry).toHaveBeenCalledTimes(1);
+    expect(readState().cards[0]!.hanViet).toBeUndefined();
+  });
+
+  it("the card form fills it from the dictionary and saves it", async () => {
+    const e = { ...TABERU, hanViet: { 食べる: "THỰC" } };
+    searchDictionary.mockResolvedValue({ query: "", lang: "ja", entries: [e], kanji: [] });
+    const onSubmit = vi.fn<(v: CardValue) => string | void>();
+    render(wrap(<CardEditor submitLabel="Lưu" onSubmit={onSubmit} />));
+    fireEvent.change(screen.getByLabelText("Từ"), { target: { value: "食べる" } });
+    await waitFor(() => expect((screen.getByPlaceholderText("CẤU NHẬP") as HTMLInputElement).value).toBe("THỰC"));
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ hanViet: "THỰC", reading: "たべる" }));
   });
 });
 

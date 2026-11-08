@@ -18,6 +18,8 @@ export type Card = {
   definition: string;
   definitionLang: CardLang;
   reading?: string;
+  /** Sino-Vietnamese reading of the Japanese word, e.g. "CẤU NHẬP"; shown after the meaning. */
+  hanViet?: string;
   /** Dictionary entry the card was made from, when it was. */
   entryId?: number;
   /** Leitner box 0-5 and when the card is next due. */
@@ -33,7 +35,18 @@ export type Card = {
 export type FlashState = { decks: Deck[]; cards: Card[] };
 
 /** One side of a card as it is shown or asked for. */
-export type Side = { text: string; lang: CardLang; reading?: string };
+export type Side = {
+  text: string;
+  lang: CardLang;
+  /** Reading of a Japanese side: used for speech and for checking typed answers. */
+  reading?: string;
+  /** False keeps the reading from being drawn above the word (it is still used for speech and checking). */
+  showReading?: boolean;
+  /** A reading shown in front of this side's text, as "こうにゅう: mua". It belongs to the Japanese side on the other end of the card. */
+  lead?: string;
+  /** Shown at the end of this side, after the text: the Sino-Vietnamese reading of the card's Japanese word. */
+  trail?: string;
+};
 
 /** Which side is asked: the term, the definition, or either at random. */
 export type Direction = "term" | "definition" | "mixed";

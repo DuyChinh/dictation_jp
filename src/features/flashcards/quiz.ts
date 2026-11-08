@@ -11,16 +11,30 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
   return a;
 }
 
-/** The two sides of a card; `flip` asks for the definition and answers with the term. */
+/**
+ * The two sides of a card; `flip` asks for the definition and answers with the term.
+ *
+ * A Japanese word's reading is not drawn above it when the word is the question (that would give the
+ * reading away). It is shown with the answer instead: in front of the meaning ("こうにゅう: mua"), or above
+ * the Japanese answer when the meaning was the question.
+ */
 export function sidesOf(card: Card, flip = false): { prompt: Side; answer: Side } {
-  const term: Side = { text: card.term, lang: card.termLang, reading: card.termLang === "ja" ? card.reading : undefined };
-  const def: Side = {
-    text: card.definition,
-    lang: card.definitionLang,
-    reading: card.definitionLang === "ja" ? card.reading : undefined,
-  };
-  return flip ? { prompt: def, answer: term } : { prompt: term, answer: def };
+  const reading = card.reading?.trim() || undefined;
+  const term: Side = { text: card.term, lang: card.termLang, reading: card.termLang === "ja" ? reading : undefined };
+  const def: Side = { text: card.definition, lang: card.definitionLang, reading: card.definitionLang === "ja" ? reading : undefined };
+  const { prompt, answer: bare } = flip ? { prompt: def, answer: term } : { prompt: term, answer: def };
+  // the Sino-Vietnamese reading goes at the end of the answer, whichever way round the card is asked
+  const hanViet = card.hanViet?.trim() || undefined;
+  const answer: Side = hanViet && (term.lang === "ja" || def.lang === "ja") ? { ...bare, trail: hanViet } : bare;
+  if (prompt.lang === "ja" && prompt.reading && answer.lang !== "ja") {
+    const lead = prompt.reading !== prompt.text ? prompt.reading : undefined;
+    return { prompt: { ...prompt, showReading: false }, answer: lead ? { ...answer, lead } : answer };
+  }
+  return { prompt, answer };
 }
+
+/** A side as one of several choices to pick from (a button, a tile): no reading shown, so it hints at nothing. */
+export const choiceSide = (side: Side): Side => ({ ...side, showReading: false, lead: undefined, trail: undefined });
 
 export const pickFlip = (direction: Direction, rng: Rng = Math.random): boolean =>
   direction === "definition" ? true : direction === "term" ? false : rng() < 0.5;
@@ -176,7 +190,7 @@ export function buildTest(allCards: Card[], opts: TestOptions, rng: Rng = Math.r
       const others = distractors(card, flip, allCards, MAX_MC_OPTIONS - 1, rng);
       if (others.length === 0) kind = "write";
       else {
-        const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: sidesOf(c, flip).answer }));
+        const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
         questions.push({ kind: "mc", id: nextId(), cardId: card.id, prompt, answer, options });
         return;
       }
@@ -186,7 +200,7 @@ export function buildTest(allCards: Card[], opts: TestOptions, rng: Rng = Math.r
       if (others.length === 0) kind = "write";
       else {
         const isTrue = rng() < 0.5;
-        const shown = isTrue ? answer : sidesOf(others[0]!, flip).answer;
+        const shown = choiceSide(isTrue ? answer : sidesOf(others[0]!, flip).answer);
         questions.push({ kind: "tf", id: nextId(), cardId: card.id, prompt, answer, shown, isTrue });
         return;
       }
@@ -252,8 +266,8 @@ export function buildMatchRound(cards: Card[], size: number, direction: Directio
   const tiles: MatchTile[] = [];
   for (const c of picked) {
     const { prompt, answer } = sidesOf(c, pickFlip(direction, rng));
-    tiles.push({ tileId: `${c.id}:p`, cardId: c.id, side: prompt, kind: "prompt" });
-    tiles.push({ tileId: `${c.id}:a`, cardId: c.id, side: answer, kind: "answer" });
+    tiles.push({ tileId: `${c.id}:p`, cardId: c.id, side: choiceSide(prompt), kind: "prompt" });
+    tiles.push({ tileId: `${c.id}:a`, cardId: c.id, side: choiceSide(answer), kind: "answer" });
   }
   return shuffle(tiles, rng);
 }
@@ -272,7 +286,7 @@ export function buildDropRound(cards: Card[], count: number, direction: Directio
       const flip = pickFlip(direction, rng);
       const { prompt } = sidesOf(card, flip);
       const others = distractors(card, flip, cards, 3, rng);
-      const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: sidesOf(c, flip).answer }));
+      const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
       return { cardId: card.id, prompt, options };
     });
 }

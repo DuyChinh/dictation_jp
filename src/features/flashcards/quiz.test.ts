@@ -242,3 +242,50 @@ describe("ratings and blitz", () => {
     expect(miss.state).toMatchObject({ streak: 0, bestStreak: 4, right: 4, wrong: 1, score: 50 });
   });
 });
+
+describe("where a reading is shown", () => {
+  const buy = card("b", "購入", "mua; mua sắm", { reading: "こうにゅう" });
+
+  it("keeps the reading off the Japanese question and puts it in front of the meaning", () => {
+    const { prompt, answer } = sidesOf(buy);
+    expect(prompt).toMatchObject({ text: "購入", reading: "こうにゅう", showReading: false });
+    expect(answer).toMatchObject({ text: "mua; mua sắm", lead: "こうにゅう" });
+  });
+
+  it("shows it above the Japanese answer when the meaning is the question", () => {
+    const { prompt, answer } = sidesOf(buy, true);
+    expect(prompt.lead).toBeUndefined();
+    expect(answer).toMatchObject({ text: "購入", reading: "こうにゅう" });
+    expect(answer.showReading).toBeUndefined();
+  });
+
+  it("does not repeat a word that is already its own reading", () => {
+    expect(sidesOf(card("c", "ありがとう", "cảm ơn", { reading: "ありがとう" })).answer.lead).toBeUndefined();
+  });
+
+  it("still accepts the reading as a typed answer, and gives the choices no hint", async () => {
+    const { choiceSide } = await import("./quiz");
+    expect(checkAnswer("こうにゅう", sidesOf(buy, true).answer)).toBe("exact");
+    expect(choiceSide(sidesOf(buy).answer)).toMatchObject({ lead: undefined, showReading: false });
+    const opts = buildTest([buy, card("d", "犬", "chó", { reading: "いぬ" })], { count: 2, direction: "term", kinds: { mc: true, tf: false, write: false, match: false } }, seeded());
+    for (const q of opts) if (q.kind === "mc") for (const o of q.options) expect(o.side.lead).toBeUndefined();
+    const tiles = buildMatchRound([buy, card("d", "犬", "chó", { reading: "いぬ" })], 2, "term", seeded());
+    for (const t of tiles) expect(t.side.lead).toBeUndefined();
+  });
+});
+
+describe("Sino-Vietnamese reading", () => {
+  const buy = card("b", "購入", "mua; mua sắm", { reading: "こうにゅう", hanViet: "CẤU NHẬP" });
+
+  it("goes at the end of the answer, whichever way the card is asked", () => {
+    expect(sidesOf(buy).answer).toMatchObject({ text: "mua; mua sắm", lead: "こうにゅう", trail: "CẤU NHẬP" });
+    expect(sidesOf(buy, true).answer).toMatchObject({ text: "購入", trail: "CẤU NHẬP" });
+    expect(sidesOf(buy).prompt.trail).toBeUndefined();
+    expect(sidesOf(buy, true).prompt.trail).toBeUndefined();
+  });
+  it("is left out of choices, and of cards with no Japanese in them", async () => {
+    const { choiceSide } = await import("./quiz");
+    expect(choiceSide(sidesOf(buy).answer).trail).toBeUndefined();
+    expect(sidesOf(card("e", "to eat", "ăn", { termLang: "en", hanViet: "X" })).answer.trail).toBeUndefined();
+  });
+});

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { UiLang } from "../../shared/i18n/translations";
 import { isCardLang } from "./store";
 import type { CardLang, Direction } from "./types";
@@ -81,3 +81,28 @@ export function submitBest(deckId: string, game: GameName, value: number, better
 const SOUND_KEY = "jd.flash_sound.v1";
 export const soundOn = (): boolean => get(SOUND_KEY) !== "off";
 export const saveSound = (on: boolean) => set(SOUND_KEY, on ? "on" : "off");
+
+const HV_KEY = "jd.flash_hv.v1";
+const hvListeners = new Set<() => void>();
+
+/** Whether the Sino-Vietnamese reading is shown at the end of meanings. On unless turned off. */
+export const showHanViet = (): boolean => get(HV_KEY) !== "off";
+
+export function saveShowHanViet(on: boolean): void {
+  set(HV_KEY, on ? "on" : "off");
+  hvListeners.forEach((l) => l());
+}
+
+function subscribeHv(l: () => void): () => void {
+  hvListeners.add(l);
+  const onStorage = (e: StorageEvent) => e.key === HV_KEY && l();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    hvListeners.delete(l);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useShowHanViet(): [boolean, (on: boolean) => void] {
+  return [useSyncExternalStore(subscribeHv, showHanViet, () => true), saveShowHanViet];
+}

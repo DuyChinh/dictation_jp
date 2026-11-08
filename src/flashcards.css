@@ -596,3 +596,13 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-blitz__stage { min-height: 100px; }
   .fc-miner__scene { max-width: calc((100dvh - 190px) * 100 / 62); margin: 0 auto; }
 }
+
+/* a reading in front of a meaning: "こうにゅう: mua" */
+.fc-side__lead { color: var(--text-muted); font-weight: 600; }
+.fc-side__colon { color: var(--text-muted); }
+
+/* Sino-Vietnamese reading at the end of a meaning */
+.fc-side__trail { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.72em; font-weight: 700; letter-spacing: 0.04em; line-height: 1.6; white-space: nowrap; color: var(--acc); background: var(--acc-soft); font-family: var(--font-family); }
+.fc-reading-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .fc-reading-row { grid-template-columns: 1fr; } }
+.fc-pickers { display: flex; flex-wrap: wrap; gap: 8px 24px; }

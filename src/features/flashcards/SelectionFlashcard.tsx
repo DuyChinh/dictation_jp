@@ -100,7 +100,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
   function save(v: CardValue): string | void {
     const target = resolveDeck(decks, effectiveDeck, ft("deck.default"));
     if (isDuplicate(cards, target, v.term, v.definition)) return ft("create.duplicate");
-    addCard({ deckId: target, ...v, reading: v.reading || undefined });
+    addCard({ deckId: target, ...v, reading: v.reading || undefined, hanViet: v.hanViet || undefined });
     saveLastDeck(target);
     setDeckId(target);
     const name = decks.find((d) => d.id === target)?.name ?? ft("deck.default");

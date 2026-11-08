@@ -29,6 +29,9 @@ export type Scene = {
   nugget: { w: number; h: number };
 };
 
+/** Most a nugget is nudged from its slot, kept below the gap between neighbouring slots so they never overlap. */
+const JITTER = 3;
+
 export const SCENES = {
   wide: { H: 62, cols: [19, 50, 81], rows: [30, 45], nugget: { w: 25, h: 11 } },
   tall: { H: 100, cols: [26, 74], rows: [36, 56, 76], nugget: { w: 44, h: 14 } },
@@ -95,8 +98,8 @@ export function layoutNuggets(count: number, rng: Rng = Math.random, scene: Scen
   const { cols, rows, nugget } = scene;
   const slots = shuffle(cols.flatMap((cx) => rows.map((cy) => ({ cx, cy }))), rng).slice(0, count);
   return slots.map(({ cx, cy }) => ({
-    x: cx - nugget.w / 2 + (rng() - 0.5) * 6,
-    y: cy - nugget.h / 2 + (rng() - 0.5) * 6,
+    x: cx - nugget.w / 2 + (rng() - 0.5) * JITTER,
+    y: cy - nugget.h / 2 + (rng() - 0.5) * JITTER,
     w: nugget.w,
     h: nugget.h,
   }));

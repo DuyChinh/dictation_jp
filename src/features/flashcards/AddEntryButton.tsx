@@ -33,7 +33,7 @@ export function AddEntryButton({ entry, meaning }: { entry: DictEntry; meaning: 
       setDeckName(deck.name);
       return;
     }
-    addCard({ deckId: deck.id, term: s.ja, termLang: "ja", definition, definitionLang: lang, reading: s.reading, entryId: entry.id });
+    addCard({ deckId: deck.id, term: s.ja, termLang: "ja", definition, definitionLang: lang, reading: s.reading, hanViet: s.hanViet || undefined, entryId: entry.id });
     saveLastDeck(deck.id);
     setDeckName(deck.name);
     setResult("added");
