@@ -106,3 +106,20 @@ function subscribeHv(l: () => void): () => void {
 export function useShowHanViet(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribeHv, showHanViet, () => true), saveShowHanViet];
 }
+
+const AUTO_KEY = "jd.flash_autoflip.v1";
+/** Seconds to look at a question before the card turns over by itself: long enough to recall a word and its reading. */
+export const AUTO_FLIP_DEFAULT = 5;
+export const AUTO_FLIP_CHOICES = [3, 5, 8, 10, 15] as const;
+export type AutoFlip = { on: boolean; seconds: number };
+
+export function loadAutoFlip(): AutoFlip {
+  try {
+    const v = JSON.parse(get(AUTO_KEY) ?? "{}") as Partial<AutoFlip>;
+    const seconds = typeof v.seconds === "number" && v.seconds >= 1 && v.seconds <= 60 ? Math.round(v.seconds) : AUTO_FLIP_DEFAULT;
+    return { on: v.on === true, seconds };
+  } catch {
+    return { on: false, seconds: AUTO_FLIP_DEFAULT };
+  }
+}
+export const saveAutoFlip = (a: AutoFlip) => set(AUTO_KEY, JSON.stringify(a));

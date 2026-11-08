@@ -250,6 +250,158 @@ describe("LearnMode", () => {
   });
 });
 
+describe("LearnMode flip and auto-flip", () => {
+  const begin = (cards = seed([["犬", "chó"], ["猫", "mèo"]])) => {
+    render(wrap(<LearnMode deckId="deck1" cards={cards} direction="term" />));
+    fireEvent.click(screen.getByLabelText("Xáo trộn thứ tự"));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+  };
+  beforeEach(() => vi.useFakeTimers());
+
+  it("turns the card with a 3D flip: the question side stays, the answer side is drawn only once it is turned", async () => {
+    begin();
+    const card = document.querySelector(".fc-flash")!;
+    expect(card.className).not.toContain("is-back");
+    expect(document.querySelector(".fc-flash__side--back")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(card.className).toContain("is-back");
+    expect(document.querySelector(".fc-flash__side--front")!.getAttribute("aria-hidden")).toBe("true");
+    expect(document.querySelector(".fc-flash__side--back")!.getAttribute("aria-hidden")).toBe("false");
+    // turning back keeps the answer drawn until the turn is over, then drops it
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(card.className).not.toContain("is-back");
+    expect(document.querySelector(".fc-flash__side--back")).toBeTruthy();
+    await act(async () => void vi.advanceTimersByTime(700));
+    expect(document.querySelector(".fc-flash__side--back")).toBeNull();
+  });
+
+  it("does not turn by itself unless asked, and the choice is remembered", async () => {
+    begin();
+    await act(async () => void vi.advanceTimersByTime(60000));
+    expect(document.querySelector(".fc-flash.is-back")).toBeNull();
+    expect(document.querySelector(".fc-flash__timer")).toBeNull();
+  });
+
+  it("turns over after the chosen seconds, 5 by default", async () => {
+    render(wrap(<LearnMode deckId="deck1" cards={seed([["犬", "chó"], ["猫", "mèo"]])} direction="term" />));
+    fireEvent.click(screen.getByLabelText("Tự động lật thẻ sau một khoảng thời gian"));
+    expect((screen.getByLabelText("Số giây trước khi lật") as HTMLSelectElement).value).toBe("5");
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(document.querySelector(".fc-flash__timer")).toBeTruthy();
+    await act(async () => void vi.advanceTimersByTime(4900));
+    expect(document.querySelector(".fc-flash.is-back")).toBeNull();
+    await act(async () => void vi.advanceTimersByTime(200));
+    expect(document.querySelector(".fc-flash.is-back")).toBeTruthy();
+    expect(document.querySelector(".fc-flash__timer")).toBeNull();
+    // the next card starts its own countdown
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(document.querySelector(".fc-flash.is-back")).toBeNull();
+    await act(async () => void vi.advanceTimersByTime(5100));
+    expect(document.querySelector(".fc-flash.is-back")).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem("jd.flash_autoflip.v1")!)).toEqual({ on: true, seconds: 5 });
+  });
+
+  it("uses the seconds that were picked, and can be switched off during the round", async () => {
+    localStorage.setItem("jd.flash_autoflip.v1", JSON.stringify({ on: true, seconds: 3 }));
+    begin();
+    expect(screen.getByRole("button", { name: /Tự lật: 3s/ })).toBeTruthy();
+    await act(async () => void vi.advanceTimersByTime(3100));
+    expect(document.querySelector(".fc-flash.is-back")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Tự lật: 3s/ }));
+    expect(screen.getByRole("button", { name: /Tự lật: tắt/ })).toBeTruthy();
+    await act(async () => void vi.advanceTimersByTime(10000));
+    expect(document.querySelector(".fc-flash.is-back")).toBeNull();
+  });
+});
+
+describe("LearnMode keeps your place", () => {
+  const deckCards = () => seed([["犬", "chó"], ["猫", "mèo"], ["水", "nước"], ["火", "lửa"]]);
+  const open = (cards: Card[]) => render(wrap(<LearnMode deckId="deck1" cards={cards} direction="term" />));
+  const begin = (cards: Card[]) => {
+    const r = open(cards);
+    fireEvent.click(screen.getByLabelText("Xáo trộn thứ tự"));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    return r;
+  };
+  const promptNow = () => document.querySelector(".fc-flash__side--front .fc-side__text")!.textContent!;
+
+  it("comes back to the same card, in the same order, with the same ones marked missed", () => {
+    const cards = deckCards();
+    const first = begin(cards);
+    const order = [promptNow()];
+    fireEvent.click(screen.getByRole("button", { name: /Chưa nhớ/ }));
+    order.push(promptNow());
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    const third = promptNow();
+    first.unmount();
+
+    open(readState().cards);
+    // straight into the round, no start screen
+    expect(screen.queryByRole("button", { name: "Bắt đầu" })).toBeNull();
+    expect(screen.getByText("3 / 4")).toBeTruthy();
+    expect(promptNow()).toBe(third);
+    expect(screen.getByRole("status").textContent).toBe("Đã nhớ chỗ bạn học dở, tiếp tục ở thẻ 3/4.");
+    // finishing shows the one missed earlier for another go
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(screen.getByRole("button", { name: "Học lại 1 từ chưa nhớ" })).toBeTruthy();
+    expect(order).toHaveLength(2);
+  });
+
+  it("is forgotten once the round is finished, so the next visit starts fresh", () => {
+    const cards = deckCards();
+    const first = begin(cards.slice(0, 2));
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(screen.getByText("Hoàn thành!")).toBeTruthy();
+    expect(localStorage.getItem("jd.flash_learn.v1")).toBeNull();
+    first.unmount();
+    open(readState().cards);
+    expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
+  });
+
+  it("start over goes back to the start screen and drops the saved place", () => {
+    begin(deckCards());
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(localStorage.getItem("jd.flash_learn.v1")).toContain("deck1");
+    fireEvent.click(screen.getByRole("button", { name: /Bắt đầu lại/ }));
+    expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
+    expect(localStorage.getItem("jd.flash_learn.v1")).toBeNull();
+  });
+
+  it("skips cards that were deleted meanwhile and keeps the position", () => {
+    const cards = deckCards();
+    const first = begin(cards);
+    const shown: string[] = [promptNow()];
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    shown.push(promptNow());
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    const next = promptNow();
+    first.unmount();
+    // the card answered first is deleted
+    const remaining = readState().cards.filter((c) => c.term !== shown[0]);
+    open(remaining);
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(promptNow()).toBe(next);
+  });
+
+  it("does not resume a round older than a month, or one for another deck", () => {
+    const cards = deckCards();
+    const first = begin(cards);
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    first.unmount();
+    const store = JSON.parse(localStorage.getItem("jd.flash_learn.v1")!);
+    store.deck1.at = Date.now() - 40 * 24 * 3600 * 1000;
+    localStorage.setItem("jd.flash_learn.v1", JSON.stringify(store));
+    open(readState().cards);
+    expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
+    cleanup();
+    render(wrap(<LearnMode deckId="deck-other" cards={readState().cards} direction="term" />));
+    expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
+  });
+});
+
 describe("LearnMode swipe", () => {
   const start = () => {
     const cards = seed([["犬", "chó"], ["猫", "mèo"]]);
@@ -739,7 +891,7 @@ describe("readings next to the meaning", () => {
     expect(screen.getByText("購入")).toBeTruthy();
     expect(screen.queryByText("こうにゅう")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
-    expect(document.querySelector(".fc-flash .fc-side__text")!.textContent).toBe("こうにゅう: mua; mua sắm");
+    expect(document.querySelector(".fc-flash__side--back .fc-side__text")!.textContent).toBe("こうにゅう: mua; mua sắm");
   });
 
   it("a multiple choice question shows the kanji alone and no reading among the choices", () => {

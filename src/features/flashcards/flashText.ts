@@ -203,6 +203,13 @@ const vi = {
   "deck.hanViet.on": "Có Hán Việt",
   "deck.hanViet.off": "Không Hán Việt",
   "learn.swipe": "Kéo hoặc vuốt thẻ sang phải nếu đã nhớ, sang trái nếu chưa nhớ.",
+  "learn.auto": "Tự động lật thẻ sau một khoảng thời gian",
+  "learn.autoSeconds": "Số giây trước khi lật",
+  "learn.autoSecs": "{n} giây",
+  "learn.autoChip": "Tự lật: {n}s",
+  "learn.autoOff": "Tự lật: tắt",
+  "learn.restart": "Bắt đầu lại",
+  "learn.resumed": "Đã nhớ chỗ bạn học dở, tiếp tục ở thẻ {n}/{total}.",
 } as const;
 
 export type FtKey = keyof typeof vi;
@@ -408,6 +415,13 @@ const en: Table = {
   "deck.hanViet.on": "With Sino-Vietnamese",
   "deck.hanViet.off": "Without",
   "learn.swipe": "Drag or swipe the card right if you knew it, left if you did not.",
+  "learn.auto": "Turn cards over automatically after a while",
+  "learn.autoSeconds": "Seconds before turning",
+  "learn.autoSecs": "{n} seconds",
+  "learn.autoChip": "Auto-flip: {n}s",
+  "learn.autoOff": "Auto-flip: off",
+  "learn.restart": "Start over",
+  "learn.resumed": "Picked up where you left off: card {n} of {total}.",
 };
 
 const ja: Table = {
@@ -610,6 +624,13 @@ const ja: Table = {
   "deck.hanViet.on": "漢字音あり",
   "deck.hanViet.off": "漢字音なし",
   "learn.swipe": "覚えていたらカードを右へ、まだなら左へドラッグ（スワイプ）します。",
+  "learn.auto": "一定時間後にカードを自動でめくる",
+  "learn.autoSeconds": "めくるまでの秒数",
+  "learn.autoSecs": "{n}秒",
+  "learn.autoChip": "自動：{n}秒",
+  "learn.autoOff": "自動：オフ",
+  "learn.restart": "最初からやり直す",
+  "learn.resumed": "前回の続きから再開します：{total}枚中{n}枚目。",
 };
 
 const tables = { vi: vi as Table, en, ja } as const;

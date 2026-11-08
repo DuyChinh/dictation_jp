@@ -129,13 +129,20 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-progress > span { display: block; height: 100%; background: var(--primary-color); transition: width 0.25s ease; }
 .fc-learn__count { margin: 0; text-align: center; font-size: 13.5px; color: var(--text-muted); }
 .fc-flash { position: relative; }
-.fc-flash__face {
-  width: 100%; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px 20px; box-sizing: border-box;
-  font: inherit; color: var(--text-main); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; box-shadow: var(--card-shadow); cursor: pointer;
+/* the card: a button holding two faces that turn over together in 3D */
+.fc-flash__face { display: block; width: 100%; padding: 0; border: 0; background: transparent; font: inherit; color: var(--text-main); cursor: pointer; perspective: 1400px; }
+.fc-flash__inner { display: grid; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.15, 0.2, 1); }
+.fc-flash.is-back .fc-flash__inner { transform: rotateY(180deg); }
+.fc-flash__side {
+  position: relative; grid-area: 1 / 1; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px 20px; box-sizing: border-box;
+  background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; box-shadow: var(--card-shadow);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
 }
-.fc-flash.is-back .fc-flash__face { background: var(--primary-light); border-color: var(--primary-color); }
-.fc-flash__face .fc-side { animation: fc-pop 0.18s ease-out; }
-.fc-flash__face .fc-side--big { font-size: clamp(20px, 4.2vw, 30px); line-height: 1.4; }
+.fc-flash__side--back { transform: rotateY(180deg); background: var(--primary-light); border-color: var(--primary-color); }
+.fc-flash__side .fc-side--big { font-size: clamp(20px, 4.2vw, 30px); line-height: 1.4; }
+/* the time left before the card turns by itself */
+.fc-flash__timer { position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: linear-gradient(90deg, var(--primary-color), var(--tone-dictation)); transform-origin: left; animation: fc-timer linear forwards; }
+@keyframes fc-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .fc-flash__label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .fc-flash__hint { font-size: 13px; color: var(--text-muted); }
 .fc-flash__speak { position: absolute; top: 12px; right: 12px; }
@@ -472,7 +479,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-page { gap: 14px; }
   .fc-modes { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .fc-decks { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  .fc-flash__face { min-height: 450px; }
+  .fc-flash__side { min-height: 450px; }
   .fc-miner__scene { border-radius: 14px; }
 }
 
@@ -535,8 +542,8 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-modal__box { padding: 16px; border-radius: 14px; }
 
   /* learn */
-  .fc-flash__face { min-height: 360px; padding: 20px 14px; border-radius: 16px; }
-  .fc-flash__face .fc-side--big { font-size: 22px; }
+  .fc-flash__side { min-height: 360px; padding: 20px 14px; border-radius: 16px; }
+  .fc-flash__side .fc-side--big { font-size: 22px; }
   .fc-learn__answers .btn { height: 56px; }
 
   /* test */
@@ -593,7 +600,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 @media (max-height: 520px) and (orientation: landscape) {
   .fc-shoot__range { height: 62vh; height: 62dvh; min-height: 220px; }
   .fc-drop__sky { height: 38vh; height: 38dvh; min-height: 170px; }
-  .fc-flash__face { min-height: 270px; }
+  .fc-flash__side { min-height: 270px; }
   .fc-blitz__stage { min-height: 100px; }
   .fc-miner__scene { max-width: calc((100dvh - 190px) * 100 / 62); margin: 0 auto; }
 }
@@ -611,11 +618,22 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 /* dragging the study card: right is "knew it", left is "didn't" */
 .fc-flash__drag { position: relative; touch-action: pan-y; cursor: grab; transition: transform 0.22s ease, opacity 0.22s ease; will-change: transform; }
 .fc-flash__drag.is-dragging { transition: none; cursor: grabbing; }
-.fc-flash__drag.is-right .fc-flash__face { border-color: var(--ok); background: var(--ok-soft); }
-.fc-flash__drag.is-left .fc-flash__face { border-color: var(--bad); background: var(--bad-soft); }
+.fc-flash__drag.is-right .fc-flash__side { border-color: var(--ok); background: var(--ok-soft); }
+.fc-flash__drag.is-left .fc-flash__side { border-color: var(--bad); background: var(--bad-soft); }
 .fc-flash__stamp { position: absolute; top: 18px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: var(--card-bg); border: 2.5px solid; opacity: 0; pointer-events: none; }
 .fc-flash__stamp--ok { left: 16px; color: var(--ok); border-color: var(--ok); transform: rotate(-8deg); }
 .fc-flash__stamp--bad { right: 16px; color: var(--bad); border-color: var(--bad); transform: rotate(8deg); }
 .fc-flash__speak { z-index: 1; }
 .fc-swipehint { margin: 0; text-align: center; font-size: 13px; color: var(--text-muted); }
-@media (prefers-reduced-motion: reduce) { .fc-flash__drag { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .fc-flash__drag, .fc-flash__inner { transition: none; } .fc-flash__timer { animation: none; display: none; } }
+
+/* auto-flip: setting on the start screen, chip during the session */
+.fc-auto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.fc-auto__secs select { min-height: 40px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--card-border); border-radius: 8px; }
+.fc-auto__secs select:disabled { opacity: 0.5; }
+.fc-learn__meta { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.fc-learn__meta .fc-learn__count { margin: 0; }
+.fc-autochip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 999px; }
+.fc-autochip:hover { border-color: var(--primary-color); }
+.fc-autochip.is-on { color: var(--primary-color); background: var(--primary-light); border-color: var(--primary-color); }
+@media (pointer: coarse) { .fc-autochip { min-height: 44px; } .fc-auto__secs select { min-height: 44px; font-size: 16px; } }

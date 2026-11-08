@@ -5,6 +5,7 @@ import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistorySto
 import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
 import { FLASHCARD_KEY } from "../../features/flashcards/store";
+import { LEARN_KEY } from "../../features/flashcards/learnProgress";
 import { syncFlashcards } from "../../features/flashcards/sync";
 import { LISTENING_ATTEMPTS_KEY, getAllListeningAttempts, uploadListeningAttempt } from "./listeningAttemptStore";
 import {
@@ -35,6 +36,7 @@ const PRACTICE_KEYS = [
   PAPER_EXAM_KEY,
   PAPER_EXAM_HISTORY_KEY,
   FLASHCARD_KEY,
+  LEARN_KEY,
 ];
 
 /** Rows per import request, to stay well under the server's request size limit. */
