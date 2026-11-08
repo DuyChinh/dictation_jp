@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../shared/ui/Icon";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
@@ -14,6 +14,12 @@ type Scope = "all" | "due";
 
 type Item = { card: Card; flip: boolean };
 
+/** How far (px) a card must be dragged sideways to count as an answer, and how far a press may move and still be a tap. */
+const SWIPE_MIN = 70;
+const SWIPE_MAX = 120;
+const TAP_SLOP = 8;
+const LEAVE_MS = 220;
+
 /** Flip-through study: see one side, think, flip, then say whether you knew it. Answers move cards between boxes. */
 export function LearnMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
@@ -25,6 +31,15 @@ export function LearnMode({ deckId, cards, direction }: Props) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [unknown, setUnknown] = useState<string[]>([]);
+  // dragging the card: how far it is from the middle, whether a finger or mouse is down, and which way it is leaving
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [leaving, setLeaving] = useState<-1 | 1 | null>(null);
+  const press = useRef<{ x: number; y: number; id: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const dragRef = useRef<HTMLDivElement>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
   function start(from: Card[]) {
     const ordered = mix ? shuffle(from) : [...from].sort((a, b) => a.createdAt - b.createdAt);
@@ -43,6 +58,53 @@ export function LearnMode({ deckId, cards, direction }: Props) {
     if (!known) setUnknown((u) => [...u, item.card.id]);
     setIndex((i) => i + 1);
     setFlipped(false);
+    setDx(0);
+    setDragging(false);
+    setLeaving(null);
+  }
+
+  const threshold = () => Math.min(SWIPE_MAX, Math.max(SWIPE_MIN, (dragRef.current?.offsetWidth ?? 0) * 0.28));
+
+  function onPointerDown(e: PointerEvent<HTMLDivElement>) {
+    if (leaving || (e.pointerType === "mouse" && e.button !== 0)) return;
+    // the speaker is its own control
+    if ((e.target as Element).closest(".speak-btn")) return;
+    press.current = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+    suppressClick.current = false;
+  }
+
+  function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+    const p = press.current;
+    if (!p || p.id !== e.pointerId) return;
+    const moveX = e.clientX - p.x;
+    if (!p.moved) {
+      if (Math.abs(moveX) < TAP_SLOP) return;
+      // mostly up or down is a scroll, not a swipe
+      if (Math.abs(e.clientY - p.y) > Math.abs(moveX)) {
+        press.current = null;
+        return;
+      }
+      p.moved = true;
+      setDragging(true);
+      dragRef.current?.setPointerCapture?.(e.pointerId);
+    }
+    setDx(moveX);
+  }
+
+  function endPress(e: PointerEvent<HTMLDivElement>, cancelled = false) {
+    const p = press.current;
+    if (!p || p.id !== e.pointerId) return;
+    press.current = null;
+    if (!p.moved) return;
+    suppressClick.current = true;
+    setDragging(false);
+    const moved = e.clientX - p.x;
+    if (!cancelled && Math.abs(moved) >= threshold()) {
+      const dir = moved > 0 ? 1 : -1;
+      setLeaving(dir);
+      setDx(dir * 700);
+      leaveTimer.current = setTimeout(() => answer(dir > 0), LEAVE_MS);
+    } else setDx(0);
   }
 
   useEffect(() => {
@@ -122,12 +184,36 @@ export function LearnMode({ deckId, cards, direction }: Props) {
       <p className="fc-learn__count">{index + 1} / {session.length}</p>
 
       <div className={`fc-flash${flipped ? " is-back" : ""}`}>
-        <button type="button" className="fc-flash__face" onClick={() => setFlipped((f) => !f)} aria-label={ft("learn.flip")}>
-          <span className="fc-flash__label">{flipped ? ft("learn.back") : ft("learn.front")}</span>
-          <SideView key={`${item!.card.id}:${flipped}`} side={shown} big speak={false} />
-          {!flipped && <span className="fc-flash__hint">{ft("learn.flipHint")}</span>}
-        </button>
-        {shown.lang === "ja" && <SpeakButton className="fc-flash__speak" text={shown.reading || shown.text} />}
+        <div
+          key={index}
+          ref={dragRef}
+          className={`fc-flash__drag${dragging ? " is-dragging" : ""}${dx > 40 ? " is-right" : dx < -40 ? " is-left" : ""}`}
+          style={{ transform: dx ? `translateX(${dx}px) rotate(${Math.max(-18, Math.min(18, dx / 18))}deg)` : undefined }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={(e) => endPress(e)}
+          onPointerCancel={(e) => endPress(e, true)}
+          onClickCapture={(e) => {
+            if (suppressClick.current) {
+              suppressClick.current = false;
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          <span className="fc-flash__stamp fc-flash__stamp--ok" style={{ opacity: Math.min(1, Math.max(0, dx) / threshold()) }} aria-hidden="true">
+            <Icon name="check" size={20} strokeWidth={3} /> {ft("learn.know")}
+          </span>
+          <span className="fc-flash__stamp fc-flash__stamp--bad" style={{ opacity: Math.min(1, Math.max(0, -dx) / threshold()) }} aria-hidden="true">
+            <Icon name="close" size={20} strokeWidth={3} /> {ft("learn.dontKnow")}
+          </span>
+          <button type="button" className="fc-flash__face" onClick={() => setFlipped((f) => !f)} aria-label={ft("learn.flip")}>
+            <span className="fc-flash__label">{flipped ? ft("learn.back") : ft("learn.front")}</span>
+            <SideView key={`${item!.card.id}:${flipped}`} side={shown} big speak={false} />
+            {!flipped && <span className="fc-flash__hint">{ft("learn.flipHint")}</span>}
+          </button>
+          {shown.lang === "ja" && <SpeakButton className="fc-flash__speak" text={shown.reading || shown.text} />}
+        </div>
       </div>
 
       <div className="fc-learn__answers">
@@ -138,6 +224,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
           <Icon name="check" size={18} /> {ft("learn.know")}
         </button>
       </div>
+      <p className="fc-swipehint">{ft("learn.swipe")}</p>
       <p className="fc-keys">{ft("learn.keys")}</p>
     </section>
   );

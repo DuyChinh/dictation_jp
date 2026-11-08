@@ -130,12 +130,12 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-learn__count { margin: 0; text-align: center; font-size: 13.5px; color: var(--text-muted); }
 .fc-flash { position: relative; }
 .fc-flash__face {
-  width: 100%; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px 20px; box-sizing: border-box;
+  width: 100%; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px 20px; box-sizing: border-box;
   font: inherit; color: var(--text-main); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; box-shadow: var(--card-shadow); cursor: pointer;
 }
 .fc-flash.is-back .fc-flash__face { background: var(--primary-light); border-color: var(--primary-color); }
 .fc-flash__face .fc-side { animation: fc-pop 0.18s ease-out; }
-.fc-flash__face .fc-side--big { font-size: clamp(28px, 7vw, 44px); }
+.fc-flash__face .fc-side--big { font-size: clamp(20px, 4.2vw, 30px); line-height: 1.4; }
 .fc-flash__label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .fc-flash__hint { font-size: 13px; color: var(--text-muted); }
 .fc-flash__speak { position: absolute; top: 12px; right: 12px; }
@@ -472,7 +472,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-page { gap: 14px; }
   .fc-modes { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .fc-decks { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  .fc-flash__face { min-height: 300px; }
+  .fc-flash__face { min-height: 450px; }
   .fc-miner__scene { border-radius: 14px; }
 }
 
@@ -535,7 +535,8 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-modal__box { padding: 16px; border-radius: 14px; }
 
   /* learn */
-  .fc-flash__face { min-height: 240px; padding: 20px 14px; border-radius: 16px; }
+  .fc-flash__face { min-height: 360px; padding: 20px 14px; border-radius: 16px; }
+  .fc-flash__face .fc-side--big { font-size: 22px; }
   .fc-learn__answers .btn { height: 56px; }
 
   /* test */
@@ -592,7 +593,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 @media (max-height: 520px) and (orientation: landscape) {
   .fc-shoot__range { height: 62vh; height: 62dvh; min-height: 220px; }
   .fc-drop__sky { height: 38vh; height: 38dvh; min-height: 170px; }
-  .fc-flash__face { min-height: 180px; }
+  .fc-flash__face { min-height: 270px; }
   .fc-blitz__stage { min-height: 100px; }
   .fc-miner__scene { max-width: calc((100dvh - 190px) * 100 / 62); margin: 0 auto; }
 }
@@ -606,3 +607,15 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-reading-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .fc-reading-row { grid-template-columns: 1fr; } }
 .fc-pickers { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+
+/* dragging the study card: right is "knew it", left is "didn't" */
+.fc-flash__drag { position: relative; touch-action: pan-y; cursor: grab; transition: transform 0.22s ease, opacity 0.22s ease; will-change: transform; }
+.fc-flash__drag.is-dragging { transition: none; cursor: grabbing; }
+.fc-flash__drag.is-right .fc-flash__face { border-color: var(--ok); background: var(--ok-soft); }
+.fc-flash__drag.is-left .fc-flash__face { border-color: var(--bad); background: var(--bad-soft); }
+.fc-flash__stamp { position: absolute; top: 18px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: var(--card-bg); border: 2.5px solid; opacity: 0; pointer-events: none; }
+.fc-flash__stamp--ok { left: 16px; color: var(--ok); border-color: var(--ok); transform: rotate(-8deg); }
+.fc-flash__stamp--bad { right: 16px; color: var(--bad); border-color: var(--bad); transform: rotate(8deg); }
+.fc-flash__speak { z-index: 1; }
+.fc-swipehint { margin: 0; text-align: center; font-size: 13px; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .fc-flash__drag { transition: none; } }

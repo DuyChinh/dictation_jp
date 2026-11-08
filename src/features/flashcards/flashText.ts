@@ -202,6 +202,7 @@ const vi = {
   "deck.hanViet": "Âm Hán Việt",
   "deck.hanViet.on": "Có Hán Việt",
   "deck.hanViet.off": "Không Hán Việt",
+  "learn.swipe": "Kéo hoặc vuốt thẻ sang phải nếu đã nhớ, sang trái nếu chưa nhớ.",
 } as const;
 
 export type FtKey = keyof typeof vi;
@@ -406,6 +407,7 @@ const en: Table = {
   "deck.hanViet": "Sino-Vietnamese reading",
   "deck.hanViet.on": "With Sino-Vietnamese",
   "deck.hanViet.off": "Without",
+  "learn.swipe": "Drag or swipe the card right if you knew it, left if you did not.",
 };
 
 const ja: Table = {
@@ -607,6 +609,7 @@ const ja: Table = {
   "deck.hanViet": "ベトナム漢字音",
   "deck.hanViet.on": "漢字音あり",
   "deck.hanViet.off": "漢字音なし",
+  "learn.swipe": "覚えていたらカードを右へ、まだなら左へドラッグ（スワイプ）します。",
 };
 
 const tables = { vi: vi as Table, en, ja } as const;

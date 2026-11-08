@@ -16,6 +16,20 @@ import { AddEntryButton } from "./AddEntryButton";
 import { addCard, createDeck, readState } from "./store";
 import type { Card } from "./types";
 
+// jsdom has no PointerEvent; a mouse event with the extra fields stands in so positions reach the handlers
+if (typeof window.PointerEvent === "undefined") {
+  class FakePointerEvent extends MouseEvent {
+    pointerId: number;
+    pointerType: string;
+    constructor(type: string, init: MouseEventInit & { pointerId?: number; pointerType?: string } = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 0;
+      this.pointerType = init.pointerType ?? "mouse";
+    }
+  }
+  window.PointerEvent = FakePointerEvent as unknown as typeof PointerEvent;
+}
+
 const searchDictionary = vi.fn();
 const lookupWord = vi.fn();
 const fetchEntry = vi.fn();
@@ -233,6 +247,70 @@ describe("LearnMode", () => {
     expect(screen.getByRole("radio", { name: "Cần ôn hôm nay (1)" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     expect(screen.getByText("1 / 1")).toBeTruthy();
+  });
+});
+
+describe("LearnMode swipe", () => {
+  const start = () => {
+    const cards = seed([["犬", "chó"], ["猫", "mèo"]]);
+    render(wrap(<LearnMode deckId="deck1" cards={cards} direction="term" />));
+    fireEvent.click(screen.getByLabelText("Xáo trộn thứ tự"));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    return document.querySelector(".fc-flash__drag") as HTMLElement;
+  };
+  const drag = (el: HTMLElement, from: number, to: number, y = 0) => {
+    fireEvent.pointerDown(el, { clientX: from, clientY: 0, pointerId: 1, pointerType: "touch", button: 0 });
+    fireEvent.pointerMove(el, { clientX: (from + to) / 2, clientY: y / 2, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerMove(el, { clientX: to, clientY: y, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerUp(el, { clientX: to, clientY: y, pointerId: 1, pointerType: "touch" });
+  };
+  beforeEach(() => vi.useFakeTimers());
+
+  it("a swipe to the right marks the card known, after the card flies off", async () => {
+    const el = start();
+    drag(el, 100, 260);
+    expect(el.className).toContain("is-right");
+    // not answered until it has left
+    expect(cardOf("犬").right).toBe(0);
+    await act(async () => void vi.advanceTimersByTime(300));
+    expect(cardOf("犬")).toMatchObject({ box: 1, right: 1 });
+    expect(screen.getByText("2 / 2")).toBeTruthy();
+    expect((document.querySelector(".fc-flash__drag") as HTMLElement).style.transform).toBe("");
+  });
+
+  it("a swipe to the left marks it not known", async () => {
+    const el = start();
+    drag(el, 260, 100);
+    expect(el.className).toContain("is-left");
+    await act(async () => void vi.advanceTimersByTime(300));
+    expect(cardOf("犬")).toMatchObject({ box: 0, wrong: 1 });
+  });
+
+  it("a short drag springs back and does not flip or answer", async () => {
+    const el = start();
+    drag(el, 100, 130);
+    await act(async () => void vi.advanceTimersByTime(300));
+    expect(cardOf("犬").right + cardOf("犬").wrong).toBe(0);
+    expect(screen.getByText("1 / 2")).toBeTruthy();
+    expect(screen.getByText("犬")).toBeTruthy();
+    expect(el.style.transform).toBe("");
+  });
+
+  it("a mostly vertical move is a scroll, not a swipe", async () => {
+    const el = start();
+    drag(el, 100, 190, 300);
+    await act(async () => void vi.advanceTimersByTime(300));
+    expect(screen.getByText("1 / 2")).toBeTruthy();
+    expect(cardOf("犬").right).toBe(0);
+  });
+
+  it("a drag does not count as a tap, but a tap still flips", () => {
+    const el = start();
+    drag(el, 100, 130);
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(screen.queryByText("chó")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(screen.getByText("chó")).toBeTruthy();
   });
 });
 
