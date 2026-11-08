@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
@@ -32,6 +32,8 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
   const [saved, setSaved] = useState<{ deckId: string; deckName: string } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // where the form sits vertically once its height is known: under the selection, or above it, but always on screen
+  const [panelTop, setPanelTop] = useState<number | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -90,6 +92,28 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
     };
   }, [open, close]);
 
+  const anchor = picked?.rect ?? null;
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    if (!open || !el || !anchor) {
+      setPanelTop(null);
+      return;
+    }
+    const place = () => {
+      const h = el.offsetHeight;
+      const vh = window.innerHeight;
+      const below = anchor.bottom + 8;
+      const above = anchor.top - h - 8;
+      const top = below + h <= vh - 8 ? below : above >= 8 ? above : Math.max(8, vh - h - 8);
+      setPanelTop(top);
+    };
+    place();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, anchor, saved]);
+
   if (!picked) return null;
 
   const effectiveDeck = decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
@@ -117,7 +141,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
         role="dialog"
         aria-label={ft("select.title")}
         data-nolookup
-        style={{ left, top: Math.min(top, window.innerHeight - 120) }}
+        style={{ left, top: panelTop ?? Math.min(top, window.innerHeight - 120) }}
       >
         <button type="button" className="dict-popup__close" onClick={close} aria-label={ft("common.close")}>
           <Icon name="close" size={16} />

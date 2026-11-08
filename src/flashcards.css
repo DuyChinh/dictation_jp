@@ -253,7 +253,8 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-match__grid { grid-template-columns: repeat(2, 1fr); }
   .fc-q__options, .fc-drop__options { grid-template-columns: 1fr; }
   .fc-q__match li { grid-template-columns: 1fr; }
-  .fc-selpanel { left: 8px !important; right: 8px; width: auto; }
+  /* on a phone the form is a sheet at the bottom of the screen, so it can never run off it */
+  .fc-selpanel { left: 8px !important; right: 8px; width: auto; top: auto !important; bottom: calc(8px + var(--safe-bottom)); }
   .fc-drop__sky { height: 260px; }
   .fc-newdeck, .fc-rename { flex-wrap: wrap; }
 }
