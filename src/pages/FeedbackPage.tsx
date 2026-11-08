@@ -6,6 +6,8 @@ import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { ApiError } from "../shared/api/client";
 import { triggerConfetti } from "../shared/utils/confetti";
 import { useAuth } from "../features/auth/AuthContext";
+import { FEEDBACK } from "../config/feedback";
+import { FeedbackComingSoon } from "../features/feedback/ComingSoon";
 import {
   FEEDBACK_CATEGORIES,
   listFeedback,
@@ -188,7 +190,7 @@ function Composer({ onPosted }: { onPosted: (item: FeedbackItem) => void }) {
   );
 }
 
-export function FeedbackPage() {
+function FeedbackBoard() {
   const { t } = useUiLanguage();
   const { user, loading: authLoading } = useAuth();
   const [sort, setSort] = useState<FeedbackSort>("new");
@@ -343,4 +345,8 @@ export function FeedbackPage() {
       </div>
     </AppShell>
   );
+}
+
+export function FeedbackPage() {
+  return FEEDBACK.comingSoon ? <FeedbackComingSoon /> : <FeedbackBoard />;
 }
