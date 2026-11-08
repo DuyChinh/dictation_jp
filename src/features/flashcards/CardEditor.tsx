@@ -29,6 +29,8 @@ type Props = {
   /** Empty the boxes and focus the first one after a successful save, to add the next card. */
   clearAfterSubmit?: boolean;
   autoFocus?: boolean;
+  /** Told what is typed in the boxes whenever it changes: a complete card, or null while a box is empty. */
+  onDraft?: (draft: CardValue | null) => void;
 };
 
 const SEARCH_DELAY = 300;
@@ -41,7 +43,7 @@ const meaningHint = (leftLang: CardLang, rightLang: CardLang): MeaningPair =>
  * its own language. Typing in the left box looks the word up and fills the right box with the meaning in the
  * language chosen there, until the learner types in the right box themselves.
  */
-export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false }: Props) {
+export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft }: Props) {
   const { uiLang } = useUiLanguage();
   const ft = useFt();
   const [left, setLeft] = useState(initial?.term ?? "");
@@ -165,6 +167,17 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       leftRef.current?.focus();
     }
   }
+
+  // let the page keep what is half typed, so leaving the page can still save it
+  useEffect(() => {
+    onDraft?.(
+      left.trim() && right.trim()
+        ? { term: left.trim(), termLang: leftLang, definition: right.trim(), definitionLang: rightLang, reading: hasJapanese ? reading.trim() : "", hanViet: hasJapanese ? hanViet.trim() : "", entryId }
+        : null,
+    );
+    // onDraft is only a listener
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [left, right, leftLang, rightLang, reading, hanViet, entryId, hasJapanese]);
 
   const langName = (l: CardLang) => ft(`lang.${l}`);
 

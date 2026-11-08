@@ -345,3 +345,14 @@ try {
 } catch {
   /* storage blocked: nothing to move */
 }
+
+/** Brings back a card that was just deleted. */
+export function restoreCard(id: string): void {
+  const s = readState();
+  const now = Date.now();
+  writeState({ ...s, cards: s.cards.map((c) => {
+    if (c.id !== id || !c.deleted) return c;
+    const { deleted: _gone, ...rest } = c;
+    return { ...rest, updatedAt: now };
+  }) });
+}

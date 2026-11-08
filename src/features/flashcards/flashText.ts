@@ -292,6 +292,11 @@ const vi = {
   "mill.takeHome": "Bạn nhận được {prize} điểm thưởng.",
   "mill.reached": "Trả lời đúng {n}/{total} câu.",
   "mill.newBest": "Giải thưởng cao nhất mới!",
+  "create.save": "Lưu",
+  "create.back": "Quay lại",
+  "create.autosave": "Từ đang gõ dở sẽ tự động được lưu khi bạn quay lại.",
+  "undo.deleted": "Đã xóa “{term}”.",
+  "undo.undo": "Hoàn tác",
 } as const;
 
 export type FtKey = keyof typeof vi;
@@ -586,6 +591,11 @@ const en: Table = {
   "mill.takeHome": "You take home {prize} points.",
   "mill.reached": "{n} of {total} questions right.",
   "mill.newBest": "New best prize!",
+  "create.save": "Save",
+  "create.back": "Back",
+  "create.autosave": "A word you are still typing is saved automatically when you go back.",
+  "undo.deleted": "Deleted “{term}”.",
+  "undo.undo": "Undo",
 };
 
 const ja: Table = {
@@ -877,6 +887,11 @@ const ja: Table = {
   "mill.takeHome": "{prize}ポイントを獲得しました。",
   "mill.reached": "{total}問中{n}問正解。",
   "mill.newBest": "最高賞金を更新！",
+  "create.save": "保存",
+  "create.back": "戻る",
+  "create.autosave": "入力途中の単語は、戻るときに自動で保存されます。",
+  "undo.deleted": "「{term}」を削除しました。",
+  "undo.undo": "元に戻す",
 };
 
 const tables = { vi: vi as Table, en, ja } as const;

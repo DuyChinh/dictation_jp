@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CardEditor, type CardValue } from "../features/flashcards/CardEditor";
 import { DirectionPicker, HanVietPicker } from "../features/flashcards/DirectionPicker";
 import { useFt } from "../features/flashcards/flashText";
 import { useDirection, useShowHanViet } from "../features/flashcards/prefs";
-import { SideView } from "../features/flashcards/SideView";
-import { cardsOf, deckStats, deleteCard, deleteDeck, renameDeck, updateCard, useFlashcards } from "../features/flashcards/store";
+import { cardsOf, deckStats, deleteDeck, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
-import { acceptedAnswers, sidesOf } from "../features/flashcards/quiz";
+import { acceptedAnswers } from "../features/flashcards/quiz";
 import type { Card } from "../features/flashcards/types";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 import { MODES } from "../features/flashcards/modes";
+import { CardEditModal } from "../features/flashcards/CardEditModal";
+import { CardRow } from "../features/flashcards/CardRow";
+import { useUndoDelete } from "../features/flashcards/UndoDelete";
 import { DeckShare } from "../features/flashcards/DeckShare";
 
 export function FlashcardDeckPage() {
@@ -32,6 +33,7 @@ export function FlashcardDeckPage() {
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Card | null>(null);
+  const { remove: removeCard, bar } = useUndoDelete();
 
   useEffect(() => {
     void syncFlashcards();
@@ -68,11 +70,6 @@ export function FlashcardDeckPage() {
       deleteDeck(deckId);
       navigate("/flashcards", { replace: true });
     }
-  }
-  function saveEdit(v: CardValue): void {
-    if (!editing) return;
-    updateCard(editing.id, { term: v.term, termLang: v.termLang, definition: v.definition, definitionLang: v.definitionLang, reading: v.reading, hanViet: v.hanViet, entryId: v.entryId });
-    setEditing(null);
   }
 
   return (
@@ -153,38 +150,14 @@ export function FlashcardDeckPage() {
         ) : (
           <ul className="fc-cardlist">
             {shown.map((c) => (
-              <li key={c.id} className="fc-row">
-                <SideView side={sidesOf(c).prompt} />
-                <span className="fc-row__sep" aria-hidden="true">→</span>
-                <SideView side={sidesOf(c).answer} speak={c.definitionLang === "ja"} />
-                <span className="fc-row__tools">
-                  <button type="button" className="icon-btn icon-btn--ghost" onClick={() => setEditing(c)} aria-label={`${ft("deck.edit")}: ${c.term}`} title={ft("deck.edit")}>
-                    <Icon name="pencil" size={18} />
-                  </button>
-                  <button type="button" className="icon-btn icon-btn--ghost" onClick={() => deleteCard(c.id)} aria-label={`${ft("deck.remove")}: ${c.term}`} title={ft("deck.remove")}>
-                    <Icon name="trash" size={18} />
-                  </button>
-                </span>
-              </li>
+              <CardRow key={c.id} card={c} onEdit={setEditing} onDelete={removeCard} />
             ))}
           </ul>
         )}
       </section>
 
-      {editing && (
-        <div className="fc-modal" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setEditing(null)}>
-          <div className="fc-modal__box" role="dialog" aria-modal="true" aria-label={ft("deck.edit")}>
-            <h2>{ft("deck.edit")}</h2>
-            <CardEditor
-              initial={{ term: editing.term, termLang: editing.termLang, definition: editing.definition, definitionLang: editing.definitionLang, reading: editing.reading, hanViet: editing.hanViet, entryId: editing.entryId }}
-              submitLabel={ft("common.save")}
-              onSubmit={saveEdit}
-              onCancel={() => setEditing(null)}
-              compact
-            />
-          </div>
-        </div>
-      )}
+      {bar}
+      {editing && <CardEditModal card={editing} onClose={() => setEditing(null)} />}
     </AppShell>
   );
 }

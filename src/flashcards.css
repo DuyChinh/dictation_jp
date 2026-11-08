@@ -797,3 +797,13 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 @media (prefers-reduced-motion: reduce) {
   .fc-mil__stage::before, .fc-mil__ans.is-locked, .fc-mil__ans.is-right, .fc-mil__question, .fc-mil__clock.is-low { animation: none; }
 }
+
+/* the Back / Save buttons on the create page, and the undo after a delete */
+.fc-createbar { justify-content: flex-end; flex-wrap: nowrap; }
+.fc-createbar .btn { gap: 6px; }
+.fc-page__head > .fc-createbar { align-self: flex-start; }
+.fc-undo { position: fixed; left: 50%; bottom: calc(20px + var(--safe-bottom)); z-index: 80; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 18px; border-radius: 999px; font-size: 14.5px; font-weight: 600; color: var(--inverse-text); background: var(--inverse-bg); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); animation: fc-undo-in 0.25s ease-out; }
+.fc-undo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes fc-undo-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 640px) { .fc-page__head > .fc-createbar { align-self: stretch; } .fc-createbar .btn { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .fc-undo { animation: none; } }
