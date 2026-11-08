@@ -103,6 +103,43 @@ class SoundEffects {
       osc.stop(now + i * 0.12 + 0.35);
     });
   }
+
+  /** One short note, used for quick right/wrong feedback in games. */
+  private blip(freqs: number[], step: number, length: number, type: OscillatorType, volume: number) {
+    if (!this.enabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    freqs.forEach((freq, i) => {
+      const t = now + i * step;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(volume, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + length);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + length + 0.05);
+    });
+  }
+
+  /** A bright two-note "ding" for a right answer or a matched pair. */
+  playCorrect() {
+    this.blip([659.25, 880], 0.07, 0.22, "sine", 0.16);
+  }
+
+  /** A low, short buzz for a wrong answer. */
+  playWrong() {
+    this.blip([196, 155.56], 0.09, 0.2, "triangle", 0.14);
+  }
+
+  /** A tiny tick, e.g. when a tile is turned over. */
+  playFlip() {
+    this.blip([520], 0, 0.08, "sine", 0.1);
+  }
 }
 
 export const sfx = new SoundEffects();

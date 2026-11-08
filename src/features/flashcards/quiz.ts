@@ -321,3 +321,49 @@ export function dropNext(s: DropState, correct: boolean): DropState {
   else if (next.index >= next.total) next.status = "won";
   return next;
 }
+
+// ---------- more games and ratings ----------
+
+/** 0-3 stars for a share of right answers: 3 from 90%, 2 from 60%, 1 for anything right. */
+export function starsForRatio(right: number, total: number): number {
+  if (total <= 0 || right <= 0) return 0;
+  const r = right / total;
+  return r >= 0.9 ? 3 : r >= 0.6 ? 2 : 1;
+}
+
+/** Matching: seconds per pair plus a penalty for wrong pairs decide the stars. */
+export function matchStars(pairs: number, ms: number, mistakes: number): number {
+  const load = ms / 1000 / Math.max(1, pairs) + (2 * mistakes) / Math.max(1, pairs);
+  return load <= 4 ? 3 : load <= 8 ? 2 : 1;
+}
+
+/** Memory: fewer wrong turns than half the pairs is 3 stars, fewer than the pairs 2. */
+export function memoryStars(pairs: number, mistakes: number): number {
+  return mistakes <= pairs / 2 ? 3 : mistakes <= pairs ? 2 : 1;
+}
+
+export const BLITZ_SECONDS = 60;
+/** Seconds taken off the clock by a wrong answer. */
+export const BLITZ_PENALTY = 3;
+
+/** x1 at first, x2 after three right answers in a row, and so on up to x5. */
+export const comboMultiplier = (streak: number): number => Math.min(5, 1 + Math.floor(streak / 3));
+
+export type BlitzState = { score: number; streak: number; bestStreak: number; right: number; wrong: number };
+export const startBlitz = (): BlitzState => ({ score: 0, streak: 0, bestStreak: 0, right: 0, wrong: 0 });
+
+/** The state after an answer, and how many points it earned. */
+export function blitzNext(s: BlitzState, correct: boolean): { state: BlitzState; gained: number } {
+  const gained = correct ? 10 * comboMultiplier(s.streak) : 0;
+  const streak = correct ? s.streak + 1 : 0;
+  return {
+    gained,
+    state: {
+      score: s.score + gained,
+      streak,
+      bestStreak: Math.max(s.bestStreak, streak),
+      right: s.right + (correct ? 1 : 0),
+      wrong: s.wrong + (correct ? 0 : 1),
+    },
+  };
+}

@@ -12,14 +12,8 @@ import type { Card } from "../features/flashcards/types";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
-import { Icon, type IconName } from "../shared/ui/Icon";
-
-export const MODES = [
-  { id: "learn", icon: "card", min: 1 },
-  { id: "test", icon: "file", min: 1 },
-  { id: "match", icon: "grid", min: 2 },
-  { id: "drop", icon: "flag", min: 2 },
-] as const satisfies ReadonlyArray<{ id: string; icon: IconName; min: number }>;
+import { Icon } from "../shared/ui/Icon";
+import { MODES } from "../features/flashcards/modes";
 
 export function FlashcardDeckPage() {
   const { t } = useUiLanguage();
@@ -133,12 +127,22 @@ export function FlashcardDeckPage() {
 
         <div className="fc-listhead">
           <h2 className="fc-section">{ft("deck.cards")} ({cards.length})</h2>
-          {cards.length > 5 && (
-            <input type="search" className="fc-input fc-listhead__search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ft("deck.search")} aria-label={ft("deck.search")} />
+          {cards.length > 0 && (
+            <div className="fc-search" role="search">
+              <Icon name="search" size={18} aria-hidden="true" />
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={ft("deck.search")} aria-label={ft("deck.search")} autoComplete="off" spellCheck={false} />
+              {query && (
+                <button type="button" className="fc-search__clear" onClick={() => setQuery("")} aria-label={ft("deck.searchClear")} title={ft("deck.searchClear")}>
+                  <Icon name="close" size={16} />
+                </button>
+              )}
+            </div>
           )}
         </div>
         {cards.length === 0 ? (
           <p className="fc-note">{ft("deck.noCards")}</p>
+        ) : shown.length === 0 ? (
+          <p className="fc-note">{fmt(ft("deck.searchNone"), { q: query.trim() })}</p>
         ) : (
           <ul className="fc-cardlist">
             {shown.map((c) => (

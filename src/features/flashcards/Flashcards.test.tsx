@@ -7,6 +7,8 @@ import { CardEditor, type CardValue } from "./CardEditor";
 import { DropMode } from "./DropMode";
 import { LearnMode } from "./LearnMode";
 import { MatchMode } from "./MatchMode";
+import { MemoryMode } from "./MemoryMode";
+import { BlitzMode } from "./BlitzMode";
 import { TestMode } from "./TestMode";
 import { AddEntryButton } from "./AddEntryButton";
 import { addCard, createDeck, readState } from "./store";
@@ -185,8 +187,8 @@ describe("LearnMode", () => {
     expect(cardOf("猫")).toMatchObject({ box: 0, wrong: 1 });
 
     expect(screen.getByText("Hoàn thành!")).toBeTruthy();
-    expect(screen.getByText("Bạn nhớ 1/2 thẻ.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Học lại 1 thẻ chưa nhớ" })).toBeTruthy();
+    expect(screen.getByText("Bạn nhớ 1/2 từ.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Học lại 1 từ chưa nhớ" })).toBeTruthy();
   });
 
   it("asks the definition first when the direction says so", () => {
@@ -223,6 +225,7 @@ describe("TestMode", () => {
     const cards = seed();
     const { container } = render(wrap(<TestMode deckId="deck1" cards={cards} direction="term" />));
     for (const name of ["Trắc nghiệm", "Đúng / Sai", "Nối cặp"]) fireEvent.click(screen.getByLabelText(name));
+    fireEvent.click(screen.getByLabelText("Tất cả trên một trang"));
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
 
     const questions = [...container.querySelectorAll(".fc-q")];
@@ -240,7 +243,7 @@ describe("TestMode", () => {
 
     expect(screen.getByText("50%")).toBeTruthy();
     expect(screen.getByText("Đúng 2/4")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Làm lại 2 thẻ sai" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Làm lại 2 từ sai" })).toBeTruthy();
     expect(readState().cards.filter((c) => c.right === 1)).toHaveLength(2);
     expect(readState().cards.filter((c) => c.wrong === 1)).toHaveLength(2);
     // wrong ones show the right answer
@@ -251,6 +254,7 @@ describe("TestMode", () => {
     const cards = seed();
     const { container } = render(wrap(<TestMode deckId="deck1" cards={cards} direction="term" />));
     for (const name of ["Đúng / Sai", "Điền đáp án", "Nối cặp"]) fireEvent.click(screen.getByLabelText(name));
+    fireEvent.click(screen.getByLabelText("Tất cả trên một trang"));
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
     const [first, second] = [...container.querySelectorAll(".fc-q")];
@@ -348,6 +352,165 @@ describe("DropMode", () => {
     }
     expect(screen.getByText("Bạn đã vượt qua!")).toBeTruthy();
     expect(screen.getByText(/Đúng 4\/4 từ/)).toBeTruthy();
+  });
+});
+
+describe("TestMode one question at a time", () => {
+  const writeOnly = () => {
+    for (const name of ["Trắc nghiệm", "Đúng / Sai", "Nối cặp"]) fireEvent.click(screen.getByLabelText(name));
+  };
+
+  it("is the default: one question shows, with next and previous, and submits on the last", () => {
+    render(wrap(<TestMode deckId="deck1" cards={seed([["犬", "chó"], ["猫", "mèo"], ["水", "nước"]])} direction="term" />));
+    expect((screen.getByLabelText("Từng câu một") as HTMLInputElement).checked).toBe(true);
+    writeOnly();
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
+
+    expect(document.querySelectorAll(".fc-q")).toHaveLength(1);
+    expect(screen.getByText("Câu 1/3")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Câu trước" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Nộp bài" })).toBeNull();
+
+    const answerHere = () => {
+      const term = document.querySelector(".fc-q .fc-side__text")!.textContent!;
+      fireEvent.change(document.querySelector(".fc-q input")!, { target: { value: MEANING[term]! } });
+    };
+    answerHere();
+    fireEvent.click(screen.getByRole("button", { name: "Câu sau" }));
+    expect(screen.getByText("Câu 2/3")).toBeTruthy();
+    answerHere();
+    // jump with the numbered dots, then back to the one left
+    fireEvent.click(screen.getByRole("button", { name: "Đến câu 3" }));
+    expect(screen.getByRole("button", { name: "Nộp bài" })).toBeTruthy();
+    expect(screen.getByText("Đã trả lời 2/3 câu")).toBeTruthy();
+    answerHere();
+    fireEvent.click(screen.getByRole("button", { name: "Nộp bài" }));
+    expect(screen.getByText("100%")).toBeTruthy();
+    // the review lists every question
+    expect(document.querySelectorAll(".fc-q")).toHaveLength(3);
+  });
+
+  it("moves on with Enter in the answer box", () => {
+    render(wrap(<TestMode deckId="deck1" cards={seed()} direction="term" />));
+    writeOnly();
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
+    fireEvent.keyDown(document.querySelector(".fc-q input")!, { key: "Enter" });
+    expect(screen.getByText("Câu 2/4")).toBeTruthy();
+  });
+});
+
+describe("MemoryMode", () => {
+  it("keeps a matched pair face up, turns a mismatch back, and finishes with stars", async () => {
+    render(wrap(<MemoryMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    const down = () => screen.getAllByRole("button", { name: /Thẻ úp/ });
+    expect(down()).toHaveLength(8);
+    const tileFor = (text: string) => [...document.querySelectorAll(".fc-mem")].find((b) => b.querySelector(".fc-mem__back")?.textContent === text) as HTMLElement;
+
+    // a wrong pair counts a mistake and turns back
+    fireEvent.click(tileFor("犬"));
+    fireEvent.click(tileFor("mèo"));
+    expect(screen.getByText("Lật sai: 1")).toBeTruthy();
+    await waitFor(() => expect(down()).toHaveLength(8), { timeout: 2000 });
+
+    for (const term of Object.keys(MEANING)) {
+      fireEvent.click(tileFor(term));
+      fireEvent.click(tileFor(MEANING[term]!));
+      // the last pair swaps the board for the result
+      await waitFor(() => expect(!tileFor(term) || tileFor(term).className.includes("is-done")).toBe(true), { timeout: 2000 });
+    }
+    expect(await screen.findByText("Tìm đủ các cặp!")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /sao/ })).toBeTruthy();
+    expect(localStorage.getItem("jd.flash_best.v1")).toContain("deck1:memory");
+  });
+});
+
+describe("BlitzMode", () => {
+  const optionFor = (text: string) => [...document.querySelectorAll(".fc-drop__options button")].find((b) => b.textContent?.includes(text)) as HTMLElement;
+  const current = () => document.querySelector(".fc-blitz__prompt .fc-side__text")!.textContent!;
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+
+  it("scores right answers with a growing combo and takes time off a wrong one", async () => {
+    render(wrap(<BlitzMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(optionFor(MEANING[current()]!));
+      await act(async () => void vi.advanceTimersByTime(400));
+    }
+    // 10 + 10 + 10 + 20
+    expect(screen.getByText("Điểm: 50")).toBeTruthy();
+    expect(document.querySelector(".fc-combo")?.textContent).toBe("Combo x2");
+
+    const before = Number(document.querySelector(".fc-blitz__time")!.textContent!.trim());
+    const wrong = Object.values(MEANING).find((m) => m !== MEANING[current()])!;
+    fireEvent.click(optionFor(wrong));
+    await act(async () => void vi.advanceTimersByTime(700));
+    const after = Number(document.querySelector(".fc-blitz__time")!.textContent!.trim());
+    expect(before - after).toBeGreaterThanOrEqual(3);
+    expect(document.querySelector(".fc-combo")).toBeNull();
+  });
+
+  it("ends when the minute is up and remembers the high score", async () => {
+    render(wrap(<BlitzMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    fireEvent.click(optionFor(MEANING[current()]!));
+    await act(async () => void vi.advanceTimersByTime(61000));
+    expect(screen.getByText("Hết giờ!")).toBeTruthy();
+    expect(screen.getByText("Đúng 1 · sai 0 · chuỗi đúng dài nhất 1")).toBeTruthy();
+    expect(screen.getByText("Điểm cao mới!")).toBeTruthy();
+  });
+});
+
+describe("pages", () => {
+  const AppShellMock = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  void AppShellMock;
+
+  it("the create page lists every word already in the deck and points out the new one", async () => {
+    const { FlashcardCreatePage } = await import("../../pages/FlashcardCreatePage");
+    seed();
+    searchDictionary.mockResolvedValue({ query: "", lang: "ja", entries: [], kanji: [] });
+    render(
+      <MemoryRouter initialEntries={["/flashcards/create?deck=deck1"]}>
+        <UiLanguageProvider>
+          <Routes>
+            <Route path="/flashcards/create" element={<FlashcardCreatePage />} />
+          </Routes>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Các từ trong bộ (4)")).toBeTruthy();
+    expect(screen.getByText("犬")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Từ"), { target: { value: "木" } });
+    fireEvent.change(screen.getByLabelText("Nghĩa"), { target: { value: "cây" } });
+    fireEvent.click(screen.getByRole("button", { name: "Thêm thẻ" }));
+    expect(screen.getByText("Các từ trong bộ (5)")).toBeTruthy();
+    expect(screen.getByText("Mới thêm")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Mở bộ thẻ" })).toBeTruthy();
+  });
+
+  it("the deck page counts words and searches them", async () => {
+    const { FlashcardDeckPage } = await import("../../pages/FlashcardDeckPage");
+    seed();
+    render(
+      <MemoryRouter initialEntries={["/flashcards/deck1"]}>
+        <UiLanguageProvider>
+          <Routes>
+            <Route path="/flashcards/:deckId" element={<FlashcardDeckPage />} />
+          </Routes>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("4 từ")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Lật hình/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Đua thời gian/ })).toBeTruthy();
+    const search = screen.getByRole("searchbox", { name: "Tìm từ trong bộ" });
+    fireEvent.change(search, { target: { value: "mèo" } });
+    expect(screen.getByText("猫")).toBeTruthy();
+    expect(screen.queryByText("犬")).toBeNull();
+    fireEvent.change(search, { target: { value: "zzz" } });
+    expect(screen.getByText("Không có từ nào khớp “zzz”.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Xóa tìm kiếm" }));
+    expect(screen.getByText("犬")).toBeTruthy();
   });
 });
 

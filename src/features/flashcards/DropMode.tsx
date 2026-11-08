@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
+import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
 import { getBest, submitBest } from "./prefs";
-import { DROP_LIVES, buildDropRound, dropNext, fallSeconds, startDrop, type DropItem, type DropState } from "./quiz";
+import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, fallSeconds, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
@@ -24,6 +25,8 @@ export function DropMode({ deckId, cards, direction }: Props) {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [highScore, setHighScore] = useState<{ best: number | null; improved: boolean } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { pops, pop } = usePops();
+  const { shaking, shake } = useShake();
 
   const item = items && game && game.status === "playing" ? items[game.index] : null;
   const seconds = useMemo(() => fallSeconds(game?.right ?? 0), [game?.right]);
@@ -45,6 +48,12 @@ export function DropMode({ deckId, cards, direction }: Props) {
     if (!item || !game || feedback) return;
     const correct = chosen === item.cardId;
     setFeedback({ chosen, correct });
+    playFx(correct ? "correct" : "wrong");
+    if (correct) {
+      const gained = 10 + Math.min(game.streak, 5) * 2;
+      pop(`+${gained}`, "good");
+      if (game.streak + 1 >= 3) pop(fmt(ft("game.combo"), { n: comboMultiplier(game.streak + 1) }), "info", 70);
+    } else shake();
     timer.current = setTimeout(() => {
       const next = dropNext(game, correct);
       setGame(next);
@@ -52,7 +61,10 @@ export function DropMode({ deckId, cards, direction }: Props) {
       if (next.status !== "playing") {
         const improved = submitBest(deckId, "drop", next.score, "high");
         setHighScore({ best: getBest(deckId, "drop"), improved });
-        if (next.status === "won") triggerConfetti({ particleCount: 80 });
+        if (next.status === "won") {
+          playFx("win");
+          triggerConfetti({ particleCount: 80 });
+        }
       }
     }, correct ? 350 : FEEDBACK_MS);
   }
@@ -84,6 +96,7 @@ export function DropMode({ deckId, cards, direction }: Props) {
   if (game.status !== "playing") {
     return (
       <section className="fc-panel fc-result" aria-live="polite">
+        <Stars count={game.status === "won" ? Math.max(1, starsForRatio(game.right, game.total)) : starsForRatio(game.right, game.total) >= 2 ? 1 : 0} />
         <h2>{game.status === "won" ? ft("drop.won") : ft("drop.lost")}</h2>
         <p className="fc-result__big tabular">{game.score}</p>
         <p className="fc-result__score">
@@ -111,16 +124,20 @@ export function DropMode({ deckId, cards, direction }: Props) {
         </span>
         <span className="fc-drop__score tabular">{fmt(ft("drop.score"), { score: game.score })}</span>
         <span className="fc-note tabular">{game.index + 1} / {game.total}</span>
+        <SoundToggle />
       </div>
 
-      <div className="fc-drop__sky" aria-live="polite">
+      <div className={`fc-drop__sky${shaking ? " is-shaking" : ""}${feedback && !feedback.correct ? " is-flash" : ""}`} aria-live="polite">
+        {game.streak >= 3 && <span key={`combo-${game.streak}`} className="fc-combo">{fmt(ft("game.combo"), { n: comboMultiplier(game.streak) })}</span>}
+        <Pops pops={pops} />
         <div
-          key={game.index}
+          key={`w-${game.index}`}
           className={`fc-drop__word${feedback ? (feedback.correct ? " is-hit" : " is-miss") : ""}`}
           style={{ animationDuration: `${seconds}s`, animationPlayState: feedback ? "paused" : "running" }}
           onAnimationEnd={() => settle(null)}
         >
           <SideView side={item!.prompt} big />
+          {feedback?.correct && <Burst />}
         </div>
         <div className="fc-drop__ground" aria-hidden="true" />
       </div>

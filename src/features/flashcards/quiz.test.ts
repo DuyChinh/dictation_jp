@@ -216,3 +216,29 @@ describe("drop game", () => {
     expect(w.status).toBe("won");
   });
 });
+
+describe("ratings and blitz", () => {
+  it("rates stars by share right, pace and mistakes", async () => {
+    const { starsForRatio, matchStars, memoryStars } = await import("./quiz");
+    expect([starsForRatio(0, 5), starsForRatio(1, 5), starsForRatio(3, 5), starsForRatio(9, 10), starsForRatio(0, 0)]).toEqual([0, 1, 2, 3, 0]);
+    expect(matchStars(6, 20000, 0)).toBe(3);
+    expect(matchStars(6, 40000, 0)).toBe(2);
+    expect(matchStars(6, 40000, 6)).toBe(1);
+    expect([memoryStars(6, 3), memoryStars(6, 6), memoryStars(6, 7)]).toEqual([3, 2, 1]);
+  });
+  it("builds a combo multiplier from the streak, capped at x5, and resets it on a miss", async () => {
+    const { blitzNext, comboMultiplier, startBlitz } = await import("./quiz");
+    expect([0, 2, 3, 6, 12, 99].map(comboMultiplier)).toEqual([1, 1, 2, 3, 5, 5]);
+    let s = startBlitz();
+    const points: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const r = blitzNext(s, true);
+      s = r.state;
+      points.push(r.gained);
+    }
+    expect(points).toEqual([10, 10, 10, 20]);
+    const miss = blitzNext(s, false);
+    expect(miss.gained).toBe(0);
+    expect(miss.state).toMatchObject({ streak: 0, bestStreak: 4, right: 4, wrong: 1, score: 50 });
+  });
+});

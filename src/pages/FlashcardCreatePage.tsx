@@ -1,23 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CardEditor, type CardValue } from "../features/flashcards/CardEditor";
 import { DeckPicker, resolveDeck } from "../features/flashcards/DeckPicker";
 import { useFt } from "../features/flashcards/flashText";
-import { DEFAULT_DECK_ID, addCard, isDuplicate, useFlashcards } from "../features/flashcards/store";
+import { DEFAULT_DECK_ID, addCard, cardsOf, isDuplicate, useFlashcards } from "../features/flashcards/store";
 import { lastDeckId, saveLastDeck } from "../features/flashcards/prefs";
 import { SideView } from "../features/flashcards/SideView";
 import { syncFlashcards } from "../features/flashcards/sync";
-import type { Card } from "../features/flashcards/types";
+import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
+
+const LIST_MAX = 40;
 
 export function FlashcardCreatePage() {
   const { t } = useUiLanguage();
   const ft = useFt();
   const [params] = useSearchParams();
-  const { decks, cards } = useFlashcards();
+  const { decks, cards, state } = useFlashcards();
   const [deckId, setDeckId] = useState(() => params.get("deck") ?? lastDeckId() ?? DEFAULT_DECK_ID);
-  const [added, setAdded] = useState<Card[]>([]);
+  // cards made on this visit, to point out in the list
+  const [added, setAdded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     void syncFlashcards();
@@ -26,6 +29,7 @@ export function FlashcardCreatePage() {
   // A remembered deck may be gone; fall back to the first one that exists.
   const effective = decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
   const deck = decks.find((d) => d.id === effective);
+  const deckCards = useMemo(() => cardsOf(state, effective).sort((a, b) => b.createdAt - a.createdAt), [state, effective]);
 
   function save(v: CardValue): string | void {
     const target = resolveDeck(decks, effective, ft("deck.default"));
@@ -33,7 +37,7 @@ export function FlashcardCreatePage() {
     const card = addCard({ deckId: target, ...v, reading: v.reading || undefined });
     saveLastDeck(target);
     setDeckId(target);
-    setAdded((a) => [card, ...a].slice(0, 8));
+    setAdded((a) => new Set(a).add(card.id));
   }
 
   return (
@@ -64,21 +68,27 @@ export function FlashcardCreatePage() {
           <CardEditor submitLabel={ft("create.add")} onSubmit={save} clearAfterSubmit autoFocus />
         </div>
 
-        {added.length > 0 && (
-          <div className="fc-added" aria-live="polite">
-            <h2 className="fc-section">{ft("create.added")}</h2>
-            <ul className="fc-cardlist">
-              {added.map((c) => (
-                <li key={c.id} className="fc-row">
-                  <SideView side={{ text: c.term, lang: c.termLang, reading: c.termLang === "ja" ? c.reading : undefined }} speak={false} />
+        <div className="fc-added">
+          <div className="fc-listhead">
+            <h2 className="fc-section">{ft("create.words")} ({deckCards.length})</h2>
+            {deck && <Link to={`/flashcards/${deck.id}`} className="btn btn--soft btn--sm">{ft("create.openDeck")}</Link>}
+          </div>
+          {deckCards.length === 0 ? (
+            <p className="fc-note">{ft("deck.noCards")}</p>
+          ) : (
+            <ul className="fc-cardlist" aria-live="polite">
+              {deckCards.slice(0, LIST_MAX).map((c) => (
+                <li key={c.id} className={`fc-row${added.has(c.id) ? " is-new" : ""}`}>
+                  <SideView side={{ text: c.term, lang: c.termLang, reading: c.termLang === "ja" ? c.reading : undefined }} />
                   <span className="fc-row__sep" aria-hidden="true">→</span>
-                  <SideView side={{ text: c.definition, lang: c.definitionLang, reading: c.definitionLang === "ja" ? c.reading : undefined }} speak={false} />
+                  <SideView side={{ text: c.definition, lang: c.definitionLang, reading: c.definitionLang === "ja" ? c.reading : undefined }} speak={c.definitionLang === "ja"} />
+                  {added.has(c.id) && <span className="fc-row__tag">{ft("create.justAdded")}</span>}
                 </li>
               ))}
             </ul>
-            {deck && <Link to={`/flashcards/${deck.id}`} className="btn btn--soft">{ft("create.openDeck")}</Link>}
-          </div>
-        )}
+          )}
+          {deckCards.length > LIST_MAX && <p className="fc-note">{fmt(ft("create.showingFirst"), { n: LIST_MAX })}</p>}
+        </div>
       </section>
     </AppShell>
   );

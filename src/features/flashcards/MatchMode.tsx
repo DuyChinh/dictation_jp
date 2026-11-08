@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { fmt } from "../../shared/i18n/format";
+import { Burst, SoundToggle, Stars, playFx } from "./GameBits";
 import { getBest, submitBest } from "./prefs";
-import { buildMatchRound, type MatchTile } from "./quiz";
+import { buildMatchRound, matchStars, type MatchTile } from "./quiz";
 import { useFt } from "./flashText";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
@@ -53,6 +54,7 @@ export function MatchMode({ deckId, cards, direction }: Props) {
     const full = tiles!.length / 2 >= Math.min(ROUND, cards.length);
     const improved = full ? submitBest(deckId, "match", time, "low") : false;
     setRecord({ best: getBest(deckId, "match"), improved });
+    playFx("win");
     triggerConfetti({ particleCount: 60 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished]);
@@ -63,12 +65,14 @@ export function MatchMode({ deckId, cards, direction }: Props) {
     if (!selected) return setSelected(tile.tileId);
     const first = tiles.find((t) => t.tileId === selected)!;
     if (first.cardId === tile.cardId && first.kind !== tile.kind) {
+      playFx("correct");
       setMatched((m) => new Set(m).add(tile.cardId));
       setSelected(null);
     } else if (first.kind === tile.kind) {
       // two of the same side: just move the selection
       setSelected(tile.tileId);
     } else {
+      playFx("wrong");
       setMistakes((n) => n + 1);
       setWrong([first.tileId, tile.tileId]);
       setTimeout(() => {
@@ -95,11 +99,13 @@ export function MatchMode({ deckId, cards, direction }: Props) {
       <div className="fc-match__bar">
         <span className="fc-match__time tabular" aria-live="off">{formatSeconds(elapsed)}</span>
         <span className="fc-note">{fmt(ft("match.mistakes"), { n: mistakes })}</span>
+        <SoundToggle />
         <button type="button" className="btn btn--ghost btn--sm" onClick={play}>{ft("match.restart")}</button>
       </div>
 
       {finished ? (
         <div className="fc-panel fc-result" aria-live="polite">
+          <Stars count={matchStars(tiles.length / 2, elapsed, mistakes)} />
           <h2>{ft("match.doneTitle")}</h2>
           <p className="fc-result__big tabular">{formatSeconds(elapsed)}</p>
           <p className="fc-result__score">{fmt(ft("match.mistakes"), { n: mistakes })}</p>
@@ -129,6 +135,7 @@ export function MatchMode({ deckId, cards, direction }: Props) {
                 onClick={() => pick(t)}
               >
                 <SideView side={t.side} speak={false} />
+                {gone && <Burst />}
               </button>
             );
           })}

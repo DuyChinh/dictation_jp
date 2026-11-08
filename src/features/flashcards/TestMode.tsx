@@ -28,6 +28,8 @@ export function TestMode({ deckId, cards, direction }: Props) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [graded, setGraded] = useState<ReturnType<typeof gradeTest> | null>(null);
+  const [view, setView] = useState<"single" | "all">("single");
+  const [current, setCurrent] = useState(0);
 
   const anyKind = QUESTION_KINDS.some((k) => kinds[k]);
 
@@ -35,6 +37,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
     setQuestions(buildTest(pool, { count: n, direction, kinds }));
     setAnswers({});
     setGraded(null);
+    setCurrent(0);
     window.scrollTo?.({ top: 0 });
   }
 
@@ -68,6 +71,15 @@ export function TestMode({ deckId, cards, direction }: Props) {
             <label key={k} className="fc-check">
               <input type="checkbox" checked={kinds[k]} onChange={(e) => setKinds({ ...kinds, [k]: e.target.checked })} />
               {ft(`test.kind.${k}`)}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="fc-kinds">
+          <legend>{ft("test.view")}</legend>
+          {(["single", "all"] as const).map((v) => (
+            <label key={v} className="fc-check">
+              <input type="radio" name="test-view" checked={view === v} onChange={() => setView(v)} />
+              {ft(`test.view.${v}`)}
             </label>
           ))}
         </fieldset>
@@ -109,25 +121,92 @@ export function TestMode({ deckId, cards, direction }: Props) {
     );
   }
 
+  const submitBar = (
+    <div className="fc-actions fc-actions--end">
+      <button type="button" className="btn btn--outline" onClick={() => setQuestions(null)}>
+        {ft("common.cancel")}
+      </button>
+      <button type="button" className="btn btn--primary btn--lg" onClick={submit}>
+        {ft("test.submit")}
+      </button>
+    </div>
+  );
+
+  if (view === "all") {
+    return (
+      <div className="fc-test">
+        <p className="fc-note">{fmt(ft("test.progress"), { done: answered, total: questions.length })}</p>
+        {questions.map((q, i) => (
+          <QuestionView
+            key={q.id}
+            n={i + 1}
+            q={q}
+            answer={answers[q.id]}
+            onChange={(a) => setAnswers((prev) => ({ ...prev, [q.id]: a }))}
+            ft={ft}
+          />
+        ))}
+        {submitBar}
+      </div>
+    );
+  }
+
+  const idx = Math.min(current, questions.length - 1);
+  const q = questions[idx]!;
+  const last = idx === questions.length - 1;
   return (
-    <div className="fc-test">
-      <p className="fc-note">{fmt(ft("test.progress"), { done: answered, total: questions.length })}</p>
-      {questions.map((q, i) => (
-        <QuestionView
-          key={q.id}
-          n={i + 1}
-          q={q}
-          answer={answers[q.id]}
-          onChange={(a) => setAnswers((prev) => ({ ...prev, [q.id]: a }))}
-          ft={ft}
-        />
-      ))}
-      <div className="fc-actions fc-actions--end">
-        <button type="button" className="btn btn--outline" onClick={() => setQuestions(null)}>
-          {ft("common.cancel")}
+    <div className="fc-test fc-test--single">
+      <div className="fc-progress" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={answered}>
+        <span style={{ width: `${(answered / questions.length) * 100}%` }} />
+      </div>
+      <div className="fc-test__head">
+        <p className="fc-note">{fmt(ft("test.questionOf"), { n: idx + 1, total: questions.length })}</p>
+        <p className="fc-note">{fmt(ft("test.progress"), { done: answered, total: questions.length })}</p>
+      </div>
+      <nav className="fc-dots" aria-label={ft("test.title")}>
+        {questions.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            className={`fc-dots__item${i === idx ? " is-current" : ""}${isAnswered(x, answers[x.id]) ? " is-done" : ""}`}
+            aria-current={i === idx ? "step" : undefined}
+            aria-label={fmt(ft("test.goTo"), { n: i + 1 })}
+            onClick={() => setCurrent(i)}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </nav>
+      <div
+        key={q.id}
+        className="fc-test__stage"
+        onKeyDown={(e) => {
+          // Enter in a text box moves on, as it would on a form
+          if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+            e.preventDefault();
+            if (!last) setCurrent(idx + 1);
+          }
+        }}
+      >
+        <QuestionView n={idx + 1} q={q} answer={answers[q.id]} onChange={(a) => setAnswers((prev) => ({ ...prev, [q.id]: a }))} ft={ft} />
+      </div>
+      <div className="fc-test__nav">
+        <button type="button" className="btn btn--outline" onClick={() => setCurrent(idx - 1)} disabled={idx === 0}>
+          {ft("test.prev")}
         </button>
-        <button type="button" className="btn btn--primary btn--lg" onClick={submit}>
-          {ft("test.submit")}
+        {last ? (
+          <button type="button" className="btn btn--primary btn--lg" onClick={submit}>
+            {ft("test.submit")}
+          </button>
+        ) : (
+          <button type="button" className="btn btn--primary" onClick={() => setCurrent(idx + 1)}>
+            {ft("test.next")}
+          </button>
+        )}
+      </div>
+      <div className="fc-actions fc-actions--end">
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setQuestions(null)}>
+          {ft("common.cancel")}
         </button>
       </div>
     </div>

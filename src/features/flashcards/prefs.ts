@@ -51,7 +51,7 @@ export const saveRightLang = (lang: CardLang) => set(RIGHT_KEY, lang);
 export const lastDeckId = (): string | null => get(DECK_KEY);
 export const saveLastDeck = (id: string) => set(DECK_KEY, id);
 
-export type GameName = "match" | "drop";
+export type GameName = "match" | "drop" | "memory" | "blitz";
 type Best = Record<string, number>;
 
 function readBest(): Best {
@@ -77,3 +77,7 @@ export function submitBest(deckId: string, game: GameName, value: number, better
   }
   return improved;
 }
+
+const SOUND_KEY = "jd.flash_sound.v1";
+export const soundOn = (): boolean => get(SOUND_KEY) !== "off";
+export const saveSound = (on: boolean) => set(SOUND_KEY, on ? "on" : "off");
