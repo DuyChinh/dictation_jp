@@ -895,6 +895,33 @@ describe("MillionaireMode", () => {
     expect(screen.getByText("Hết giờ!")).toBeTruthy();
   });
 
+  it("shows where you are on the ladder as dots too, for when there is no room for the ladder", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    const dots = () => [...document.querySelectorAll(".fc-mil__dots li")];
+    expect(dots()).toHaveLength(15);
+    expect(dots()[0]!.className).toContain("is-current");
+    expect(dots().filter((d) => d.className.includes("is-safe"))).toHaveLength(2);
+    await answer(rightIndex());
+    await answer(rightIndex());
+    expect(dots()[0]!.className).toContain("is-done");
+    expect(dots()[1]!.className).toContain("is-done");
+    expect(dots()[2]!.className).toContain("is-current");
+  });
+
+  it("never scrolls the stage: the stage clips its contents, and scrolling one into view would slide the whole game aside", async () => {
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    for (let q = 0; q < 3; q++) await answer(rightIndex());
+    expect(spy).not.toHaveBeenCalled();
+    const stage = document.querySelector<HTMLElement>(".fc-mil__stage")!;
+    expect(stage.scrollLeft).toBe(0);
+    // @ts-expect-error restoring jsdom's lack of the method
+    delete Element.prototype.scrollIntoView;
+  });
+
   it("a deck smaller than fifteen words still gives fifteen questions, never the same card twice running", async () => {
     render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
     play();

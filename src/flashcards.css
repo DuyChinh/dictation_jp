@@ -678,9 +678,9 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 /* =========================================================================
    Who wants to be a millionaire
    ========================================================================= */
-.fc-mil { --gold: #f5b83d; --orange: #ff8a1f; --navy: #0d1245; --ok-lit: #1fb85a; --bad-lit: #e5484d; }
+.fc-mil { container-type: inline-size; --gold: #f5b83d; --orange: #ff8a1f; --navy: #0d1245; --ok-lit: #1fb85a; --bad-lit: #e5484d; }
 .fc-mil__stage {
-  position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) 176px; gap: 14px; padding: 16px; border-radius: 22px; color: #fff;
+  position: relative; isolation: isolate; overflow: hidden; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr) 176px; gap: 14px; padding: 16px; border-radius: 22px; color: #fff;
   background: radial-gradient(120% 90% at 50% 0, #2c1d85 0, #140b44 55%, #070420 100%); border: 1px solid #3a2a99; box-shadow: 0 18px 50px rgba(8, 4, 40, 0.45);
 }
 /* slow stage lights */
@@ -780,19 +780,49 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 
 .fc-mil-start .fc-miner-rules { margin-bottom: 4px; }
 
-@media (max-width: 760px) {
-  .fc-mil__stage { grid-template-columns: 1fr; padding: 12px; border-radius: 18px; }
-  /* the ladder shrinks to a row: only the rung you are on and the safe ones around it matter on a phone */
-  .fc-mil__ladder { flex-direction: row; overflow-x: auto; padding: 6px; gap: 6px; scrollbar-width: none; order: -1; }
-  .fc-mil__ladder li { flex: none; flex-direction: column; gap: 0; padding: 4px 8px; align-items: center; }
-  .fc-mil__ladder .fc-mil__prize { margin-left: 0; font-size: 12px; }
-  .fc-mil__ladder .fc-mil__rung { width: auto; text-align: center; font-size: 10px; }
-  .fc-mil__ladder { flex-direction: row-reverse; justify-content: flex-end; }
-  .fc-mil__answers { grid-template-columns: 1fr; gap: 10px; }
+/* where you are on the ladder, as dots, when the ladder itself does not fit */
+.fc-mil__dots { display: none; list-style: none; margin: 0; padding: 0 2px; align-items: center; justify-content: space-between; gap: 4px; }
+.fc-mil__dots li { flex: none; width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); }
+.fc-mil__dots .is-done { background: var(--orange); opacity: 0.7; }
+.fc-mil__dots .is-safe { width: 11px; height: 11px; background: transparent; box-shadow: inset 0 0 0 2px #fff; }
+.fc-mil__dots .is-safe.is-done { background: var(--orange); box-shadow: inset 0 0 0 2px #fff; opacity: 1; }
+.fc-mil__dots .is-current { width: 14px; height: 14px; background: var(--orange); opacity: 1; box-shadow: 0 0 0 3px rgba(255, 138, 31, 0.35), 0 0 12px rgba(255, 138, 31, 0.8); animation: fc-pulse 1.2s ease-in-out infinite; }
+
+/* the layout follows the room the game has, not the screen: the page may have a sidebar open beside it */
+@container (max-width: 699px) {
+  .fc-mil__stage { grid-template-columns: minmax(0, 1fr); padding: 14px; border-radius: 18px; }
+  .fc-mil__ladder { display: none; }
+  .fc-mil__dots { display: flex; }
+  .fc-mil__question { min-height: 92px; padding: 12px 32px; }
+  .fc-mil__bars { gap: 14px; height: 160px; }
+}
+@container (max-width: 520px) {
+  .fc-mil__answers { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .fc-mil__ans { min-height: 56px; padding: 8px 26px; font-size: 15px; }
-  .fc-mil__question { min-height: 88px; padding: 12px 30px; }
   .fc-mil__life { width: 46px; height: 38px; }
-  .fc-mil__bars { gap: 12px; height: 150px; }
+}
+@container (max-width: 400px) {
+  .fc-mil__stage { padding: 10px; }
+  .fc-mil__top { gap: 8px; }
+  .fc-mil__lifelines { gap: 6px; }
+  .fc-mil__life { width: 42px; height: 36px; }
+  .fc-mil__worth { font-size: 18px; }
+  .fc-mil__clock { width: 42px; height: 42px; font-size: 15px; }
+  .fc-mil__question { min-height: 80px; padding: 10px 26px; }
+  .fc-mil__ans { padding: 8px 22px; gap: 8px; }
+  .fc-mil__popup { padding: 12px; gap: 10px; }
+  .fc-mil__bars { gap: 10px; height: 130px; }
+  .fc-mil__bar { width: 46px; }
+  .fc-mil__phone { flex-direction: column; text-align: center; }
+  .fc-mil__speech { border-radius: 18px; text-align: center; }
+}
+/* a phone on its side is short: tighten the vertical space */
+@media (max-height: 520px) {
+  .fc-mil__stage { padding: 10px; }
+  .fc-mil__main { gap: 8px; }
+  .fc-mil__question { min-height: 60px; padding-block: 8px; }
+  .fc-mil__ans { min-height: 48px; }
+  .fc-mil__bars { height: 110px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fc-mil__stage::before, .fc-mil__ans.is-locked, .fc-mil__ans.is-right, .fc-mil__question, .fc-mil__clock.is-low { animation: none; }

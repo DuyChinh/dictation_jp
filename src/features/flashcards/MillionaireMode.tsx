@@ -41,13 +41,8 @@ const PHONE_MS = 1500;
 
 /** The ladder of prizes beside the question, the current rung lit and the safe ones marked. */
 function Ladder({ index, correct, fmtPrize, label }: { index: number; correct: number; fmtPrize: (n: number) => string; label: string }) {
-  const ref = useRef<HTMLOListElement>(null);
-  // on a phone the ladder is a row that scrolls: keep the current rung in view
-  useEffect(() => {
-    (ref.current?.querySelector(".is-current") as HTMLElement | null)?.scrollIntoView?.({ block: "nearest", inline: "center" });
-  }, [index]);
   return (
-    <ol className="fc-mil__ladder" aria-label={label} ref={ref}>
+    <ol className="fc-mil__ladder" aria-label={label}>
       {Array.from({ length: PRIZES.length }, (_, i) => i)
         .reverse()
         .map((i) => (
@@ -56,6 +51,17 @@ function Ladder({ index, correct, fmtPrize, label }: { index: number; correct: n
             <span className="fc-mil__prize tabular">{fmtPrize(PRIZES[i]!)}</span>
           </li>
         ))}
+    </ol>
+  );
+}
+
+/** Where you are on the ladder as a row of dots, for when there is no room for the ladder itself. */
+function Dots({ index, correct }: { index: number; correct: number }) {
+  return (
+    <ol className="fc-mil__dots" aria-hidden="true">
+      {PRIZES.map((_, i) => (
+        <li key={i} className={`${i === index ? "is-current" : ""}${i < correct ? " is-done" : ""}${isSafeLevel(i + 1) ? " is-safe" : ""}`.trim()} />
+      ))}
     </ol>
   );
 }
@@ -322,6 +328,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     <section className={`fc-mil${shaking ? " is-shaking" : ""}`} aria-label={ft("mill.title")}>
       <div className="fc-mil__stage">
         <div className="fc-mil__main">
+          <Dots index={index} correct={correctCount} />
           <header className="fc-mil__top">
             <div className="fc-mil__lifelines" role="group" aria-label={ft("mill.lifelines")}>
               {LIFELINES.map((kind) => (
