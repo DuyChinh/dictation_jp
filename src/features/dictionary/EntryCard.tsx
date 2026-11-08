@@ -3,6 +3,7 @@ import type { DictEntry } from "../../shared/api/dictionary";
 import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
+import { AddEntryButton } from "../flashcards/AddEntryButton";
 import { jlptLabel, miscLabel, uniquePos } from "./dictLabels";
 
 /** Which meanings to read: both (the interface language first), or one language only. */
@@ -66,6 +67,7 @@ export function EntryCard({ entry, meaning = "both", compact = false, linkHeadwo
         <div className="dict-entry__badges">
           {entry.jlpt && <span className={`dict-badge dict-badge--n${entry.jlpt}`}>{jlptLabel(entry.jlpt)}</span>}
           {entry.common && <span className="dict-badge dict-badge--common">{t("dict.common")}</span>}
+          <AddEntryButton entry={entry} meaning={meaning} />
         </div>
       </header>
 

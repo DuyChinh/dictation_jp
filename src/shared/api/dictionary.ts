@@ -79,9 +79,10 @@ export function searchDictionary(
   q: string,
   signal?: AbortSignal,
   meaning?: MeaningPair,
+  lang: SearchLang = "auto",
 ): Promise<SearchResult> {
   const hint = meaning ? `&meaning=${meaning}` : "";
-  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=auto${hint}`, { signal, cache: "no-cache" });
+  return apiFetch<SearchResult>(`/api/dict/search?q=${encodeURIComponent(q)}&lang=${lang}${hint}`, { signal, cache: "no-cache" });
 }
 
 export async function fetchEntry(id: number): Promise<DictEntry> {

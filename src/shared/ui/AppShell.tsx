@@ -27,7 +27,7 @@ function useIsDrawer(): boolean {
   return drawer;
 }
 
-type NavItem = { to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean };
+type NavItem = { to: string; label: TranslationKey; icon: IconName; end?: boolean; heart?: boolean; isNew?: boolean };
 
 /** What the learner does: find a test, sit it, see how it went. */
 const NAV_LEARN: NavItem[] = [
@@ -36,6 +36,7 @@ const NAV_LEARN: NavItem[] = [
   { to: "/exams", label: "nav.exams", icon: "clock" },
   { to: "/history", label: "nav.progress", icon: "chart" },
   { to: "/dictionary", label: "nav.dictionary", icon: "search" },
+  { to: "/flashcards", label: "nav.flashcards", icon: "card", isNew: true },
   { to: "/leaderboard", label: "nav.leaderboard", icon: "trophy" },
 ];
 
@@ -181,6 +182,7 @@ export function AppShell({
                 >
                   <Icon name={item.icon} />
                   <span className="shell-nav__label">{t(item.label)}</span>
+                  {item.isNew && <span className="shell-nav__new">{t("nav.new")}</span>}
                 </NavLink>
               ))}
             </div>

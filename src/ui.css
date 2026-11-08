@@ -3908,3 +3908,15 @@
   .cb__card, .cb__tick { animation: none; }
   .cb__dots i { opacity: 0.6; }
 }
+
+/* "New" tag on a menu item; in the collapsed rail it shrinks to a dot on the icon. */
+.shell-nav__new {
+  margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.5;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--primary-text); background: var(--heart);
+}
+.shell-nav__item { position: relative; }
+@media (min-width: 1024px) {
+  .shell.is-collapsed .shell-nav__new {
+    position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; padding: 0; font-size: 0; margin: 0; border: 2px solid var(--sidebar-bg); box-sizing: content-box;
+  }
+}

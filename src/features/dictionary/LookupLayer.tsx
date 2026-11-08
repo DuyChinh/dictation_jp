@@ -9,6 +9,7 @@ import { EntryCard, headwordOf } from "./EntryCard";
 import { KanjiCard } from "./KanjiCard";
 import { reasonLabel } from "./dictLabels";
 import { caretAt, clickContext, rangeForMatch } from "./textContext";
+import { SelectionFlashcard } from "../flashcards/SelectionFlashcard";
 
 type Popup = {
   rect: DOMRect;
@@ -33,6 +34,7 @@ export function LookupLayer({ children, className }: { children: ReactNode; clas
   const { t, uiLang } = useUiLanguage();
   const [popup, setPopup] = useState<Popup | null>(null);
   const latest = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
     latest.current++;
@@ -85,8 +87,9 @@ export function LookupLayer({ children, className }: { children: ReactNode; clas
   }
 
   return (
-    <div className={className} onClick={onClick}>
+    <div className={className} onClick={onClick} ref={rootRef}>
       {children}
+      <SelectionFlashcard containerRef={rootRef} />
       {popup && createPortal(<LookupPopup popup={popup} onClose={close} t={t} uiLang={uiLang} />, document.body)}
     </div>
   );

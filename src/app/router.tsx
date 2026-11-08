@@ -8,6 +8,10 @@ import { ExamRoomPage } from "../pages/ExamRoomPage";
 import { ExamHistoryPage } from "../pages/ExamHistoryPage";
 import { LeaderboardPage } from "../pages/LeaderboardPage";
 import { DictionaryPage } from "../pages/DictionaryPage";
+import { FlashcardsPage } from "../pages/FlashcardsPage";
+import { FlashcardCreatePage } from "../pages/FlashcardCreatePage";
+import { FlashcardDeckPage } from "../pages/FlashcardDeckPage";
+import { FlashcardStudyPage } from "../pages/FlashcardStudyPage";
 import { PricingPage } from "../pages/PricingPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { FeedbackPage } from "../pages/FeedbackPage";
@@ -73,6 +77,10 @@ export function AppRouter() {
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/dictionary" element={<DictionaryPage />} />
+                <Route path="/flashcards" element={<FlashcardsPage />} />
+                <Route path="/flashcards/create" element={<FlashcardCreatePage />} />
+                <Route path="/flashcards/:deckId" element={<FlashcardDeckPage />} />
+                <Route path="/flashcards/:deckId/:mode" element={<FlashcardStudyPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />

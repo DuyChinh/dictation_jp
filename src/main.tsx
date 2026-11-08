@@ -7,6 +7,7 @@ import "./paper.css";
 import "./redesign.css";
 import "./leaderboard.css";
 import "./dictionary.css";
+import "./flashcards.css";
 import "./select.css";
 
 const root = document.getElementById("root");

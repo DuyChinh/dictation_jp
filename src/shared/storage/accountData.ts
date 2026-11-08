@@ -4,6 +4,8 @@ import { LISTENING_KEY, getAllListeningAnswers } from "./listeningScoreStore";
 import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistoryStore";
 import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
+import { FLASHCARD_KEY } from "../../features/flashcards/store";
+import { syncFlashcards } from "../../features/flashcards/sync";
 import { LISTENING_ATTEMPTS_KEY, getAllListeningAttempts, uploadListeningAttempt } from "./listeningAttemptStore";
 import {
   PAPER_EXAM_KEY,
@@ -32,6 +34,7 @@ const PRACTICE_KEYS = [
   LESSON_ACTIVITY_KEY,
   PAPER_EXAM_KEY,
   PAPER_EXAM_HISTORY_KEY,
+  FLASHCARD_KEY,
 ];
 
 /** Rows per import request, to stay well under the server's request size limit. */
@@ -124,6 +127,7 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
       localStorage.removeItem(PENDING_IMPORT_KEY);
     }
     void syncExamHistoryFromServer();
+    void syncFlashcards();
     return;
   }
 
@@ -137,4 +141,5 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
 
   localStorage.setItem(OWNER_KEY, userId);
   void syncExamHistoryFromServer();
+  void syncFlashcards();
 }
