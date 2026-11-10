@@ -4,7 +4,9 @@ import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
-import { SoundToggle, Stars, playFx, useShake } from "./GameBits";
+import { MusicToggle, SoundToggle, Stars, useShake } from "./GameBits";
+import { playGameSound, startBed, stopBed, tightenBed } from "./gameSound";
+import { useMillText } from "./millionaireText";
 import {
   LIFELINES,
   PRIZES,
@@ -14,8 +16,10 @@ import {
   fallbackPrize,
   fiftyFifty,
   friendAdvice,
+  isMilestone,
   isSafeLevel,
   millionaireStars,
+  nextMilestonePrize,
   prizeAfter,
   type Advice,
   type Lifeline,
@@ -30,6 +34,8 @@ import type { Card, Direction } from "./types";
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 type Phase = "asking" | "locked" | "revealed";
+/** The card shown when a safe level has been reached: how many questions are done. */
+type Milestone = { n: number };
 type Popup = { kind: "audience"; votes: number[] } | { kind: "phone"; advice: Advice; typing: boolean } | { kind: "walk" } | null;
 type End = { reason: "wrong" | "time" | "walk" | "win"; prize: number; correct: number };
 
@@ -84,6 +90,7 @@ function LifelineIcon({ kind }: { kind: Lifeline }) {
  */
 export function MillionaireMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
+  const mt = useMillText();
   const { uiLang } = useUiLanguage();
   const backTo = useBackTo(deckId);
   const { shaking, shake } = useShake();
@@ -102,6 +109,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   const [left, setLeft] = useState(QUESTION_SECONDS);
   const [timedOut, setTimedOut] = useState(false);
   const [end, setEnd] = useState<End | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [record, setRecord] = useState<{ best: number | null; improved: boolean } | null>(null);
 
   const itemRef = useRef<DropItem | null>(null);
@@ -112,11 +120,18 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   const deadline = useRef(0);
   const pausedAt = useRef(0);
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const lastTick = useRef(-1);
   itemRef.current = item;
   indexRef.current = index;
   correctRef.current = correctCount;
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout);
+      stopBed();
+    },
+    [],
+  );
   const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
 
   const options = item?.options ?? [];
@@ -135,7 +150,8 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     return next;
   }
 
-  function loadQuestion() {
+  /** Puts up question `number` (1-15): its card, the clock, the question sting and the tense music. */
+  function loadQuestion(number: number) {
     setItem(pullItem());
     setRemoved([]);
     setSelected(null);
@@ -144,6 +160,9 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     setTimedOut(false);
     deadline.current = Date.now() + QUESTION_SECONDS * 1000;
     setLeft(QUESTION_SECONDS);
+    lastTick.current = -1;
+    playGameSound("question");
+    startBed(number);
   }
 
   function newGame() {
@@ -156,19 +175,21 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     setUsed({});
     setEnd(null);
     setRecord(null);
+    setMilestone(null);
     setStage("playing");
-    loadQuestion();
+    loadQuestion(1);
   }
 
   function finish(reason: End["reason"], correct: number) {
     const prize = reason === "win" ? PRIZES[QUESTIONS - 1]! : reason === "walk" ? prizeAfter(correct) : fallbackPrize(correct);
     setEnd({ reason, prize, correct });
     setStage("over");
-    setRecord({ best: getBest(deckId, "millionaire"), improved: submitBest(deckId, "millionaire", prize, "high") });
-    if (prize > 0) {
-      playFx("win");
-      triggerConfetti({ particleCount: reason === "win" ? 160 : 70 });
-    }
+    setRecord({ best: getBest(deckId, "millionaire2"), improved: submitBest(deckId, "millionaire2", prize, "high") });
+    stopBed();
+    if (reason === "win") playGameSound("win");
+    else if (reason === "walk") playGameSound("walk");
+    else if (prize > 0) playGameSound("levelClear");
+    if (prize > 0) triggerConfetti({ particleCount: reason === "win" ? 200 : 70 });
   }
 
   /** Shows whether the answer was right, then climbs or ends. */
@@ -177,18 +198,24 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     if (!current) return;
     const right = choice !== null && current.options[choice]?.cardId === current.cardId;
     setPhase("revealed");
-    playFx(right ? "correct" : "wrong");
+    stopBed();
     if (right) {
       const n = correctRef.current + 1;
       setCorrectCount(n);
+      // a safe level gets the big fanfare, and then a card saying what is now certain
+      if (n < QUESTIONS) playGameSound(isMilestone(n) ? "milestone" : "correct");
       later(() => {
         if (n >= QUESTIONS) finish("win", n);
-        else {
+        else if (isMilestone(n)) {
+          triggerConfetti({ particleCount: 90 });
+          setMilestone({ n });
+        } else {
           setIndex((i) => i + 1);
-          loadQuestion();
+          loadQuestion(n + 1);
         }
       }, REVEAL_MS);
     } else {
+      playGameSound(choice === null ? "timeup" : "wrong");
       shake();
       later(() => finish(choice === null ? "time" : "wrong", correctRef.current), FAIL_MS);
     }
@@ -198,7 +225,8 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     if (phase !== "asking" || popup || removed.includes(i) || !item) return;
     setSelected(i);
     setPhase("locked");
-    playFx("flip");
+    stopBed();
+    playGameSound("lock");
     later(() => reveal(i), LOCK_MS);
   }
 
@@ -207,7 +235,14 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     if (stage !== "playing" || phase !== "asking" || popup || !timed) return;
     const id = setInterval(() => {
       const remaining = deadline.current - Date.now();
-      setLeft(Math.max(0, Math.ceil(remaining / 1000)));
+      const secs = Math.max(0, Math.ceil(remaining / 1000));
+      setLeft(secs);
+      // the pulse tightens and the last seconds tick
+      tightenBed(secs <= 10);
+      if (secs <= 5 && secs > 0 && secs !== lastTick.current) {
+        lastTick.current = secs;
+        playGameSound("tick");
+      }
       if (remaining <= 0) {
         clearInterval(id);
         setTimedOut(true);
@@ -236,10 +271,12 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
       const gone = fiftyFifty(options.length, correctIdx);
       if (gone.length === 0) return;
       setRemoved(gone);
-      playFx("correct");
+      playGameSound("fifty");
     } else if (kind === "audience") {
+      playGameSound("audience");
       openPopup({ kind: "audience", votes: audienceVotes(options.length, correctIdx, number, removed) });
     } else if (kind === "phone") {
+      playGameSound("phone");
       openPopup({ kind: "phone", advice: friendAdvice(options.length, correctIdx, number, removed), typing: true });
       later(() => setPopup((p) => (p?.kind === "phone" ? { ...p, typing: false } : p)), PHONE_MS);
     } else {
@@ -247,9 +284,19 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
       setRemoved([]);
       deadline.current = Date.now() + QUESTION_SECONDS * 1000;
       setLeft(QUESTION_SECONDS);
-      playFx("flip");
+      lastTick.current = -1;
+      playGameSound("swap");
     }
     setUsed((u) => ({ ...u, [kind]: true }));
+  }
+
+  /** Leaves the milestone card for the next question. */
+  function continueAfterMilestone() {
+    if (!milestone) return;
+    const n = milestone.n;
+    setMilestone(null);
+    setIndex((i) => i + 1);
+    loadQuestion(n + 1);
   }
 
   const canUse = (kind: Lifeline) => stage === "playing" && phase === "asking" && !popup && !used[kind] && (kind !== "fifty" || options.length >= 3);
@@ -260,6 +307,13 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
       const k = e.key.toLowerCase();
+      if (milestone) {
+        if (k === "enter" || k === " ") {
+          e.preventDefault();
+          continueAfterMilestone();
+        }
+        return;
+      }
       const at = ["a", "b", "c", "d"].indexOf(k) >= 0 ? ["a", "b", "c", "d"].indexOf(k) : Number(k) >= 1 && Number(k) <= 4 ? Number(k) - 1 : -1;
       if (at >= 0 && at < options.length) choose(at);
       else if (k === "escape" && popup) closePopup();
@@ -268,12 +322,12 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     return () => window.removeEventListener("keydown", onKey);
     // choose reads the latest state
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, options.length, phase, popup, removed, item]);
+  }, [stage, options.length, phase, popup, removed, item, milestone]);
 
   // ---------- screens ----------
 
   if (stage === "idle") {
-    const best = getBest(deckId, "millionaire");
+    const best = getBest(deckId, "millionaire2");
     return (
       <section className="fc-panel fc-start fc-mil-start">
         <h2>{ft("mill.title")}</h2>
@@ -294,6 +348,12 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
           />
           {fmt(ft("mill.timer"), { n: QUESTION_SECONDS })}
         </label>
+        <div className="fc-mil-soundrow" role="group" aria-label={mt("sound.hint")}>
+          <SoundToggle />
+          <span>{mt("sound.effects")}</span>
+          <MusicToggle />
+          <span>{mt("sound.music")}</span>
+        </div>
         {best !== null && <p className="fc-note">{fmt(ft("mill.best"), { prize: money(best) })}</p>}
         <button type="button" className="btn btn--primary btn--lg" onClick={newGame}>{ft("common.start")}</button>
       </section>
@@ -346,7 +406,10 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
               ))}
             </div>
             <div className="fc-mil__meta">
-              <span className="fc-mil__count">{fmt(ft("mill.question"), { n: qNumber, total: QUESTIONS })}</span>
+              <span className="fc-mil__count">
+                {fmt(ft("mill.question"), { n: qNumber, total: QUESTIONS })}
+                {(isSafeLevel(qNumber) || qNumber === QUESTIONS) && <em className="fc-mil__tag">{mt("ms.tag")}</em>}
+              </span>
               <span className="fc-mil__worth tabular">{money(PRIZES[index]!)}</span>
             </div>
             {timed && (
@@ -355,6 +418,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
               </span>
             )}
             <SoundToggle />
+            <MusicToggle />
           </header>
 
           <div className="fc-mil__question" key={`q-${index}-${item!.cardId}`}>
@@ -394,6 +458,24 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
               {fmt(ft("mill.walk"), { prize: money(walkPrize) })}
             </button>
           </footer>
+
+          {milestone && (
+            <div className="fc-mil__milestone" role="dialog" aria-modal="true" aria-label={mt("ms.eyebrow")}>
+              <div className="fc-mil__cheque">
+                <span className="fc-mil__ribbon">{mt("ms.eyebrow")}</span>
+                <h3>{mt("ms.title", { n: milestone.n })}</h3>
+                <p className="fc-mil__chequelabel">{mt("ms.amount")}</p>
+                <strong className="fc-mil__chequeprize tabular">{money(prizeAfter(milestone.n))}</strong>
+                <p>{mt("ms.safe")}</p>
+                <p className="fc-mil__chequenext">
+                  {mt(nextMilestonePrize(milestone.n) === PRIZES[QUESTIONS - 1] ? "ms.top" : "ms.next", { prize: money(nextMilestonePrize(milestone.n)) })}
+                </p>
+                <button type="button" className="btn btn--primary btn--lg" onClick={continueAfterMilestone} autoFocus>
+                  {mt("ms.go")}
+                </button>
+              </div>
+            </div>
+          )}
 
           {popup && (
             <div className="fc-mil__popup" role="dialog" aria-label={ft(popup.kind === "audience" ? "mill.audienceTitle" : popup.kind === "phone" ? "mill.friendTitle" : "mill.walkAsk")}>

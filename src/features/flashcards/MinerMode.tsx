@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
@@ -38,6 +38,7 @@ import {
   type Scene,
   type SkinId,
 } from "./miner";
+import { playGameSound } from "./gameSound";
 import { SkinArt } from "./MinerSkins";
 import { getBest, submitBest } from "./prefs";
 import { buildDropRound, type DropItem } from "./quiz";
@@ -57,6 +58,60 @@ const RESULT_MS = 900;
 const CHEER_MS = 520;
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+
+/** The narrowest the field is made when it is shrunk to fit the screen's height. */
+const MIN_FIELD_PX = 260;
+
+/**
+ * The widest the field may be for the whole of it to be on screen at once. The field keeps its proportions, so
+ * on a screen that is wide but not tall (a laptop) it would be taller than the window and the bottom nuggets
+ * would be cut off. What is above and below the field (clock, lives, the word, the launch button) is measured
+ * and subtracted; the tallest that was seen is kept so the field does not change size from question to question.
+ */
+function useFitField(active: boolean, ratio: number, scrollKey: string) {
+  const root = useRef<HTMLElement>(null);
+  const field = useRef<HTMLDivElement>(null);
+  const [maxWidth, setMaxWidth] = useState<number | null>(null);
+  const tallestOther = useRef(0);
+
+  useLayoutEffect(() => {
+    if (!active) return;
+    tallestOther.current = 0;
+    const fit = () => {
+      const r = root.current;
+      const f = field.current;
+      if (!r || !f) return;
+      const style = getComputedStyle(r);
+      const chrome = (parseFloat(style.getPropertyValue("--header-h")) || 72) + 8;
+      const other = r.offsetHeight - f.offsetHeight;
+      tallestOther.current = Math.max(tallestOther.current, other);
+      const room = window.innerHeight - chrome - tallestOther.current - 16;
+      const width = Math.floor(room * ratio);
+      const available = r.clientWidth;
+      const next = width >= available ? null : Math.max(MIN_FIELD_PX, width);
+      setMaxWidth((old) => (old === next || (old !== null && next !== null && Math.abs(old - next) < 2) ? old : next));
+    };
+    fit();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    if (root.current) observer?.observe(root.current);
+    const onResize = () => {
+      tallestOther.current = 0;
+      fit();
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+    };
+  }, [active, ratio]);
+
+  // a new game puts the whole field in view, with the clock and the word above it
+  useEffect(() => {
+    if (active) root.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+  }, [active, scrollKey]);
+
+  return { root, field, maxWidth };
+}
 
 /** A phone held upright gets the tall field with bigger nuggets; anything wider gets the wide one. */
 function useNarrow(): boolean {
@@ -136,6 +191,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   itemRef.current = item;
   sceneRef.current = scene;
   const playing = stage === "playing";
+  const { root, field, maxWidth } = useFitField(playing || stage === "cleared", W / scene.H, `${scene.H}`);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
@@ -203,10 +259,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
 
   /** The claw is back, with nugget `index` or with nothing. */
   function arrived(index: number | null) {
-    if (index === null) {
-      playFx("flip");
-      return;
-    }
+    if (index === null) return;
     const picked = nuggetsRef.current[index];
     const current = itemRef.current;
     if (!picked || !current) return;
@@ -230,7 +283,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           clearedAt.current = Date.now();
           setClearInfo({ bonus: timeBonus(deadline.current - clearedAt.current) });
           setStage("cleared");
-          playFx("win");
+          playGameSound("levelClear");
           triggerConfetti({ particleCount: 90 });
         } else ask();
       }, 650);
@@ -259,7 +312,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         clawRef.current = claw;
         paint();
         if (event?.type === "caught") {
-          playFx("flip");
+          playGameSound("grab");
           setCarried(event.index);
         } else if (event?.type === "arrived") arrived(event.index);
       }
@@ -290,13 +343,19 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   const idle = () => clawRef.current.phase === "swing" && !pausedRef.current;
 
   function drop() {
-    if (playing && idle()) clawRef.current = launch(clawRef.current);
+    if (playing && idle()) {
+      clawRef.current = launch(clawRef.current);
+      playGameSound("launch");
+    }
   }
 
   /** Tapping a nugget sends the claw straight to it. */
   function aim(index: number) {
     const target = nuggetsRef.current[index];
-    if (playing && target && idle()) clawRef.current = aimAt(clawRef.current, index, target.box);
+    if (playing && target && idle()) {
+      clawRef.current = aimAt(clawRef.current, index, target.box);
+      playGameSound("launch");
+    }
   }
 
   const canBoom = playing && carried !== null && clawRef.current.phase === "retract" && !feedback && miner.dynamite > 0;
@@ -310,7 +369,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     clawRef.current = dropCatch(c);
     setCarried(null);
     setBoom({ key: ++boomKey.current, x: tip.x, y: tip.y });
-    playFx("wrong");
+    playGameSound("boom");
     shake();
     pop(ft("miner.pop.boom"), "bad", pctX(tip.x));
     later(() => setBoom(null), 700);
@@ -390,7 +449,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   const potential = (n: Nugget) => skinPoints(n.skin);
 
   return (
-    <section className="fc-miner" aria-label={ft("miner.title")}>
+    <section ref={root} className="fc-miner" aria-label={ft("miner.title")}>
       <div className="fc-mhud">
         <div className="fc-mhud__sign">
           <span className="fc-mhud__signlabel">{ft("miner.target")}</span>
@@ -432,9 +491,12 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       </div>
 
       <div
+        ref={field}
         className={`fc-miner__scene${scene === SCENES.tall ? " is-tall" : ""}${shaking ? " is-shaking" : ""}`}
         style={{
           aspectRatio: `${W} / ${scene.H}`,
+          maxWidth: maxWidth ?? undefined,
+          marginInline: maxWidth ? "auto" : undefined,
           ["--nw" as string]: `${scene.nugget.w}cqw`,
           ["--nh" as string]: `${scene.nugget.h}cqw`,
           ["--ground" as string]: pct(8, scene.H),

@@ -723,6 +723,9 @@ describe("MillionaireMode", () => {
     fireEvent.click(answers()[i]!);
     await frames(1400);
     await frames(then);
+    // a safe level stops on its card; carry on from it
+    const card = screen.queryByRole("dialog", { name: "Mốc an toàn" });
+    if (card) fireEvent.click(within(card).getByRole("button", { name: "Chơi tiếp" }));
   };
   const life = (name: RegExp) => screen.getByRole("button", { name }) as HTMLButtonElement;
   beforeEach(() => vi.useFakeTimers());
@@ -742,13 +745,14 @@ describe("MillionaireMode", () => {
     render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
     play();
     expect(screen.getByText("Câu 1/15")).toBeTruthy();
-    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("100");
+    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("200.000");
     expect(answers().map((b) => b.querySelector(".fc-mil__letter")!.textContent)).toEqual(["A", "B", "C", "D"]);
     expect(screen.getAllByRole("button", { name: /50:50|khán giả|người thân|Đổi câu hỏi/ })).toHaveLength(4);
     const rungs = [...document.querySelectorAll(".fc-mil__ladder li")];
     expect(rungs).toHaveLength(15);
-    expect(rungs[0]!.textContent).toContain("1.000.000");
-    expect(document.querySelector(".fc-mil__ladder .is-current")!.textContent).toContain("100");
+    expect(rungs[0]!.textContent).toContain("250.000.000");
+    expect(rungs[14]!.textContent).toContain("200.000");
+    expect(document.querySelector(".fc-mil__ladder .is-current")!.textContent).toContain("200.000");
     expect(document.querySelectorAll(".fc-mil__ladder .is-safe")).toHaveLength(2);
     expect(document.querySelector(".fc-mil__clock")!.textContent).toBe("30");
   });
@@ -767,7 +771,7 @@ describe("MillionaireMode", () => {
     expect(screen.getByRole("status").textContent).toBe("Chính xác!");
     await frames(1800);
     expect(screen.getByText("Câu 2/15")).toBeTruthy();
-    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("200");
+    expect(document.querySelector(".fc-mil__worth")!.textContent).toBe("400.000");
     expect(document.querySelector(".fc-mil__ladder .is-done")).toBeTruthy();
   });
 
@@ -805,10 +809,43 @@ describe("MillionaireMode", () => {
     for (let q = 0; q < 5; q++) await answer(rightIndex());
     expect(screen.getByText("Câu 6/15")).toBeTruthy();
     await answer(wrongIndex(), 2600);
-    expect(document.querySelector(".fc-result__big")!.textContent).toBe("1.000");
-    expect(screen.getByText("Bạn nhận được 1.000 điểm thưởng.")).toBeTruthy();
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("2.000.000");
+    expect(screen.getByText("Bạn nhận được 2.000.000 điểm thưởng.")).toBeTruthy();
     expect(screen.getByText("Trả lời đúng 5/15 câu.")).toBeTruthy();
-    expect(JSON.parse(localStorage.getItem("jd.flash_best.v1")!)["deck1:millionaire"]).toBe(1000);
+    expect(JSON.parse(localStorage.getItem("jd.flash_best.v1")!)["deck1:millionaire2"]).toBe(2_000_000);
+  });
+
+  it("stops on a card at each safe level, saying what is now certain, and goes on when asked", async () => {
+    render(wrap(<MillionaireMode deckId="deck1" cards={deck()} direction="term" />));
+    play();
+    for (let q = 0; q < 4; q++) await answer(rightIndex());
+    // no card between safe levels
+    expect(screen.queryByRole("dialog", { name: "Mốc an toàn" })).toBeNull();
+    expect(screen.getByText("Câu 5/15")).toBeTruthy();
+    expect(screen.getByText("Câu hỏi mốc")).toBeTruthy();
+
+    fireEvent.click(answers()[rightIndex()]!);
+    await frames(1400);
+    await frames(1800);
+    let card = screen.getByRole("dialog", { name: "Mốc an toàn" });
+    expect(card.textContent).toContain("Chúc mừng! Bạn đã vượt qua câu 5");
+    expect(card.querySelector(".fc-mil__chequeprize")!.textContent).toBe("2.000.000");
+    expect(card.textContent).toContain("Mốc tiếp theo: 22.000.000");
+    // the game waits on the card: no question 6 yet, and the answers cannot be touched
+    expect(screen.queryByText("Câu 6/15")).toBeNull();
+    fireEvent.keyDown(window, { key: "Enter" });
+    expect(screen.queryByRole("dialog", { name: "Mốc an toàn" })).toBeNull();
+    expect(screen.getByText("Câu 6/15")).toBeTruthy();
+
+    for (let q = 0; q < 4; q++) await answer(rightIndex());
+    fireEvent.click(answers()[rightIndex()]!);
+    await frames(1400);
+    await frames(1800);
+    card = screen.getByRole("dialog", { name: "Mốc an toàn" });
+    expect(card.querySelector(".fc-mil__chequeprize")!.textContent).toBe("22.000.000");
+    expect(card.textContent).toContain("Giải thưởng lớn nhất: 250.000.000");
+    fireEvent.click(within(card).getByRole("button", { name: "Chơi tiếp" }));
+    expect(screen.getByText("Câu 11/15")).toBeTruthy();
   });
 
   it("50:50 takes away two wrong answers and never the right one, once", async () => {
@@ -875,14 +912,14 @@ describe("MillionaireMode", () => {
     expect((screen.getByRole("button", { name: /Dừng cuộc chơi/ }) as HTMLButtonElement).disabled).toBe(true);
     await answer(rightIndex());
     await answer(rightIndex());
-    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 200/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 400.000/ }));
     const dialog = screen.getByRole("dialog", { name: "Dừng cuộc chơi?" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Chơi tiếp" }));
     expect(screen.getByText("Câu 3/15")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 200/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận 400.000/ }));
     fireEvent.click(screen.getByRole("button", { name: "Dừng và nhận thưởng" }));
     expect(screen.getByText("Bạn đã dừng cuộc chơi")).toBeTruthy();
-    expect(document.querySelector(".fc-result__big")!.textContent).toBe("200");
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("400.000");
   });
 
   it("runs out of time: the answer is shown and the game ends", async () => {
@@ -933,7 +970,7 @@ describe("MillionaireMode", () => {
       await answer(rightIndex(), 1800);
     }
     expect(screen.getByText("Chúc mừng! Bạn là triệu phú!")).toBeTruthy();
-    expect(document.querySelector(".fc-result__big")!.textContent).toBe("1.000.000");
+    expect(document.querySelector(".fc-result__big")!.textContent).toBe("250.000.000");
     expect(screen.getByRole("img", { name: /3/ })).toBeTruthy();
   });
 });
@@ -977,6 +1014,33 @@ describe("MinerMode", () => {
     // four nuggets, each its own kind of treasure with its worth on it
     expect(nuggetButtons()).toHaveLength(4);
     for (const b of nuggetButtons()) expect([10, 12, 16, 20, 25, 30]).toContain(valueOf(b));
+  });
+
+  it("shrinks the field to the window's height so the whole of it is on screen, and leaves it alone when there is room", () => {
+    const heights = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("fc-miner__scene") ? 620 : 900; // the field, and the whole game around it
+    });
+    const widths = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
+    const inner = window.innerHeight;
+    try {
+      // 700 high: 700 - header (72 + 8) - the 280 around the field - 16 = 324 for the field, which is 522 wide at 100:62
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
+      render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+      play();
+      const field = document.querySelector<HTMLElement>(".fc-miner__scene")!;
+      expect(field.style.maxWidth).toBe("522px");
+      expect(field.style.marginInline).toBe("auto");
+      cleanup();
+
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: 1400 });
+      render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+      play();
+      expect(document.querySelector<HTMLElement>(".fc-miner__scene")!.style.maxWidth).toBe("");
+    } finally {
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: inner });
+      heights.mockRestore();
+      widths.mockRestore();
+    }
   });
 
   it("tapping a nugget sends the claw straight to it, even one off to the side, and pays what it is worth", async () => {

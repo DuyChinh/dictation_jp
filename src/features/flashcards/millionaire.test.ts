@@ -6,8 +6,10 @@ import {
   fallbackPrize,
   fiftyFifty,
   friendAdvice,
+  isMilestone,
   isSafeLevel,
   millionaireStars,
+  nextMilestonePrize,
   prizeAfter,
 } from "./millionaire";
 
@@ -20,20 +22,27 @@ const seeded = (seed = 5) => () => {
 };
 
 describe("the prize ladder", () => {
-  it("has fifteen rungs rising to a million", () => {
+  it("has fifteen rungs, from 200,000 up to 250,000,000", () => {
     expect(QUESTIONS).toBe(15);
-    expect(PRIZES[0]).toBe(100);
-    expect(PRIZES[14]).toBe(1_000_000);
+    expect(PRIZES[0]).toBe(200_000);
+    expect(PRIZES[14]).toBe(250_000_000);
+    expect([...PRIZES]).toEqual([200_000, 400_000, 600_000, 1_000_000, 2_000_000, 3_000_000, 6_000_000, 10_000_000, 14_000_000, 22_000_000, 30_000_000, 40_000_000, 80_000_000, 150_000_000, 250_000_000]);
     for (let i = 1; i < PRIZES.length; i++) expect(PRIZES[i]!).toBeGreaterThan(PRIZES[i - 1]!);
   });
   it("pays the rung just reached, and nothing before the first", () => {
-    expect([0, 1, 5, 14, 15, 99].map(prizeAfter)).toEqual([0, 100, 1000, 500000, 1000000, 1000000]);
+    expect([0, 1, 5, 14, 15, 99].map(prizeAfter)).toEqual([0, 200_000, 2_000_000, 150_000_000, 250_000_000, 250_000_000]);
   });
   it("falls back to the last safe prize when an answer is wrong", () => {
-    expect([0, 4, 5, 9, 10, 14].map(fallbackPrize)).toEqual([0, 0, 1000, 1000, 32000, 32000]);
+    expect([0, 4, 5, 9, 10, 14].map(fallbackPrize)).toEqual([0, 0, 2_000_000, 2_000_000, 22_000_000, 22_000_000]);
     expect(isSafeLevel(5)).toBe(true);
     expect(isSafeLevel(10)).toBe(true);
     expect(isSafeLevel(6)).toBe(false);
+  });
+  it("stops at the two safe levels, not on the last question, which ends the game", () => {
+    expect([4, 5, 6, 9, 10, 11, 14, 15].map(isMilestone)).toEqual([false, true, false, false, true, false, false, false]);
+  });
+  it("names the next safe prize, then the top one", () => {
+    expect([0, 4, 5, 9, 10, 14].map(nextMilestonePrize)).toEqual([2_000_000, 2_000_000, 22_000_000, 22_000_000, 250_000_000, 250_000_000]);
   });
   it("gives stars for how far the player got", () => {
     expect([0, 4, 5, 9, 10, 14, 15].map(millionaireStars)).toEqual([0, 0, 1, 1, 2, 2, 3]);

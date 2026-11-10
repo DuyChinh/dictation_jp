@@ -92,6 +92,8 @@ export function errorText(err: unknown): string {
   switch (err.code) {
     case "NETWORK":
       return "Không kết nối được máy chủ.";
+    case "UNAVAILABLE":
+      return "Dịch vụ tạm thời chưa sẵn sàng. Vui lòng thử lại sau.";
     case "INVALID_CREDENTIALS":
       return "Sai tên đăng nhập hoặc mật khẩu.";
     case "LOCKED":

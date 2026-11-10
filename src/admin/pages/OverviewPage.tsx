@@ -7,6 +7,7 @@ import { adminFetch, type Overview } from "../api";
 import { useAsync } from "../hooks";
 import { dateTimeText, lessonTitle, num, vnd } from "../format";
 import { PaymentStatusBadge } from "./PaymentsPage";
+import { TrafficChart } from "../components/TrafficChart";
 
 const RANGES = [7, 30, 90] as const;
 
@@ -109,6 +110,8 @@ export function OverviewPage() {
       </PageHead>
 
       {error && <div className="notice notice--error adm-gap">{error}</div>}
+
+      <TrafficChart />
 
       {data && (
         <>

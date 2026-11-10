@@ -3,8 +3,12 @@ import type { Rng } from "./quiz";
 /**
  * "Who wants to be a millionaire": fifteen questions up a ladder of prizes, with two safe levels to fall back
  * to and four lifelines. The rules and the numbers live here, apart from the screen, so they can be tested.
+ * The ladder is the one of the Vietnamese show: 200,000 for the first question up to 250,000,000 for the last.
  */
-export const PRIZES = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000] as const;
+export const PRIZES = [
+  200_000, 400_000, 600_000, 1_000_000, 2_000_000, 3_000_000, 6_000_000, 10_000_000, 14_000_000, 22_000_000, 30_000_000, 40_000_000, 80_000_000,
+  150_000_000, 250_000_000,
+] as const;
 export const QUESTIONS = PRIZES.length;
 /** Answering this many questions right makes that prize safe: a wrong answer afterwards falls back to it. */
 export const SAFE_COUNTS = [5, 10] as const;
@@ -20,6 +24,15 @@ export function fallbackPrize(correct: number): number {
 }
 
 export const isSafeLevel = (questionNumber: number): boolean => (SAFE_COUNTS as readonly number[]).includes(questionNumber);
+
+/** A milestone is a safe level just reached: the show stops to say what is now certain (the last question ends the game instead). */
+export const isMilestone = (correctCount: number): boolean => isSafeLevel(correctCount) && correctCount < QUESTIONS;
+
+/** The next safe prize still to come, or the top prize once both are passed. */
+export function nextMilestonePrize(correctCount: number): number {
+  const next = SAFE_COUNTS.find((c) => c > correctCount);
+  return prizeAfter(next ?? QUESTIONS);
+}
 
 /** 0 to 3 stars for how far up the ladder the player got. */
 export const millionaireStars = (correct: number): number => (correct >= QUESTIONS ? 3 : correct >= 10 ? 2 : correct >= 5 ? 1 : 0);

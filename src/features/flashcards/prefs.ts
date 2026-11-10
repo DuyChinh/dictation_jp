@@ -51,7 +51,8 @@ export const saveRightLang = (lang: CardLang) => set(RIGHT_KEY, lang);
 export const lastDeckId = (): string | null => get(DECK_KEY);
 export const saveLastDeck = (id: string) => set(DECK_KEY, id);
 
-export type GameName = "match" | "drop" | "memory" | "blitz" | "millionaire" | "miner";
+/** "millionaire2" is the quiz show with the Vietnamese prize ladder; the old "millionaire" scores were on another scale. */
+export type GameName = "match" | "drop" | "memory" | "blitz" | "millionaire" | "millionaire2" | "miner";
 type Best = Record<string, number>;
 
 function readBest(): Best {
@@ -79,8 +80,29 @@ export function submitBest(deckId: string, game: GameName, value: number, better
 }
 
 const SOUND_KEY = "jd.flash_sound.v1";
+const MUSIC_KEY = "jd.flash_music.v1";
+/** Fired when sound or music is switched, so a sound that is already playing can stop (or come back) at once. */
+export const SOUND_EVENT = "jd:flash-sound";
+const announceSound = () => {
+  try {
+    window.dispatchEvent(new Event(SOUND_EVENT));
+  } catch {
+    /* no window: nothing is playing anyway */
+  }
+};
+
+/** Sound effects and music of the games; the learner can switch all of it off. */
 export const soundOn = (): boolean => get(SOUND_KEY) !== "off";
-export const saveSound = (on: boolean) => set(SOUND_KEY, on ? "on" : "off");
+export const saveSound = (on: boolean) => {
+  set(SOUND_KEY, on ? "on" : "off");
+  announceSound();
+};
+/** The tense background music of the quiz show; off with the sound, or on its own. */
+export const musicOn = (): boolean => get(MUSIC_KEY) !== "off";
+export const saveMusic = (on: boolean) => {
+  set(MUSIC_KEY, on ? "on" : "off");
+  announceSound();
+};
 
 const HV_KEY = "jd.flash_hv.v1";
 const hvListeners = new Set<() => void>();

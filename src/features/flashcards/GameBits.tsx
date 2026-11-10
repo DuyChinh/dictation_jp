@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/ui/Icon";
 import { sfx } from "../../shared/utils/sfx";
 import { useFt } from "./flashText";
-import { saveSound, soundOn } from "./prefs";
+import { useMillText } from "./millionaireText";
+import { musicOn, saveMusic, saveSound, soundOn } from "./prefs";
 
 export type Fx = "correct" | "wrong" | "flip" | "win";
 
@@ -31,6 +32,33 @@ export function SoundToggle() {
       }}
     >
       <Icon name={on ? "volume" : "eyeOff"} size={18} />
+    </button>
+  );
+}
+
+/** Switches the background music of the quiz show on and off; the sound effects have their own button. */
+export function MusicToggle() {
+  const mt = useMillText();
+  const [on, setOn] = useState(musicOn);
+  const label = on ? mt("music.on") : mt("music.off");
+  return (
+    <button
+      type="button"
+      className="icon-btn icon-btn--ghost fc-sound fc-music"
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      onClick={() => {
+        saveMusic(!on);
+        setOn(!on);
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <path d="M9 18V6l10-2v12" />
+        <circle cx="6.5" cy="18" r="2.5" />
+        <circle cx="16.5" cy="16" r="2.5" />
+        {!on && <path d="M3 3l18 18" />}
+      </svg>
     </button>
   );
 }

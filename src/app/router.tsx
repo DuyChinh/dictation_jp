@@ -34,6 +34,7 @@ import { AuthProvider } from "../features/auth/AuthContext";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
 import { LevelProvider } from "../shared/context/LevelContext";
+import { PageViewTracker } from "../shared/analytics/PageViewTracker";
 
 const RELOADED_KEY = "jd.chunk_reload";
 
@@ -70,6 +71,7 @@ export function AppRouter() {
           <AuthProvider>
             <LanguageProvider>
               <BrowserRouter>
+              <PageViewTracker />
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/lessons" element={<LessonsPage />} />
