@@ -65,6 +65,8 @@ afterEach(() => cleanup());
 describe("picture references on the page", () => {
   it("accepts only Openverse and Wikimedia Commons", () => {
     expect(isAllowedImage(OV("aaa"))).toBe(true);
+    // Commons' own search answers with thumb.wikimedia.org addresses
+    expect(isAllowedImage({ url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/D.jpg/400px-D.jpg" })).toBe(true);
     expect(isAllowedImage({ url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/D.jpg/400px-D.jpg" })).toBe(true);
     for (const url of ["https://evil.example/p.gif", "http://api.openverse.org/x", "https://api.openverse.org.evil.example/x", "https://u:p@api.openverse.org/x", "javascript:alert(1)", "data:image/png;base64,AAAA", "not a url"]) {
       expect(isAllowedImage({ url }), url).toBe(false);

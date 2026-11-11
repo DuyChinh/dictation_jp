@@ -2,7 +2,8 @@ import type { ImageHit } from "../../shared/api/images";
 import type { CardImage } from "./types";
 
 /** Pictures come only from Openverse and Wikimedia Commons; anything else is never loaded, whatever a deck says. */
-const IMAGE_HOSTS = ["api.openverse.org", "upload.wikimedia.org"];
+/** Commons resizes on thumb.wikimedia.org (what its search answers with); upload.wikimedia.org holds the originals. */
+const IMAGE_HOSTS = ["api.openverse.org", "thumb.wikimedia.org", "upload.wikimedia.org"];
 const PAGE_HOSTS = ["openverse.org", "commons.wikimedia.org"];
 
 function httpsHost(value: string | undefined, hosts: string[]): boolean {
