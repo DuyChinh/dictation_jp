@@ -263,14 +263,15 @@ describe("where a reading is shown", () => {
     expect(sidesOf(card("c", "ありがとう", "cảm ơn", { reading: "ありがとう" })).answer.lead).toBeUndefined();
   });
 
-  it("still accepts the reading as a typed answer, and gives the choices no hint", async () => {
+  it("still accepts typed readings and retains the reading before meaning choices", async () => {
     const { choiceSide } = await import("./quiz");
     expect(checkAnswer("こうにゅう", sidesOf(buy, true).answer)).toBe("exact");
-    expect(choiceSide(sidesOf(buy).answer)).toMatchObject({ lead: undefined, showReading: false });
+    expect(choiceSide(sidesOf(buy).answer)).toMatchObject({ lead: "こうにゅう", showReading: false });
+    const readings = new Map([["b", "こうにゅう"], ["d", "いぬ"]]);
     const opts = buildTest([buy, card("d", "犬", "chó", { reading: "いぬ" })], { count: 2, direction: "term", kinds: { mc: true, tf: false, write: false, match: false } }, seeded());
-    for (const q of opts) if (q.kind === "mc") for (const o of q.options) expect(o.side.lead).toBeUndefined();
+    for (const q of opts) if (q.kind === "mc") for (const o of q.options) expect(o.side.lead).toBe(readings.get(o.cardId));
     const tiles = buildMatchRound([buy, card("d", "犬", "chó", { reading: "いぬ" })], 2, "term", seeded());
-    for (const t of tiles) expect(t.side.lead).toBeUndefined();
+    for (const t of tiles) expect(t.side.lead).toBe(t.kind === "answer" ? readings.get(t.cardId) : undefined);
   });
 });
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { DirectionPicker, HanVietPicker } from "../features/flashcards/DirectionPicker";
+import { DirectionPicker, HanVietPicker, HiraganaPicker } from "../features/flashcards/DirectionPicker";
 import { useFt } from "../features/flashcards/flashText";
-import { useDirection, useShowHanViet } from "../features/flashcards/prefs";
+import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
 import { cardsOf, deckStats, deleteDeck, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
@@ -28,6 +28,7 @@ export function FlashcardDeckPage() {
   const cards = useMemo(() => cardsOf(state, deckId), [state, deckId]);
   const [direction, setDirection] = useDirection();
   const [hanViet, setHanViet] = useShowHanViet();
+  const [hiragana, setHiragana] = useShowHiragana();
   useHanVietBackfill(cards);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState("");
@@ -107,6 +108,7 @@ export function FlashcardDeckPage() {
         <h2 className="fc-section">{ft("deck.modes")}</h2>
         <DirectionPicker value={direction} onChange={setDirection} />
         <HanVietPicker value={hanViet} onChange={setHanViet} />
+        <HiraganaPicker value={hiragana} onChange={setHiragana} />
         <ul className="fc-modes">
           {MODES.map((m) => {
             const ok = cards.length >= m.min;

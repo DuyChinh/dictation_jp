@@ -33,8 +33,8 @@ export function sidesOf(card: Card, flip = false): { prompt: Side; answer: Side 
   return { prompt, answer };
 }
 
-/** A side as one of several choices to pick from (a button, a tile): no reading shown, so it hints at nothing. */
-export const choiceSide = (side: Side): Side => ({ ...side, showReading: false, lead: undefined, trail: undefined });
+/** Keep the reading before meanings; the display preference controls its visibility. */
+export const choiceSide = (side: Side): Side => ({ ...side, showReading: false, trail: undefined });
 
 export const pickFlip = (direction: Direction, rng: Rng = Math.random): boolean =>
   direction === "definition" ? true : direction === "term" ? false : rng() < 0.5;

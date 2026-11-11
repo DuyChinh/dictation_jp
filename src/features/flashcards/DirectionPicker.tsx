@@ -32,3 +32,18 @@ export function HanVietPicker({ value, onChange }: { value: boolean; onChange: (
     </div>
   );
 }
+
+/** Whether Japanese readings appear before meanings during study, tests and games. */
+export function HiraganaPicker({ value, onChange }: { value: boolean; onChange: (on: boolean) => void }) {
+  const ft = useFt();
+  return (
+    <div className="fc-dir" role="radiogroup" aria-label={ft("deck.hiragana")}>
+      <span className="fc-dir__label">{ft("deck.hiragana")}</span>
+      {[true, false].map((on) => (
+        <button key={String(on)} type="button" role="radio" aria-checked={value === on} className={`fc-dir__item${value === on ? " is-on" : ""}`} onClick={() => onChange(on)}>
+          {ft(on ? "deck.hiragana.on" : "deck.hiragana.off")}
+        </button>
+      ))}
+    </div>
+  );
+}

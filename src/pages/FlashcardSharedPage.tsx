@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../shared/api/client";
-import { DirectionPicker, HanVietPicker } from "../features/flashcards/DirectionPicker";
+import { DirectionPicker, HanVietPicker, HiraganaPicker } from "../features/flashcards/DirectionPicker";
 import { StudyModes } from "../features/flashcards/StudyModes";
 import { SideView } from "../features/flashcards/SideView";
 import { useFt } from "../features/flashcards/flashText";
 import { MODES, modeById } from "../features/flashcards/modes";
-import { useDirection, useShowHanViet } from "../features/flashcards/prefs";
+import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
 import { acceptedAnswers, sidesOf } from "../features/flashcards/quiz";
 import { fetchSharedDeck, sharedToCards, type SharedDeck } from "../features/flashcards/shareApi";
 import { importSharedDeck } from "../features/flashcards/store";
@@ -75,6 +75,7 @@ export function FlashcardSharedPage() {
   const [state, retry] = useSharedDeck(shareId);
   const [direction, setDirection] = useDirection();
   const [hanViet, setHanViet] = useShowHanViet();
+  const [hiragana, setHiragana] = useShowHiragana();
   const [query, setQuery] = useState("");
   const deckKey = `shared-${shareId}`;
   const cards = useMemo(() => (state.status === "ready" ? sharedToCards(state.deck, deckKey) : []), [state, deckKey]);
@@ -120,6 +121,7 @@ export function FlashcardSharedPage() {
       <div className="fc-pickers">
         <DirectionPicker value={direction} onChange={setDirection} />
         <HanVietPicker value={hanViet} onChange={setHanViet} />
+        <HiraganaPicker value={hiragana} onChange={setHiragana} />
       </div>
       <ul className="fc-modes">
         {MODES.map((m) => {

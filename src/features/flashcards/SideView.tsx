@@ -1,5 +1,5 @@
 import { SpeakButton } from "../../shared/ui/SpeakButton";
-import { useShowHanViet } from "./prefs";
+import { useShowHanViet, useShowHiragana } from "./prefs";
 import type { Side } from "./types";
 
 /**
@@ -8,13 +8,14 @@ import type { Side } from "./types";
  */
 export function SideView({ side, big = false, speak = true }: { side: Side; big?: boolean; speak?: boolean }) {
   const [hanViet] = useShowHanViet();
+  const [hiragana] = useShowHiragana();
   const ja = side.lang === "ja";
   const showReading = ja && side.reading && side.reading !== side.text && side.showReading !== false;
   return (
     <span className={`fc-side${big ? " fc-side--big" : ""}${ja ? " jp" : ""}`} lang={ja ? "ja" : side.lang}>
       {showReading && <span className="fc-side__reading">{side.reading}</span>}
       <span className="fc-side__text">
-        {side.lead && (
+        {side.lead && hiragana && (
           <>
             <span className="fc-side__lead jp" lang="ja">{side.lead}</span>
             <span className="fc-side__colon">: </span>

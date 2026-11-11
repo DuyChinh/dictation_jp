@@ -14,6 +14,7 @@ import {
   type QuestionResult,
 } from "./quiz";
 import { recordAnswers } from "./store";
+import { useShowHiragana } from "./prefs";
 import { SideView } from "./SideView";
 import type { Card, Direction, Side } from "./types";
 
@@ -337,7 +338,9 @@ function MatchBlock({
   result?: QuestionResult;
   ft: Ft;
 }) {
+  const [hiragana] = useShowHiragana();
   const given = answer ?? {};
+  const choiceText = (side: Side) => side.lead && hiragana ? `${side.lead}: ${side.text}` : side.text;
   return (
     <>
       <p className="fc-note">{ft("test.matchHint")}</p>
@@ -357,13 +360,13 @@ function MatchBlock({
               >
                 <option value="">{ft("test.pick")}</option>
                 {q.choices.map((c) => (
-                  <option key={c.cardId} value={c.cardId}>{c.side.text}</option>
+                  <option key={c.cardId} value={c.cardId}>{choiceText(c.side)}</option>
                 ))}
               </select>
               {r && !r.correct && (
                 <span className="fc-q__correct">
                   {ft("test.rightAnswer")}: <SideView side={p.answer} speak={false} />
-                  {picked && <span className="fc-note"> ({ft("test.yourAnswer")}: {picked.side.text})</span>}
+                  {picked && <span className="fc-note"> ({ft("test.yourAnswer")}: {choiceText(picked.side)})</span>}
                 </span>
               )}
             </li>

@@ -12,6 +12,7 @@ import { BlitzMode } from "./BlitzMode";
 import { MillionaireMode } from "./MillionaireMode";
 import { MinerMode } from "./MinerMode";
 import { TestMode } from "./TestMode";
+import { StudyModes } from "./StudyModes";
 import { AddEntryButton } from "./AddEntryButton";
 import { addCard, createDeck, readState } from "./store";
 import type { Card } from "./types";
@@ -1258,7 +1259,7 @@ describe("readings next to the meaning", () => {
     expect(document.querySelector(".fc-flash__side--back .fc-side__text")!.textContent).toBe("こうにゅう: mua; mua sắm");
   });
 
-  it("a multiple choice question shows the kanji alone and no reading among the choices", () => {
+  it("a multiple choice question shows the kanji alone and readings before meaning choices", () => {
     const d = readState().decks[0] ?? createDeck("Bộ", "deck1");
     void d;
     const cards = (() => {
@@ -1270,8 +1271,61 @@ describe("readings next to the meaning", () => {
     const { container } = render(wrap(<TestMode deckId="deck2" cards={cards} direction="term" />));
     for (const name of ["Đúng / Sai", "Điền đáp án", "Nối cặp"]) fireEvent.click(screen.getByLabelText(name));
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
-    expect(container.textContent).not.toContain("こうにゅう");
-    expect(container.textContent).not.toContain("いぬ");
+    expect(container.querySelector(".fc-q__prompt .fc-side__lead")).toBeNull();
+    expect(container.querySelector(".fc-q__prompt .fc-side__reading")).toBeNull();
+    expect(container.querySelector(".fc-q__options")!.textContent).toContain("こうにゅう: mua");
+    expect(container.querySelector(".fc-q__options")!.textContent).toContain("いぬ: chó");
+  });
+});
+
+describe("hiragana display preference for tests and games", () => {
+  function readingCards() {
+    const deck = createDeck("Bộ đọc", "deck1");
+    for (const [term, definition, reading] of [["購入", "mua", "こうにゅう"], ["犬", "chó", "いぬ"], ["猫", "mèo", "ねこ"], ["水", "nước", "みず"]]) {
+      addCard({ deckId: deck.id, term: term!, definition: definition!, reading, ...base });
+    }
+    return readState().cards;
+  }
+
+  it.each(["mc", "tf", "match"] as const)("shows readings for %s questions by default and remembers turning them off", (kind) => {
+    const cards = readingCards();
+    const begin = () => {
+      const labels = { mc: "Trắc nghiệm", tf: "Đúng / Sai", match: "Nối cặp", write: "Điền đáp án" };
+      for (const [key, label] of Object.entries(labels)) if (key !== kind) fireEvent.click(screen.getByLabelText(label));
+      fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
+    };
+    const { unmount } = render(wrap(<StudyModes deckId="deck1" cards={cards} mode="test" />));
+    expect(screen.getByRole("radio", { name: "Có Hiragana" }).getAttribute("aria-checked")).toBe("true");
+    begin();
+    const meaningTexts = () => kind === "match"
+      ? [...document.querySelectorAll(".fc-q__match option")].map((o) => o.textContent).join(" ")
+      : document.querySelector(".fc-q")!.textContent!;
+    expect(meaningTexts()).toMatch(/(こうにゅう: mua|いぬ: chó|ねこ: mèo|みず: nước)/);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Không Hiragana" }));
+    expect(meaningTexts()).not.toMatch(/こうにゅう|いぬ|ねこ|みず/);
+    unmount();
+
+    render(wrap(<StudyModes deckId="deck1" cards={cards} mode="test" />));
+    expect(screen.getByRole("radio", { name: "Không Hiragana" }).getAttribute("aria-checked")).toBe("true");
+    begin();
+    expect(meaningTexts()).not.toMatch(/こうにゅう|いぬ|ねこ|みず/);
+  });
+
+  it.each(["match", "memory", "drop", "blitz", "millionaire", "miner"] as const)("shows readings in %s and allows disabling them before starting", (mode) => {
+    const cards = readingCards();
+    const { unmount } = render(wrap(<StudyModes deckId="deck1" cards={cards} mode={mode} />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    const leads = [...document.querySelectorAll(".fc-side__lead")];
+    expect(leads.length).toBeGreaterThan(0);
+    for (const lead of leads) expect(lead.parentElement!.textContent).toMatch(/(こうにゅう: mua|いぬ: chó|ねこ: mèo|みず: nước)/);
+    unmount();
+
+    render(wrap(<StudyModes deckId="deck1" cards={cards} mode={mode} />));
+    fireEvent.click(screen.getByRole("radio", { name: "Không Hiragana" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(document.querySelector(".fc-side__lead")).toBeNull();
+    expect(document.querySelector(".fc-side__colon")).toBeNull();
   });
 });
 

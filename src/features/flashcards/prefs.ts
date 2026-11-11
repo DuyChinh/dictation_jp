@@ -129,6 +129,31 @@ export function useShowHanViet(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribeHv, showHanViet, () => true), saveShowHanViet];
 }
 
+const HIRAGANA_KEY = "jd.flash_hiragana.v1";
+const hiraganaListeners = new Set<() => void>();
+
+/** Whether the Japanese reading appears before meanings. On unless turned off. */
+export const showHiragana = (): boolean => get(HIRAGANA_KEY) !== "off";
+
+export function saveShowHiragana(on: boolean): void {
+  set(HIRAGANA_KEY, on ? "on" : "off");
+  hiraganaListeners.forEach((l) => l());
+}
+
+function subscribeHiragana(l: () => void): () => void {
+  hiraganaListeners.add(l);
+  const onStorage = (e: StorageEvent) => e.key === HIRAGANA_KEY && l();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    hiraganaListeners.delete(l);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useShowHiragana(): [boolean, (on: boolean) => void] {
+  return [useSyncExternalStore(subscribeHiragana, showHiragana, () => true), saveShowHiragana];
+}
+
 const AUTO_KEY = "jd.flash_autoflip.v1";
 /** Seconds to look at a question before the card turns over by itself: long enough to recall a word and its reading. */
 export const AUTO_FLIP_DEFAULT = 5;
