@@ -1,6 +1,7 @@
 import { musicOn, soundOn, SOUND_EVENT } from "./prefs";
 import correctUrl from "../../../music_millionare/Am-thanh-tra-loi-dung-ai-la-trieu-phu-www_tiengdong_com.mp3";
 import wrongUrl from "../../../music_millionare/Am-thanh-tra-loi-sai-ai-la-trieu-phu-www_tiengdong_com.mp3";
+import resultUrl from "../../../music_millionare/Nhac-nen-game-show-ai-la-trieu-phu-www_tiengdong_com.mp3";
 
 /**
  * The supplied recordings announce right and wrong quiz answers. Other show and miner effects, and an
@@ -219,13 +220,14 @@ const PLAYERS: Record<ShowSound, (c: AudioContext, out: AudioNode, t: number) =>
 };
 
 type AnswerSound = "correct" | "wrong";
-const answerUrls = { correct: correctUrl, wrong: wrongUrl };
-const answerBuffers = new Map<AnswerSound, AudioBuffer>();
-const answerLoads = new Map<AnswerSound, Promise<AudioBuffer | null>>();
+type Recording = AnswerSound | "result";
+const answerUrls = { correct: correctUrl, wrong: wrongUrl, result: resultUrl };
+const answerBuffers = new Map<Recording, AudioBuffer>();
+const answerLoads = new Map<Recording, Promise<AudioBuffer | null>>();
 let answerSource: AudioBufferSourceNode | null = null;
 let answerVersion = 0;
 
-function loadAnswerSound(name: AnswerSound, c: AudioContext): Promise<AudioBuffer | null> {
+function loadAnswerSound(name: Recording, c: AudioContext): Promise<AudioBuffer | null> {
   const ready = answerBuffers.get(name);
   if (ready) return Promise.resolve(ready);
   const loading = answerLoads.get(name);
@@ -246,13 +248,14 @@ function loadAnswerSound(name: AnswerSound, c: AudioContext): Promise<AudioBuffe
   return request;
 }
 
-/** Unlock Web Audio on the Start gesture and cache the two recordings before the first answer. */
+/** Unlock Web Audio on the Start gesture and cache the answer clips and result track. */
 export function prepareAnswerSounds(): void {
   if (!soundOn()) return;
   const a = audio();
   if (!a) return;
   void loadAnswerSound("correct", a.c);
   void loadAnswerSound("wrong", a.c);
+  void loadAnswerSound("result", a.c);
 }
 
 /** Cancel a recording, including a pending download, when leaving, restarting or choosing again. */
@@ -263,6 +266,59 @@ export function stopAnswerSound(): void {
     answerSource.disconnect();
     answerSource = null;
   }
+}
+
+let resultWanted = false;
+let resultSource: AudioBufferSourceNode | null = null;
+let resultGain: GainNode | null = null;
+let resultVersion = 0;
+
+function clearResultMusic(): void {
+  resultVersion++;
+  resultSource?.stop();
+  resultSource?.disconnect();
+  resultGain?.disconnect();
+  resultSource = null;
+  resultGain = null;
+}
+
+function syncResultMusic(): void {
+  if (!resultWanted || !soundOn()) {
+    clearResultMusic();
+    return;
+  }
+  if (resultSource) return;
+  const a = audio();
+  if (!a) return;
+  const version = ++resultVersion;
+  void loadAnswerSound("result", a.c).then((buffer) => {
+    if (!buffer || version !== resultVersion || !resultWanted || !soundOn()) return;
+    const gain = a.c.createGain();
+    gain.gain.setValueAtTime(0.0001, a.c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.5, a.c.currentTime + 0.8);
+    gain.connect(a.out);
+    const source = a.c.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+    resultSource = source;
+    resultGain = gain;
+    source.start();
+  });
+}
+
+/** The result screen has its own soundtrack, even when in-game background music is off. */
+export function startResultMusic(): void {
+  stopAnswerSound();
+  stopBed();
+  clearResultMusic();
+  resultWanted = true;
+  syncResultMusic();
+}
+
+export function stopResultMusic(): void {
+  resultWanted = false;
+  clearResultMusic();
 }
 
 /** Plays one sound, unless sound is switched off. A new answer replaces the previous recording. */
@@ -391,4 +447,5 @@ export function stopBed(): void {
 if (typeof window !== "undefined") window.addEventListener(SOUND_EVENT, () => {
   if (!soundOn()) stopAnswerSound();
   syncBed();
+  syncResultMusic();
 });

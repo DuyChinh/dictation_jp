@@ -3,12 +3,13 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { MillionaireMode } from "./MillionaireMode";
-import { playGameSound, prepareAnswerSounds, stopAnswerSound, stopBed } from "./gameSound";
+import { playGameSound, prepareAnswerSounds, startResultMusic, stopAnswerSound, stopBed, stopResultMusic } from "./gameSound";
 import type { Card } from "./types";
 
 vi.mock("./gameSound", () => ({
   playGameSound: vi.fn(), prepareAnswerSounds: vi.fn(), stopAnswerSound: vi.fn(),
   startBed: vi.fn(), stopBed: vi.fn(), tightenBed: vi.fn(),
+  startResultMusic: vi.fn(), stopResultMusic: vi.fn(),
 }));
 vi.mock("../../shared/utils/confetti", () => ({ triggerConfetti: vi.fn() }));
 
@@ -60,6 +61,8 @@ describe("millionaire audio", () => {
     expect(effects.filter((name) => name === "correct")).toHaveLength(15);
     expect(effects).not.toContain("milestone");
     expect(effects).not.toContain("win");
+    expect(startResultMusic).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Tắt âm thanh" })).toBeTruthy();
   });
 
   it("uses the wrong clip after a safe level without layering another result sound over it", async () => {
@@ -70,6 +73,9 @@ describe("millionaire audio", () => {
     await answer(false);
     expect(screen.getByText("Rất tiếc, bạn đã trả lời sai")).toBeTruthy();
     expect(vi.mocked(playGameSound).mock.calls.map(([name]) => name)).toEqual(["lock", "wrong"]);
+    expect(startResultMusic).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Chơi lại" }));
+    expect(stopResultMusic).toHaveBeenCalledTimes(2);
   });
 
   it("stops the recording on the next choice and stops both recording and music when leaving", async () => {
@@ -81,8 +87,26 @@ describe("millionaire audio", () => {
     expect(stopAnswerSound).toHaveBeenCalledOnce();
     vi.mocked(stopAnswerSound).mockClear();
     vi.mocked(stopBed).mockClear();
+    vi.mocked(stopResultMusic).mockClear();
     view.unmount();
     expect(stopAnswerSound).toHaveBeenCalledOnce();
     expect(stopBed).toHaveBeenCalledOnce();
+    expect(stopResultMusic).toHaveBeenCalledOnce();
+  });
+
+  it("plays the result track after time runs out or the player walks away", async () => {
+    const view = mount();
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await advance(31000);
+    await advance(2500);
+    expect(startResultMusic).toHaveBeenCalledOnce();
+    view.unmount();
+    vi.mocked(startResultMusic).mockClear();
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    await answer(true);
+    fireEvent.click(screen.getByRole("button", { name: /Dừng cuộc chơi, nhận/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Dừng và nhận thưởng" }));
+    expect(startResultMusic).toHaveBeenCalledOnce();
   });
 });

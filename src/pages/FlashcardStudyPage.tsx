@@ -53,7 +53,7 @@ export function FlashcardStudyPage() {
 
   return (
     <AppShell breadcrumbs={crumbs}>
-      <section className="fc-page fc-page--narrow">{body}</section>
+      <section className={`fc-page ${mode === "millionaire" ? "fc-page--millionaire" : "fc-page--narrow"}`}>{body}</section>
     </AppShell>
   );
 }

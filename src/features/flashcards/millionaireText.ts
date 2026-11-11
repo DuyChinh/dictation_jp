@@ -17,6 +17,11 @@ const vi = {
   "sound.hint": "Âm thanh và nhạc nền có thể tắt bằng hai nút bên dưới.",
   "sound.effects": "Âm thanh",
   "sound.music": "Nhạc nền",
+  "result.music": "Nhạc kết thúc",
+  "result.prize": "Phần thưởng của bạn",
+  "stage.subtitle": "15 câu hỏi · 4 quyền trợ giúp",
+  "stage.topPrize": "Giải thưởng cao nhất",
+  "stage.keyboard": "hoặc 1–4 để chọn đáp án",
 } as const;
 
 type Key = keyof typeof vi;
@@ -35,6 +40,11 @@ const ja: Record<Key, string> = {
   "sound.hint": "効果音とBGMは下の2つのボタンで切れます。",
   "sound.effects": "効果音",
   "sound.music": "BGM",
+  "result.music": "結果画面の音楽",
+  "result.prize": "獲得賞金",
+  "stage.subtitle": "15問 · 4つのライフライン",
+  "stage.topPrize": "最高賞金",
+  "stage.keyboard": "または1〜4で回答",
 };
 
 const en: Record<Key, string> = {
@@ -51,6 +61,11 @@ const en: Record<Key, string> = {
   "sound.hint": "Sound effects and music can be switched off with the two buttons below.",
   "sound.effects": "Sound",
   "sound.music": "Music",
+  "result.music": "Result music",
+  "result.prize": "Your prize",
+  "stage.subtitle": "15 questions · 4 lifelines",
+  "stage.topPrize": "Top prize",
+  "stage.keyboard": "or 1–4 to answer",
 };
 
 const tables: Record<string, Record<Key, string>> = { vi, ja, en };

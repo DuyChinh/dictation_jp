@@ -10,6 +10,7 @@ import "./dictionary.css";
 import "./flashcards.css";
 import "./flashgames.css";
 import "./flashimages.css";
+import "./millionaire.css";
 import "./coming-soon.css";
 import "./select.css";
 

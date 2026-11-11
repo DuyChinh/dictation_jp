@@ -1,0 +1,135 @@
+/* Let the studio use the space beside either the sidebar or its collapsed rail. */
+.shell-content:has(> .fc-page--millionaire) { max-width: none; }
+.fc-page--millionaire { width: 100%; max-width: 1600px; min-width: 0; }
+.fc-page--millionaire > .fc-pickers { gap: 12px 24px; padding: 16px 20px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; }
+
+.fc-mil { --gold: #f3cc7b; --orange: #ffd483; }
+.fc-mil__stage {
+  grid-template-columns: minmax(0, 1fr) clamp(190px, 19cqw, 280px); gap: 22px 28px;
+  padding: clamp(18px, 2.2cqw, 34px); border: 1px solid #514b91; border-radius: 26px;
+  background: radial-gradient(ellipse at 40% -30%, #43358d 0, transparent 66%), radial-gradient(ellipse at 105% 100%, #242052 0, transparent 55%), #0c1028;
+  box-shadow: 0 24px 70px #05051540, inset 0 1px #ffffff15;
+}
+.fc-mil__stage::before { opacity: 0.2; }
+.fc-mil__brand { grid-column: 1 / -1; display: flex; align-items: center; gap: 13px; padding-bottom: 20px; border-bottom: 1px solid #ffffff17; }
+.fc-mil__brand-mark { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: 15px; color: #ffe0a0; background: linear-gradient(145deg, #e5b75630, #e5b75608); border: 1px solid #e5b75650; }
+.fc-mil__brand > div { display: flex; flex-direction: column; gap: 4px; }
+.fc-mil__brand strong { font-size: 18px; letter-spacing: -0.02em; color: #f9f5ff; }
+.fc-mil__brand > div > span { font-size: 12px; color: #b1b2d1; }
+.fc-mil__grand-prize { margin-left: auto; display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 11px; color: #b1b2d1; }
+.fc-mil__grand-prize b { font-size: 22px; color: var(--gold); letter-spacing: 0.02em; }
+.fc-mil__main { gap: 22px; }
+.fc-mil__top { gap: 14px; }
+.fc-mil__life { width: 54px; height: 42px; border: 1px solid #cbb68385; box-shadow: inset 0 1px #ffffff28, 0 4px 12px #00000025; background: linear-gradient(160deg, #383568, #1c2046); }
+.fc-mil__life:hover:not(:disabled) { box-shadow: 0 0 20px #f3cc7b35; }
+.fc-mil__worth { font-size: clamp(22px, 2.6cqw, 32px); }
+.fc-mil__count { color: #bfc0dd; font-size: 12px; }
+.fc-mil__clock { flex: none; width: 54px; height: 54px; font-size: 21px; }
+.fc-mil .fc-sound { width: 36px; height: 36px; border: 1px solid #ffffff20; background: #ffffff08; border-radius: 12px; }
+.fc-mil__question {
+  position: relative; box-sizing: border-box; min-height: 160px; margin-top: 12px;
+  padding: 30px 38px; clip-path: none; border: 1px solid #a395cd70; border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 0, #3b367a99, transparent 90%), linear-gradient(145deg, #242052, #131631);
+  box-shadow: inset 0 1px #ffffff20, 0 10px 30px #00000020;
+}
+.fc-mil__question::before { content: ""; position: absolute; top: -1px; left: 22%; right: 22%; height: 2px; background: linear-gradient(90deg, transparent, #f3cc7b, transparent); }
+.fc-mil__question .fc-side--big { font-size: clamp(32px, 4cqw, 54px); line-height: 1.4; }
+.fc-mil__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.fc-mil__ans {
+  --edge: #8e83bd85; --fill-a: #292752; --fill-b: #1a1e3e;
+  min-width: 0; min-height: 90px; padding: 18px 22px; gap: 16px; border-radius: 16px; clip-path: none;
+  font-size: clamp(16px, 1.6cqw, 22px); line-height: 1.55; box-shadow: 0 6px 18px #05051530;
+}
+.fc-mil__ans::before { inset: 1px; clip-path: none; border-radius: 15px; }
+.fc-mil__letter { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #f3cc7b45; border-radius: 11px; background: #f3cc7b0d; font-size: 17px; }
+.fc-mil__text { overflow-wrap: anywhere; }
+.fc-mil__text .fc-side__lead { color: #c2b8ef; }
+.fc-mil__ans:focus-visible, .fc-mil__life:focus-visible { outline: 3px solid #fff2bd; outline-offset: 4px; }
+.fc-mil__ans.is-right { --fill-a: #166c4a; --fill-b: #10442f; }
+.fc-mil__ans.is-wrong { --fill-a: #9c3649; --fill-b: #631f35; }
+.fc-mil__foot { align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; margin-top: auto; }
+.fc-mil__keyboard { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #b1b2d1; }
+.fc-mil__keyboard kbd { display: inline-grid; place-items: center; width: 21px; height: 23px; margin-right: 1px; font: inherit; border-radius: 5px; background: #ffffff08; border: 1px solid #ffffff25; }
+.fc-mil__ladder { padding: 12px; gap: 4px; border-radius: 18px; background: #080c21b3; border-color: #8074b14d; box-shadow: inset 0 1px #ffffff0d; }
+.fc-mil__ladder li { min-height: 27px; padding: 5px 12px; box-sizing: border-box; font-size: clamp(13px, 1.3cqw, 18px); color: #d5bb84; }
+.fc-mil__ladder .is-current { color: #30200a; background: linear-gradient(110deg, #ffe5a3, #e9af58); box-shadow: 0 3px 18px #efbb6040; }
+.fc-mil__ladder .is-safe { color: #f7f4ff; }
+.fc-mil__ladder .is-current.is-safe { color: #30200a; }
+
+/* The result stays in the same studio, with a gold prize and completed steps. */
+.fc-mil-result {
+  position: relative; isolation: isolate; overflow: hidden; box-sizing: border-box; min-height: 660px;
+  padding: 24px clamp(20px, 5vw, 80px) 40px; gap: 14px; border-radius: 26px; color: #f7f4ff; border: 1px solid #74619585;
+  background: radial-gradient(ellipse at 50% 10%, #5a417866, transparent 60%), radial-gradient(ellipse at 50% 110%, #b17f3a20, transparent 65%), #101329;
+  box-shadow: 0 24px 70px #05051540, inset 0 1px #ffffff20;
+}
+.fc-mil-result::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0.55; pointer-events: none;
+  background: repeating-conic-gradient(from -15deg at 50% -20%, transparent 0deg 17deg, #d4b2760c 18deg 23deg, transparent 24deg 40deg); }
+.fc-mil-result__top { display: flex; align-items: center; justify-content: space-between; align-self: stretch; gap: 12px; color: #c2b9d4; font-size: 12px; }
+.fc-mil-result__top > span, .fc-mil-result__sound { display: inline-flex; align-items: center; gap: 8px; }
+.fc-mil-result__sound .fc-sound { margin: 0; color: #e0d5f5; }
+.fc-mil-result__trophy { display: grid; place-items: center; width: 104px; height: 104px; margin-top: 8px; color: #ffdc8a; border: 1px solid #ffd48360; border-radius: 50%;
+  background: radial-gradient(circle at 35% 20%, #ffe5a32e, #e0ae4c08); box-shadow: 0 0 0 8px #e5b75606, 0 0 60px #e0ae4c1a; }
+.fc-mil-result .fc-stars svg { width: 30px; height: 30px; }
+.fc-mil-result h2 { margin: 0; max-width: 32ch; color: #faf6ff; font-size: clamp(22px, 2.7vw, 36px); letter-spacing: -0.03em; line-height: 1.3; }
+.fc-mil-result__label { margin: 12px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #c4b9d4; }
+.fc-mil-result .fc-result__big { color: #ffdc8a; font-size: clamp(38px, 6vw, 88px); letter-spacing: -0.04em; text-shadow: 0 2px 30px #ffd48320; }
+.fc-mil-result .fc-result__score { margin: 0; color: #d5cae2; font-size: 15px; }
+.fc-mil-result .fc-note { margin: 0; color: #bcb1d1; }
+.fc-mil-result__progress { width: min(360px, 100%); display: flex; gap: 5px; margin-top: 12px; }
+.fc-mil-result__progress span { flex: 1; height: 5px; background: #ffffff17; border-radius: 99px; }
+.fc-mil-result__progress .is-done { background: linear-gradient(90deg, #efbb60, #ffe7ad); box-shadow: 0 0 10px #efbb6020; }
+.fc-mil-result .fc-badge { margin: 0; color: #ffdf9d; background: #f3cc7b14; border: 1px solid #f3cc7b30; }
+.fc-mil-result .fc-actions { margin-top: 12px; justify-content: center; gap: 12px; }
+.fc-mil-result .btn--primary { min-width: 150px; background: linear-gradient(120deg, #ffe6ab, #eab764); color: #34200b; border: 1px solid #ffe6ab; box-shadow: 0 5px 24px #eab76420; }
+.fc-mil-result .btn--primary:hover { filter: brightness(1.08); }
+.fc-mil-result .btn--ghost { color: #d9cdea; border: 1px solid #ffffff20; }
+.fc-mil-result.is-winner { border-color: #b9975f80; }
+
+@container (min-width: 1100px) {
+  .fc-mil__main { min-height: 590px; gap: 24px; }
+  .fc-mil__question { min-height: 190px; margin-top: 24px; }
+  .fc-mil__ans { min-height: 104px; }
+  .fc-mil__ladder li { min-height: 35px; }
+}
+@container (max-width: 850px) {
+  .fc-mil__stage { gap: 18px; padding: 18px; }
+  .fc-mil__top { gap: 10px; }
+  .fc-mil__lifelines { gap: 6px; }
+  .fc-mil__life { width: 44px; height: 38px; }
+  .fc-mil__question { min-height: 140px; padding: 22px; margin-top: 0; }
+  .fc-mil__ans { padding: 14px; gap: 10px; }
+  .fc-mil__ladder { padding: 8px; }
+  .fc-mil__ladder li { padding-inline: 7px; }
+  .fc-mil__keyboard { display: none; }
+}
+@container (max-width: 699px) {
+  .fc-mil__stage { grid-template-columns: minmax(0, 1fr); }
+  .fc-mil__brand { padding-bottom: 14px; gap: 10px; }
+  .fc-mil__brand strong { font-size: 16px; }
+  .fc-mil__brand-mark { width: 40px; height: 40px; }
+  .fc-mil__grand-prize { display: none; }
+  .fc-mil__main { gap: 18px; }
+  .fc-mil__clock { width: 44px; height: 44px; font-size: 18px; }
+  .fc-mil__foot { justify-content: center; }
+}
+@container (max-width: 520px) {
+  .fc-mil__stage { padding: 14px; border-radius: 20px; }
+  .fc-mil__answers { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .fc-mil__ans { min-height: 68px; padding: 12px 16px; }
+  .fc-mil__question { min-height: 120px; }
+  .fc-mil__question .fc-side--big { font-size: 32px; }
+  .fc-mil__life { width: 42px; }
+}
+@media (max-width: 640px) {
+  .fc-page--millionaire > .fc-pickers { padding: 14px; }
+  .fc-mil-result { padding: 16px 18px 28px; min-height: 600px; }
+  .fc-mil-result__top { font-size: 11px; }
+  .fc-mil-result__sound > span { display: none; }
+  .fc-mil-result__trophy { width: 88px; height: 88px; }
+}
+@media (max-height: 520px) {
+  .fc-mil__main { min-height: 0; gap: 12px; }
+  .fc-mil__question { min-height: 80px; margin-top: 0; padding-block: 12px; }
+  .fc-mil__ans { min-height: 56px; }
+}

@@ -39,9 +39,10 @@ function useSharedDeck(shareId: string): [State, () => void] {
 
 function Frame({ children, title, to }: { children: React.ReactNode; title?: string; to?: string }) {
   const { t } = useUiLanguage();
+  const { mode } = useParams();
   return (
     <AppShell breadcrumbs={[{ label: t("nav.flashcards"), to: "/flashcards" }, ...(title ? [{ label: title, to }] : [])]}>
-      <section className="fc-page fc-page--narrow">{children}</section>
+      <section className={`fc-page ${mode === "millionaire" ? "fc-page--millionaire" : "fc-page--narrow"}`}>{children}</section>
     </AppShell>
   );
 }

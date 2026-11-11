@@ -5,7 +5,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { MusicToggle, SoundToggle, Stars, useShake } from "./GameBits";
-import { playGameSound, prepareAnswerSounds, startBed, stopAnswerSound, stopBed, tightenBed } from "./gameSound";
+import { playGameSound, prepareAnswerSounds, startBed, startResultMusic, stopAnswerSound, stopBed, stopResultMusic, tightenBed } from "./gameSound";
 import { useMillText } from "./millionaireText";
 import {
   LIFELINES,
@@ -130,6 +130,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
       timers.current.forEach(clearTimeout);
       stopBed();
       stopAnswerSound();
+      stopResultMusic();
     },
     [],
   );
@@ -168,6 +169,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   }
 
   function newGame() {
+    stopResultMusic();
     stopAnswerSound();
     timers.current.forEach(clearTimeout);
     timers.current = [];
@@ -189,8 +191,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     setStage("over");
     setRecord({ best: getBest(deckId, "millionaire2"), improved: submitBest(deckId, "millionaire2", prize, "high") });
     stopBed();
-    // The answer recording continues through the result; don't cover it with another fanfare.
-    if (reason === "walk") playGameSound("walk");
+    startResultMusic();
     if (prize > 0) triggerConfetti({ particleCount: reason === "win" ? 200 : 70 });
   }
 
@@ -366,11 +367,20 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   if (stage === "over" && end) {
     const title = end.reason === "win" ? ft("mill.won") : end.reason === "time" ? ft("mill.timeUp") : end.reason === "walk" ? ft("mill.walked") : ft("mill.lost");
     return (
-      <section className="fc-panel fc-result fc-mil-result" aria-live="polite">
+      <section className={`fc-panel fc-result fc-mil-result${end.reason === "win" ? " is-winner" : ""}`} aria-live="polite">
+        <div className="fc-mil-result__top">
+          <span><Icon name="sparkles" size={16} /> {ft("mill.title")}</span>
+          <div className="fc-mil-result__sound"><span>{mt("result.music")}</span><SoundToggle /></div>
+        </div>
+        <div className="fc-mil-result__trophy" aria-hidden="true"><Icon name={end.reason === "win" ? "crown" : "trophy"} size={64} /></div>
         <Stars count={millionaireStars(end.correct)} />
         <h2>{title}</h2>
+        <p className="fc-mil-result__label">{mt("result.prize")}</p>
         <p className="fc-result__big tabular">{money(end.prize)}</p>
         <p className="fc-result__score">{fmt(ft("mill.takeHome"), { prize: money(end.prize) })}</p>
+        <div className="fc-mil-result__progress" aria-hidden="true">
+          {PRIZES.map((_, i) => <span key={i} className={i < end.correct ? "is-done" : ""} />)}
+        </div>
         <p className="fc-note">{fmt(ft("mill.reached"), { n: end.correct, total: QUESTIONS })}</p>
         {record?.improved && end.prize > 0 && <p className="fc-badge">{ft("mill.newBest")}</p>}
         {record && !record.improved && record.best !== null && <p className="fc-note">{fmt(ft("mill.best"), { prize: money(record.best) })}</p>}
@@ -390,6 +400,11 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   return (
     <section className={`fc-mil${shaking ? " is-shaking" : ""}`} aria-label={ft("mill.title")}>
       <div className="fc-mil__stage">
+        <div className="fc-mil__brand" aria-hidden="true">
+          <span className="fc-mil__brand-mark"><Icon name="crown" size={25} /></span>
+          <div><strong>{ft("mill.title")}</strong><span>{mt("stage.subtitle")}</span></div>
+          <span className="fc-mil__grand-prize">{mt("stage.topPrize")}<b className="tabular">{money(PRIZES[QUESTIONS - 1]!)}</b></span>
+        </div>
         <div className="fc-mil__main">
           <Dots index={index} correct={correctCount} />
           <header className="fc-mil__top">
@@ -457,6 +472,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
           {phase === "locked" && <p className="fc-mil__verdict is-locked" role="status">{fmt(ft("mill.locking"), { letter: LETTERS[selected ?? 0]! })}</p>}
 
           <footer className="fc-mil__foot">
+            <span className="fc-mil__keyboard"><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> {mt("stage.keyboard")}</span>
             <button type="button" className="btn btn--ghost btn--sm" disabled={phase !== "asking" || !!popup || correctCount === 0} onClick={() => openPopup({ kind: "walk" })}>
               {fmt(ft("mill.walk"), { prize: money(walkPrize) })}
             </button>

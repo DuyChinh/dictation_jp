@@ -47,7 +47,7 @@ beforeEach(async () => {
   decodeAudio.mockReset().mockImplementation(async (data: ArrayBuffer) => ({ clip: new Uint8Array(data)[0] }));
   fetchAudio.mockReset().mockImplementation(async (url: string) => ({
     ok: true,
-    arrayBuffer: async () => new Uint8Array([url.includes("-dung-") ? 1 : 2]).buffer,
+    arrayBuffer: async () => new Uint8Array([url.includes("Nhac-nen-") ? 3 : url.includes("-dung-") ? 1 : 2]).buffer,
   }));
   vi.stubGlobal("fetch", fetchAudio);
   vi.stubGlobal("AudioContext", FakeContext);
@@ -57,6 +57,7 @@ beforeEach(async () => {
 afterEach(() => {
   game.stopBed();
   game.stopAnswerSound();
+  game.stopResultMusic();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -101,6 +102,7 @@ describe("recorded answer sounds", () => {
     expect(fetchAudio.mock.calls.map(([url]) => url)).toEqual([
       expect.stringContaining("Am-thanh-tra-loi-dung-ai-la-trieu-phu-www_tiengdong_com.mp3"),
       expect.stringContaining("Am-thanh-tra-loi-sai-ai-la-trieu-phu-www_tiengdong_com.mp3"),
+      expect.stringContaining("Nhac-nen-game-show-ai-la-trieu-phu-www_tiengdong_com.mp3"),
     ]);
     expect(recordings()).toHaveLength(0);
     game.playGameSound("correct");
@@ -111,7 +113,7 @@ describe("recorded answer sounds", () => {
     expect(recordings().at(-1)?.buffer?.clip).toBe(2);
     game.playGameSound("correct");
     await flush();
-    expect(fetchAudio).toHaveBeenCalledTimes(2);
+    expect(fetchAudio).toHaveBeenCalledTimes(3);
     expect(recordings().at(-1)?.buffer?.clip).toBe(1);
   });
 
@@ -166,6 +168,52 @@ describe("recorded answer sounds", () => {
     await flush();
     expect(recordings().at(-1)?.buffer?.clip).toBe(2);
     expect(fetchAudio).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("result soundtrack", () => {
+  it("automatically loops the supplied track with in-game background music off", async () => {
+    expect(prefs.musicOn()).toBe(false);
+    game.playGameSound("correct");
+    await flush();
+    const answer = recordings()[0]!;
+    game.startResultMusic();
+    await flush();
+    expect(answer.stop).toHaveBeenCalledOnce();
+    expect(recordings().at(-1)?.buffer?.clip).toBe(3);
+    expect(recordings().at(-1)?.loop).toBe(true);
+  });
+
+  it("follows the sound switch and cancels the soundtrack on leaving or replaying", async () => {
+    game.startResultMusic();
+    await flush();
+    const track = recordings()[0]!;
+    prefs.saveSound(false);
+    expect(track.stop).toHaveBeenCalledOnce();
+    prefs.saveSound(true);
+    await flush();
+    const resumed = recordings().at(-1)!;
+    expect(resumed).not.toBe(track);
+    expect(resumed.buffer?.clip).toBe(3);
+    game.stopResultMusic();
+    expect(resumed.stop).toHaveBeenCalledOnce();
+    prefs.saveSound(false);
+    prefs.saveSound(true);
+    await flush();
+    expect(recordings()).toHaveLength(2);
+  });
+
+  it("does not play while muted or start a late download after the result is closed", async () => {
+    prefs.saveSound(false);
+    game.startResultMusic();
+    expect(fetchAudio).not.toHaveBeenCalled();
+    let resolve!: (response: unknown) => void;
+    fetchAudio.mockReturnValue(new Promise((r) => { resolve = r; }));
+    prefs.saveSound(true);
+    game.stopResultMusic();
+    resolve({ ok: true, arrayBuffer: async () => new Uint8Array([3]).buffer });
+    await flush();
+    expect(recordings()).toHaveLength(0);
   });
 });
 
