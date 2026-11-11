@@ -17,6 +17,8 @@ type Props = {
   /** The saved answer from an earlier visit; the explanations are fetched again for it. */
   saved?: PaperAnswer;
   onAnswered: (item: PaperItem, result: PaperItemResult) => void;
+  /** Restore explanation highlights without recording another answer. */
+  onRestored?: (item: PaperItem, result: PaperItemResult) => void;
   /** Forget this answer so the question can be tried again. */
   onRetry: (item: PaperItem) => void;
   /** Move on; label tells whether that is the next question or the next type of question. */
@@ -29,16 +31,17 @@ type Props = {
 };
 
 /** One multiple-choice question: pick, check, then see why for all four choices. */
-export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNext, review }: Props) {
+export function PaperItemCard({ lessonId, item, saved, onAnswered, onRestored, onRetry, onNext, review }: Props) {
   const { t } = useUiLanguage();
   const reviewChoice = review ? (review.selected ?? review.correctId) : null;
   const [selected, setSelected] = useState<string | null>(reviewChoice ?? saved?.choiceId ?? null);
   const [result, setResult] = useState<PaperItemResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const restored = useRef(false);
   const notify = useRef(onAnswered);
   notify.current = onAnswered;
+  const restored = useRef(onRestored);
+  restored.current = onRestored;
 
   async function check(choiceId: string) {
     setBusy(true);
@@ -57,11 +60,30 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRetry, onNe
   // Reopening an answered question shows its explanations again.
   useEffect(() => {
     const first = reviewChoice ?? saved?.choiceId;
-    if (!first || restored.current) return;
-    restored.current = true;
-    void check(first);
+    if (!first) {
+      setSelected(null);
+      setResult(null);
+      setBusy(false);
+      setError(null);
+      return;
+    }
+    if (result?.selected_choice_id === first) return;
+    let cancelled = false;
+    setSelected(first);
+    setBusy(true);
+    setError(null);
+    void evaluatePaperItem({ lesson_id: lessonId, item_id: item.id, choice_id: first })
+      .then(({ result: r }) => {
+        if (cancelled) return;
+        setResult(r);
+        restored.current?.(item, r);
+      })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "Error"); })
+      .finally(() => { if (!cancelled) setBusy(false); });
+    return () => { cancelled = true; };
+    // A successful check already has its result; changing the saved pick triggers restoration.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [lessonId, item.id, reviewChoice, saved?.choiceId, saved?.at]);
 
   function retry() {
     setResult(null);

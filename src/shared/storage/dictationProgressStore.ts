@@ -1,6 +1,7 @@
 import { refreshMyScore } from "./myScoreStore";
 import { apiUrl } from "../env";
 import { mergeListeningAnswers } from "./listeningScoreStore";
+import { syncPaperProgressFromServer } from "./paperProgressStore";
 
 export type SegmentStatus = "correct" | "incorrect" | "unattempted";
 
@@ -188,6 +189,7 @@ export async function syncLessonProgressFromServer(
 export async function syncProgressOverviewFromServer(): Promise<void> {
   const token = localStorage.getItem("token");
   if (!token) return;
+  await syncPaperProgressFromServer();
 
   try {
     await pendingClear;

@@ -3,6 +3,7 @@ import { adoptLocalData, clearAccountData } from "./accountData";
 import { saveSegmentProgress } from "./dictationProgressStore";
 import { getListeningAnswers, recordListeningAnswer } from "./listeningScoreStore";
 import { PAPER_EXAM_KEY, PAPER_EXAM_HISTORY_KEY } from "./paperExamStore";
+import { getPaperProgress, PAPER_PROGRESS_KEY, PAPER_PROGRESS_SYNC_KEY, saveAnswer, syncPaperProgressFromServer } from "./paperProgressStore";
 
 const fetchMock = vi.fn();
 
@@ -65,11 +66,26 @@ describe("adoptLocalData", () => {
   it("drops another account's data instead of showing or uploading it", async () => {
     await adoptLocalData("user-a", "token-a", { fromGuest: true });
     practiceAsGuest();
+    saveAnswer("lesson-1", "written-q1", { choiceId: "2", correct: false, at: 1, part: "vocab" });
     fetchMock.mockClear();
 
     await adoptLocalData("user-b", "token-b", { fromGuest: true });
     expect(importCalls()).toHaveLength(0);
     expect(getListeningAnswers("lesson-1")).toEqual({});
+    expect(getPaperProgress("lesson-1").answers).toEqual({});
+    await syncPaperProgressFromServer();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST" && init.body?.includes("written-q1"))).toHaveLength(0);
+  });
+
+  it("uploads legacy written answers when their owner opens the app after upgrading", async () => {
+    localStorage.setItem("jd.data_owner.v1", "user-a");
+    localStorage.setItem("token", "token-a");
+    localStorage.setItem(PAPER_PROGRESS_KEY, JSON.stringify({ l1: { answers: { q1: { choiceId: "3", correct: false, at: 1000, part: "grammar" } }, sentences: {} } }));
+    await adoptLocalData("user-a", "token-a", { fromGuest: false });
+    await syncPaperProgressFromServer();
+    const uploads = fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith("/api/progress/paper") && init?.method === "POST");
+    expect(uploads).toHaveLength(1);
+    expect(JSON.parse(uploads[0]![1].body).changes[0]).toMatchObject({ lessonId: "l1", itemId: "q1", value: { choiceId: "3" } });
   });
 
   it("retries a failed import on the next page load", async () => {
@@ -93,12 +109,15 @@ describe("clearAccountData", () => {
     practiceAsGuest();
     localStorage.setItem(PAPER_EXAM_KEY, JSON.stringify({ l1: { lessonId: "l1" } }));
     localStorage.setItem(PAPER_EXAM_HISTORY_KEY, JSON.stringify([{ lessonId: "l1" }]));
+    saveAnswer("l1", "q1", { choiceId: "1", correct: true, at: 1, part: "vocab" });
     localStorage.setItem("jd.theme", "dark");
     clearAccountData();
     expect(getListeningAnswers("lesson-1")).toEqual({});
     expect(localStorage.getItem("jd.dictation_progress.v1")).toBeNull();
     expect(localStorage.getItem(PAPER_EXAM_KEY)).toBeNull();
     expect(localStorage.getItem(PAPER_EXAM_HISTORY_KEY)).toBeNull();
+    expect(localStorage.getItem(PAPER_PROGRESS_KEY)).toBeNull();
+    expect(localStorage.getItem(PAPER_PROGRESS_SYNC_KEY)).toBeNull();
     expect(localStorage.getItem("jd.theme")).toBe("dark");
   });
 });

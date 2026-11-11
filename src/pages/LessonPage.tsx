@@ -30,9 +30,11 @@ import type { PaperPart } from "../shared/api/paper";
 import { getPaperProgress, resetPaperMondai, resetPaperPart } from "../shared/storage/paperProgressStore";
 import { getLastMondai } from "../shared/storage/lastMondaiStore";
 import { usePaperPractice } from "../features/paper/usePaperPractice";
+import { useSyncedPaperProgress } from "../features/paper/useSyncedPaperProgress";
 
 export function LessonPage() {
   const { lessonId = "" } = useParams();
+  useSyncedPaperProgress(lessonId);
   const { t, uiLang } = useUiLanguage();
   const { lesson, error, loading } = useLesson(lessonId);
   // Segment → section mapping, so progress can be shown per part.

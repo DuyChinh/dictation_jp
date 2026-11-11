@@ -4,16 +4,15 @@ import type { PaperItem, PaperItemResult, PaperPart, PaperPractice } from "../..
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import {
   clearAnswers,
-  getPaperProgress,
   saveAnswer,
   saveSentence,
-  type PaperProgress,
   type SentenceStatus,
 } from "../../shared/storage/paperProgressStore";
 import { setLastMondai } from "../../shared/storage/lastMondaiStore";
 import { PassageStage } from "./PassageStage";
 import { PaperItemCard } from "./PaperItemCard";
 import { mondaiLabel, mondaiNo } from "./paperLabels";
+import { useSyncedPaperProgress } from "./useSyncedPaperProgress";
 
 type Props = { lessonId: string; paper: PaperPractice; part: PaperPart };
 
@@ -22,7 +21,7 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
   const { t, uiLang } = useUiLanguage();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [progress, setProgress] = useState<PaperProgress>(() => getPaperProgress(lessonId));
+  const { progress, setProgress, ready } = useSyncedPaperProgress(lessonId);
   const [evidence, setEvidence] = useState<Record<string, string[]>>({});
   // Bumped to remount the cards when the whole part is redone.
   const [round, setRound] = useState(0);
@@ -92,14 +91,15 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
   // target: answering the current one would make the page jump to the next one before it can be read.
   const itemNo = item?.no;
   useEffect(() => {
-    if (itemNo === undefined || active === undefined) return;
+    if (!ready || itemNo === undefined || active === undefined) return;
     if (Number(params.get("mondai")) === active && Number(params.get("q")) === itemNo) return;
     const next = new URLSearchParams(params);
     next.set("mondai", String(active));
     next.set("q", String(itemNo));
     setParams(next, { replace: true });
-  }, [active, itemNo, params, setParams]);
+  }, [ready, active, itemNo, params, setParams]);
 
+  if (!ready) return <div className="notice">{t("dictation.loading")}</div>;
   if (!item || active === undefined) return null;
 
   const nextInGroup = groupItems[itemIndex + 1];
@@ -121,6 +121,7 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
       item={item}
       saved={progress.answers[item.id]}
       onAnswered={onAnswered}
+      onRestored={(it, result) => setEvidence((prev) => ({ ...prev, [it.id]: result.evidence_sentence_ids }))}
       onRetry={onRetry}
       onNext={onNext}
     />

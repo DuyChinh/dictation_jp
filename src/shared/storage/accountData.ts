@@ -4,6 +4,8 @@ import { LISTENING_KEY, getAllListeningAnswers } from "./listeningScoreStore";
 import { HISTORY_KEY, STATS_KEY, getPracticeHistory } from "./practiceHistoryStore";
 import { LESSON_ACTIVITY_KEY, getLessonActivity } from "./lessonActivityStore";
 import { RESUME_KEY } from "./resumeStore";
+import { PAPER_PROGRESS_KEY, PAPER_PROGRESS_SYNC_KEY, preparePaperProgressSync, syncPaperProgressFromServer } from "./paperProgressStore";
+import { LAST_MONDAI_KEY } from "./lastMondaiStore";
 import { FLASHCARD_KEY } from "../../features/flashcards/store";
 import { LEARN_KEY } from "../../features/flashcards/learnProgress";
 import { syncFlashcards } from "../../features/flashcards/sync";
@@ -37,6 +39,9 @@ const PRACTICE_KEYS = [
   PAPER_EXAM_HISTORY_KEY,
   FLASHCARD_KEY,
   LEARN_KEY,
+  PAPER_PROGRESS_KEY,
+  PAPER_PROGRESS_SYNC_KEY,
+  LAST_MONDAI_KEY,
 ];
 
 /** Rows per import request, to stay well under the server's request size limit. */
@@ -130,6 +135,8 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
     }
     void syncExamHistoryFromServer();
     void syncFlashcards();
+    preparePaperProgressSync();
+    void syncPaperProgressFromServer();
     return;
   }
 
@@ -142,6 +149,8 @@ export async function adoptLocalData(userId: string, token: string, { fromGuest 
   }
 
   localStorage.setItem(OWNER_KEY, userId);
+  preparePaperProgressSync();
+  void syncPaperProgressFromServer();
   void syncExamHistoryFromServer();
   void syncFlashcards();
 }

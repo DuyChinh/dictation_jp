@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ExamEntry } from "../features/paper/ExamEntry";
 import { mondaiLabel, mondaiNo, PARTS, PART_KANJI } from "../features/paper/paperLabels";
@@ -8,7 +8,8 @@ import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { useLesson } from "../shared/content/hooks";
 import { lessonShortTitle } from "../shared/content/lessonLabels";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
-import { clearAnswers, getPaperProgress } from "../shared/storage/paperProgressStore";
+import { clearAnswers } from "../shared/storage/paperProgressStore";
+import { useSyncedPaperProgress } from "../features/paper/useSyncedPaperProgress";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
@@ -21,7 +22,7 @@ export function PaperOverviewPage() {
   const { t, uiLang } = useUiLanguage();
   const { lesson } = useLesson(lessonId);
   const { paper, error, loading } = usePaperPractice(lessonId);
-  const [progress, setProgress] = useState(() => getPaperProgress(lessonId));
+  const { progress, setProgress } = useSyncedPaperProgress(lessonId);
 
   const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
   const fallback = (lesson && getLocalizedText(lesson.title, uiLang)) || lessonId;
