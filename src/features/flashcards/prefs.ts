@@ -154,6 +154,31 @@ export function useShowHiragana(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribeHiragana, showHiragana, () => true), saveShowHiragana];
 }
 
+const IMAGES_KEY = "jd.flash_images.v1";
+const imageListeners = new Set<() => void>();
+
+/** Whether a card's picture is shown with the question in study, tests and games. On unless turned off. */
+export const showImages = (): boolean => get(IMAGES_KEY) !== "off";
+
+export function saveShowImages(on: boolean): void {
+  set(IMAGES_KEY, on ? "on" : "off");
+  imageListeners.forEach((l) => l());
+}
+
+function subscribeImages(l: () => void): () => void {
+  imageListeners.add(l);
+  const onStorage = (e: StorageEvent) => e.key === IMAGES_KEY && l();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    imageListeners.delete(l);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useShowImages(): [boolean, (on: boolean) => void] {
+  return [useSyncExternalStore(subscribeImages, showImages, () => true), saveShowImages];
+}
+
 const AUTO_KEY = "jd.flash_autoflip.v1";
 /** Seconds to look at a question before the card turns over by itself: long enough to recall a word and its reading. */
 export const AUTO_FLIP_DEFAULT = 5;

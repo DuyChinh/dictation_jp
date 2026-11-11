@@ -125,7 +125,8 @@ function LookupPopup({
 
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
+      // a box opened from inside the popup (the picture picker) is part of it, though it sits elsewhere in the page
+      if (!ref.current?.contains(e.target as Node) && !(e.target as Element).closest?.("[data-keep-open]")) onClose();
     };
     // the click that opened the popup has finished by the next tick
     const id = setTimeout(() => document.addEventListener("pointerdown", onDown), 0);

@@ -19,6 +19,12 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
  * the Japanese answer when the meaning was the question.
  */
 export function sidesOf(card: Card, flip = false): { prompt: Side; answer: Side } {
+  const sides = plainSides(card, flip);
+  // the picture goes with the question, whichever side that is: it shows what the word means, so it is no part of an answer
+  return card.image ? { ...sides, prompt: { ...sides.prompt, image: card.image } } : sides;
+}
+
+function plainSides(card: Card, flip: boolean): { prompt: Side; answer: Side } {
   const reading = card.reading?.trim() || undefined;
   const term: Side = { text: card.term, lang: card.termLang, reading: card.termLang === "ja" ? reading : undefined };
   const def: Side = { text: card.definition, lang: card.definitionLang, reading: card.definitionLang === "ja" ? reading : undefined };

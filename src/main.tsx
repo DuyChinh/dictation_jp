@@ -9,6 +9,7 @@ import "./leaderboard.css";
 import "./dictionary.css";
 import "./flashcards.css";
 import "./flashgames.css";
+import "./flashimages.css";
 import "./coming-soon.css";
 import "./select.css";
 

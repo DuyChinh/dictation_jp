@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
@@ -101,6 +101,19 @@ describe("headwordOf", () => {
   });
 });
 
+describe("EntryCard flashcard buttons", () => {
+  afterEach(cleanup);
+
+  it("offers a picture for the word beside the button that adds it to the flashcards, in the page and in the popup", () => {
+    for (const compact of [false, true]) {
+      render(wrap(<EntryCard entry={entry(["ăn"])} compact={compact} />));
+      expect(screen.getByRole("button", { name: "Tìm ảnh cho thẻ" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Thêm vào flashcard" })).toBeTruthy();
+      cleanup();
+    }
+  });
+});
+
 describe("EntryCard Hán Việt", () => {
   afterEach(cleanup);
 
@@ -156,6 +169,26 @@ describe("LookupLayer", () => {
     render(wrap(<LookupLayer><p>ぬぬぬ</p></LookupLayer>));
     clickOn(screen.getByText("ぬぬぬ"));
     await waitFor(() => expect(screen.getByText(/Không tìm thấy từ này/)).toBeTruthy());
+  });
+
+  it("stays open while something opened from inside it (the picture picker) is pressed, and closes for any other press outside", async () => {
+    lookupWord.mockResolvedValue(result);
+    render(wrap(<LookupLayer><p>食べる</p></LookupLayer>));
+    clickOn(screen.getByText("食べる"));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    // the press that opened it has finished by the next tick, when the outside-press listener is set up
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5));
+    });
+    const picker = document.createElement("div");
+    picker.setAttribute("data-keep-open", "");
+    picker.innerHTML = "<button>pick</button>";
+    document.body.appendChild(picker);
+    fireEvent.pointerDown(picker.querySelector("button")!);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    picker.remove();
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("ignores clicks on buttons so answering a question is unaffected", () => {

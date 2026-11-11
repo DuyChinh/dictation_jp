@@ -1,6 +1,7 @@
 import { BlitzMode } from "./BlitzMode";
 import { DirectionPicker, HanVietPicker, HiraganaPicker } from "./DirectionPicker";
 import { DropMode } from "./DropMode";
+import { ImagesPicker } from "./ImagesPicker";
 import { LearnMode } from "./LearnMode";
 import { MatchMode } from "./MatchMode";
 import { MemoryMode } from "./MemoryMode";
@@ -9,7 +10,7 @@ import { MillionaireMode } from "./MillionaireMode";
 import { TestMode } from "./TestMode";
 import { BackToContext } from "./StudyContext";
 import type { ModeId } from "./modes";
-import { useDirection, useShowHanViet, useShowHiragana } from "./prefs";
+import { useDirection, useShowHanViet, useShowHiragana, useShowImages } from "./prefs";
 import type { Card } from "./types";
 
 /**
@@ -20,6 +21,7 @@ export function StudyModes({ deckId, cards, mode, backTo }: { deckId: string; ca
   const [direction, setDirection] = useDirection();
   const [hanViet, setHanViet] = useShowHanViet();
   const [hiragana, setHiragana] = useShowHiragana();
+  const [images, setImages] = useShowImages();
   // a fresh start when the deck or the asked side changes
   const key = `${deckId}:${direction}`;
   const props = { key, deckId, cards, direction };
@@ -29,6 +31,7 @@ export function StudyModes({ deckId, cards, mode, backTo }: { deckId: string; ca
         <DirectionPicker value={direction} onChange={setDirection} />
         <HanVietPicker value={hanViet} onChange={setHanViet} />
         <HiraganaPicker value={hiragana} onChange={setHiragana} />
+        <ImagesPicker value={images} onChange={setImages} />
       </div>
       {mode === "learn" && <LearnMode {...props} />}
       {mode === "test" && <TestMode {...props} />}

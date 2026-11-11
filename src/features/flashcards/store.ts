@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { mergeState } from "./merge";
-import { CARD_LANGS, type Card, type CardLang, type Deck, type FlashState } from "./types";
+import { isAllowedImage } from "./cardImage";
+import { CARD_LANGS, type Card, type CardImage, type CardLang, type Deck, type FlashState } from "./types";
 
 /**
  * Decks and cards live in this browser and, when signed in, are merged with the account's copy
@@ -174,6 +175,7 @@ export type NewCard = {
   reading?: string;
   hanViet?: string;
   entryId?: number;
+  image?: CardImage;
 };
 
 export function addCard(input: NewCard): Card {
@@ -197,6 +199,7 @@ export function addCard(input: NewCard): Card {
   const hanViet = input.hanViet ? clean(input.hanViet).slice(0, 100) : "";
   if (hanViet) card.hanViet = hanViet;
   if (input.entryId) card.entryId = input.entryId;
+  if (isAllowedImage(input.image)) card.image = input.image;
   const s = readState();
   writeState({ ...s, cards: [...s.cards, card] });
   return card;
@@ -215,6 +218,7 @@ export function updateCard(id: string, patch: Partial<Omit<NewCard, "deckId">> &
       if (!next.reading?.trim()) delete next.reading;
       if (!next.hanViet?.trim()) delete next.hanViet;
       else next.hanViet = clean(next.hanViet).slice(0, 100);
+      if (!isAllowedImage(next.image)) delete next.image;
       return next;
     }),
   });
@@ -311,6 +315,7 @@ export type SharedCardData = {
   definitionLang: CardLang;
   reading?: string;
   hanViet?: string;
+  image?: CardImage;
 };
 
 /** Keeps a copy of a shared deck in this browser, as a deck of its own with fresh cards and no study progress. */
@@ -326,6 +331,7 @@ export function importSharedDeck(name: string, shared: SharedCardData[]): Deck {
     definitionLang: c.definitionLang,
     ...(c.reading ? { reading: c.reading } : {}),
     ...(c.hanViet ? { hanViet: c.hanViet } : {}),
+    ...(isAllowedImage(c.image) ? { image: c.image } : {}),
     box: 0,
     due: 0,
     right: 0,

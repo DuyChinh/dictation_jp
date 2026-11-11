@@ -1,4 +1,5 @@
 import { Icon } from "../../shared/ui/Icon";
+import { creditText, isAllowedImage } from "./cardImage";
 import { useFt } from "./flashText";
 import { sidesOf } from "./quiz";
 import { SideView } from "./SideView";
@@ -9,7 +10,10 @@ export function CardRow({ card, isNew = false, onEdit, onDelete }: { card: Card;
   const ft = useFt();
   const { prompt, answer } = sidesOf(card);
   return (
-    <li className={`fc-row${isNew ? " is-new" : ""}`}>
+    <li className={`fc-row${isNew ? " is-new" : ""}${isAllowedImage(card.image) ? " has-image" : ""}`}>
+      {isAllowedImage(card.image) && (
+        <img className="fc-row__thumb" src={card.image.url} alt="" title={creditText(card.image)} loading="lazy" decoding="async" referrerPolicy="no-referrer" draggable={false} />
+      )}
       <SideView side={prompt} />
       <span className="fc-row__sep" aria-hidden="true">→</span>
       <SideView side={answer} speak={card.definitionLang === "ja"} />

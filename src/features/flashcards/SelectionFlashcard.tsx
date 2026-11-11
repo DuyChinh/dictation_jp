@@ -80,7 +80,8 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     const onDown = (e: PointerEvent) => {
-      if (!panelRef.current?.contains(e.target as Node)) close();
+      // a box opened from inside the panel (the picture picker) is part of it, though it sits elsewhere in the page
+      if (!panelRef.current?.contains(e.target as Node) && !(e.target as Element).closest?.("[data-keep-open]")) close();
     };
     window.addEventListener("keydown", onKey);
     // the press that opened the form has finished by the next tick

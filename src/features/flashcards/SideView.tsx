@@ -1,5 +1,6 @@
 import { SpeakButton } from "../../shared/ui/SpeakButton";
-import { useShowHanViet, useShowHiragana } from "./prefs";
+import { CardPicture } from "./CardPicture";
+import { useShowHanViet, useShowHiragana, useShowImages } from "./prefs";
 import type { Side } from "./types";
 
 /**
@@ -9,10 +10,12 @@ import type { Side } from "./types";
 export function SideView({ side, big = false, speak = true }: { side: Side; big?: boolean; speak?: boolean }) {
   const [hanViet] = useShowHanViet();
   const [hiragana] = useShowHiragana();
+  const [images] = useShowImages();
   const ja = side.lang === "ja";
   const showReading = ja && side.reading && side.reading !== side.text && side.showReading !== false;
   return (
     <span className={`fc-side${big ? " fc-side--big" : ""}${ja ? " jp" : ""}`} lang={ja ? "ja" : side.lang}>
+      {big && images && side.image && <CardPicture image={side.image} />}
       {showReading && <span className="fc-side__reading">{side.reading}</span>}
       <span className="fc-side__text">
         {side.lead && hiragana && (

@@ -14,7 +14,7 @@ export function CardEditModal({ card, onClose }: { card: Card; onClose: () => vo
   }, [onClose]);
 
   function save(v: CardValue): void {
-    updateCard(card.id, { term: v.term, termLang: v.termLang, definition: v.definition, definitionLang: v.definitionLang, reading: v.reading, hanViet: v.hanViet, entryId: v.entryId });
+    updateCard(card.id, { term: v.term, termLang: v.termLang, definition: v.definition, definitionLang: v.definitionLang, reading: v.reading, hanViet: v.hanViet, entryId: v.entryId, image: v.image });
     onClose();
   }
 
@@ -23,7 +23,7 @@ export function CardEditModal({ card, onClose }: { card: Card; onClose: () => vo
       <div className="fc-modal__box" role="dialog" aria-modal="true" aria-label={ft("deck.edit")}>
         <h2>{ft("deck.edit")}</h2>
         <CardEditor
-          initial={{ term: card.term, termLang: card.termLang, definition: card.definition, definitionLang: card.definitionLang, reading: card.reading, hanViet: card.hanViet, entryId: card.entryId }}
+          initial={{ term: card.term, termLang: card.termLang, definition: card.definition, definitionLang: card.definitionLang, reading: card.reading, hanViet: card.hanViet, entryId: card.entryId, image: card.image }}
           submitLabel={ft("common.save")}
           onSubmit={save}
           onCancel={onClose}

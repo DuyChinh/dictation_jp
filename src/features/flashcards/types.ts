@@ -13,6 +13,18 @@ export type Deck = {
   deleted?: true;
 };
 
+/** A picture on a card: only a reference to one hosted by Openverse or Wikimedia Commons, with its credit. */
+export type CardImage = {
+  /** The thumbnail shown on the card. */
+  url: string;
+  /** The page that credits the picture. */
+  page?: string;
+  /** Who made it. */
+  by?: string;
+  /** Its licence, e.g. "CC BY 4.0". */
+  lic?: string;
+};
+
 /** A term and its definition, each in its own language. Only the Japanese side (if any) has a reading. */
 export type Card = {
   id: string;
@@ -26,6 +38,8 @@ export type Card = {
   hanViet?: string;
   /** Dictionary entry the card was made from, when it was. */
   entryId?: number;
+  /** A picture for the card, shown with the asked side. */
+  image?: CardImage;
   /** Leitner box 0-5 and when the card is next due. */
   box: number;
   due: number;
@@ -50,6 +64,8 @@ export type Side = {
   lead?: string;
   /** Shown at the end of this side, after the text: the Sino-Vietnamese reading of the card's Japanese word. */
   trail?: string;
+  /** The card's picture, set on the asked side only; drawn big, where a side is the question. */
+  image?: CardImage;
 };
 
 /** Which side is asked: the term, the definition, or either at random. */

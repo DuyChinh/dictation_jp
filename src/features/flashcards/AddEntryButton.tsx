@@ -4,9 +4,8 @@ import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { useFt } from "./flashText";
-import { lastDeckId, saveLastDeck } from "./prefs";
-import { DEFAULT_DECK_ID, addCard, ensureDefaultDeck, isDuplicate, useFlashcards } from "./store";
-import { suggestionFromEntry, textFor } from "./suggest";
+import { placeEntry, targetDeckId } from "./entryCard";
+import { useFlashcards } from "./store";
 import type { CardLang } from "./types";
 import "./sync";
 
@@ -19,24 +18,14 @@ export function AddEntryButton({ entry, meaning }: { entry: DictEntry; meaning: 
   const [deckName, setDeckName] = useState("");
 
   const lang: CardLang = meaning === "both" ? (uiLang === "vi" ? "vi" : "en") : meaning;
-  const remembered = lastDeckId();
-  const targetId = decks.some((d) => d.id === remembered) ? remembered! : (decks[0]?.id ?? DEFAULT_DECK_ID);
+  const targetId = targetDeckId(decks);
   const already = cards.some((c) => c.entryId === entry.id && c.deckId === targetId);
 
   function add() {
-    const s = suggestionFromEntry(entry);
-    const definition = textFor(s, lang);
-    if (!s.ja || !definition) return;
-    const deck = decks.find((d) => d.id === targetId) ?? ensureDefaultDeck(ft("deck.default"));
-    if (isDuplicate(cards, deck.id, s.ja, definition) || cards.some((c) => c.entryId === entry.id && c.deckId === deck.id)) {
-      setResult("exists");
-      setDeckName(deck.name);
-      return;
-    }
-    addCard({ deckId: deck.id, term: s.ja, termLang: "ja", definition, definitionLang: lang, reading: s.reading, hanViet: s.hanViet || undefined, entryId: entry.id });
-    saveLastDeck(deck.id);
-    setDeckName(deck.name);
-    setResult("added");
+    const placed = placeEntry({ entry, lang, decks, cards, targetId, defaultDeckName: ft("deck.default") });
+    if (!placed) return;
+    setResult(placed.status === "added" ? "added" : "exists");
+    setDeckName(placed.deckName);
   }
 
   const done = result === "added" || already;

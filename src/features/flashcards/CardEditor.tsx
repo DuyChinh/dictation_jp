@@ -2,10 +2,13 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "../../shared/api/dictionary";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
+import { creditText, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
 import { useFt } from "./flashText";
+import { ImagePicker } from "./ImagePicker";
+import { useImgText } from "./imageText";
 import { loadRightLang, saveRightLang } from "./prefs";
 import { isFallback, suggestionsFromEntries, textFor, type Suggestion } from "./suggest";
-import { CARD_LANGS, type CardLang } from "./types";
+import { CARD_LANGS, type CardImage, type CardLang } from "./types";
 
 export type CardValue = {
   term: string;
@@ -15,6 +18,7 @@ export type CardValue = {
   reading: string;
   hanViet: string;
   entryId?: number;
+  image?: CardImage;
 };
 
 type Props = {
@@ -46,6 +50,7 @@ const meaningHint = (leftLang: CardLang, rightLang: CardLang): MeaningPair =>
 export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft }: Props) {
   const { uiLang } = useUiLanguage();
   const ft = useFt();
+  const it = useImgText();
   const [left, setLeft] = useState(initial?.term ?? "");
   const [leftLang, setLeftLang] = useState<CardLang>(initial?.termLang ?? "ja");
   const [right, setRight] = useState(initial?.definition ?? "");
@@ -53,6 +58,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   const [reading, setReading] = useState(initial?.reading ?? "");
   const [hanViet, setHanViet] = useState(initial?.hanViet ?? "");
   const [entryId, setEntryId] = useState<number | undefined>(initial?.entryId);
+  const [image, setImage] = useState<CardImage | undefined>(initial?.image);
+  const [picking, setPicking] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [picked, setPicked] = useState<number | null>(null);
   const [search, setSearch] = useState<"idle" | "loading" | "error" | "done">("idle");
@@ -153,6 +160,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       reading: hasJapanese ? reading.trim() : "",
       hanViet: hasJapanese ? hanViet.trim() : "",
       entryId,
+      image,
     });
     setMessage(problem ?? "");
     if (!problem && clearAfterSubmit) {
@@ -161,6 +169,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       setReading("");
       setHanViet("");
       setEntryId(undefined);
+      setImage(undefined);
       setSuggestions([]);
       setPicked(null);
       rightTouched.current = false;
@@ -172,12 +181,21 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   useEffect(() => {
     onDraft?.(
       left.trim() && right.trim()
-        ? { term: left.trim(), termLang: leftLang, definition: right.trim(), definitionLang: rightLang, reading: hasJapanese ? reading.trim() : "", hanViet: hasJapanese ? hanViet.trim() : "", entryId }
+        ? { term: left.trim(), termLang: leftLang, definition: right.trim(), definitionLang: rightLang, reading: hasJapanese ? reading.trim() : "", hanViet: hasJapanese ? hanViet.trim() : "", entryId, image }
         : null,
     );
     // onDraft is only a listener
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [left, right, leftLang, rightLang, reading, hanViet, entryId, hasJapanese]);
+  }, [left, right, leftLang, rightLang, reading, hanViet, entryId, hasJapanese, image]);
+
+  /** What to look for: the English meaning of the chosen suggestion, else whatever box is in English. */
+  const pictureQuery = (): string => {
+    const s = picked !== null ? suggestions[picked] : undefined;
+    if (s?.en) return imageQueryFrom(s.en);
+    if (rightLang === "en") return imageQueryFrom(right);
+    if (leftLang === "en") return imageQueryFrom(left);
+    return "";
+  };
 
   const langName = (l: CardLang) => ft(`lang.${l}`);
 
@@ -272,6 +290,48 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
           />
         </label>
         </div>
+      )}
+
+      <div className="fc-imgfield">
+        {image && isAllowedImage(image) ? (
+          <>
+            <img className="fc-imgfield__thumb" src={image.url} alt={it("img.cardPicture")} referrerPolicy="no-referrer" draggable={false} />
+            <span className="fc-imgfield__credit">{creditText(image)}</span>
+            <button type="button" className="btn btn--outline btn--sm" onClick={() => setPicking(true)}>
+              <Icon name="image" size={16} />
+              {it("img.change")}
+            </button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setImage(undefined)}>
+              <Icon name="trash" size={16} />
+              {it("img.remove")}
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn btn--outline btn--sm" onClick={() => setPicking(true)} aria-haspopup="dialog">
+            <Icon name="image" size={16} />
+            {it("img.add")}
+          </button>
+        )}
+      </div>
+      {picking && (
+        <ImagePicker
+          initialQuery={pictureQuery()}
+          word={left.trim() || undefined}
+          current={image}
+          onPick={(hit) => {
+            setImage(toCardImage(hit));
+            setPicking(false);
+          }}
+          onRemove={
+            image
+              ? () => {
+                  setImage(undefined);
+                  setPicking(false);
+                }
+              : undefined
+          }
+          onClose={() => setPicking(false)}
+        />
       )}
 
       <div className="fc-suggest" aria-live="polite">
