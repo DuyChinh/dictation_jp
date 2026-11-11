@@ -1,10 +1,10 @@
 import { musicOn, soundOn, SOUND_EVENT } from "./prefs";
+import correctUrl from "../../../music_millionare/Am-thanh-tra-loi-dung-ai-la-trieu-phu-www_tiengdong_com.mp3";
+import wrongUrl from "../../../music_millionare/Am-thanh-tra-loi-sai-ai-la-trieu-phu-www_tiengdong_com.mp3";
 
 /**
- * Sounds of the quiz show and the gold miner, made on the spot with the Web Audio API (no sound files): brass
- * stabs and fanfares, a low pulse that tightens as the clock runs down, a ring, a buzzer, a cash register. They
- * follow the usual language of such shows without copying any recording. Everything is silent while the learner
- * has sound switched off, and the background pulse also needs music on.
+ * The supplied recordings announce right and wrong quiz answers. Other show and miner effects, and an
+ * upbeat background tune, use Web Audio. Effects follow the sound switch; music is separately opt-in.
  */
 
 let ctx: AudioContext | null = null;
@@ -25,7 +25,7 @@ function audio(): { c: AudioContext; out: GainNode } | null {
     master.gain.value = 0.85;
     master.connect(ctx.destination);
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  if (ctx.state === "suspended") void ctx.resume().catch(() => undefined);
   return { c: ctx, out: master! };
 }
 
@@ -218,19 +218,87 @@ const PLAYERS: Record<ShowSound, (c: AudioContext, out: AudioNode, t: number) =>
   },
 };
 
-/** Plays one sound, unless sound is switched off. */
+type AnswerSound = "correct" | "wrong";
+const answerUrls = { correct: correctUrl, wrong: wrongUrl };
+const answerBuffers = new Map<AnswerSound, AudioBuffer>();
+const answerLoads = new Map<AnswerSound, Promise<AudioBuffer | null>>();
+let answerSource: AudioBufferSourceNode | null = null;
+let answerVersion = 0;
+
+function loadAnswerSound(name: AnswerSound, c: AudioContext): Promise<AudioBuffer | null> {
+  const ready = answerBuffers.get(name);
+  if (ready) return Promise.resolve(ready);
+  const loading = answerLoads.get(name);
+  if (loading) return loading;
+  const request = fetch(answerUrls[name])
+    .then((response) => {
+      if (!response.ok) throw new Error("Audio unavailable");
+      return response.arrayBuffer();
+    })
+    .then((data) => c.decodeAudioData(data))
+    .then((buffer) => {
+      answerBuffers.set(name, buffer);
+      return buffer;
+    })
+    .catch(() => null)
+    .finally(() => answerLoads.delete(name));
+  answerLoads.set(name, request);
+  return request;
+}
+
+/** Unlock Web Audio on the Start gesture and cache the two recordings before the first answer. */
+export function prepareAnswerSounds(): void {
+  if (!soundOn()) return;
+  const a = audio();
+  if (!a) return;
+  void loadAnswerSound("correct", a.c);
+  void loadAnswerSound("wrong", a.c);
+}
+
+/** Cancel a recording, including a pending download, when leaving, restarting or choosing again. */
+export function stopAnswerSound(): void {
+  answerVersion++;
+  if (answerSource) {
+    answerSource.stop();
+    answerSource.disconnect();
+    answerSource = null;
+  }
+}
+
+/** Plays one sound, unless sound is switched off. A new answer replaces the previous recording. */
 export function playGameSound(name: ShowSound): void {
   if (!soundOn()) return;
   const a = audio();
   if (!a) return;
+  if (name === "correct" || name === "wrong") {
+    stopAnswerSound();
+    const version = answerVersion;
+    void loadAnswerSound(name, a.c).then((buffer) => {
+      if (version !== answerVersion || !soundOn()) return;
+      if (!buffer) {
+        PLAYERS[name](a.c, a.out, a.c.currentTime + 0.01);
+        return;
+      }
+      const source = a.c.createBufferSource();
+      source.buffer = buffer;
+      source.connect(a.out);
+      source.onended = () => {
+        source.disconnect();
+        if (answerSource === source) answerSource = null;
+      };
+      answerSource = source;
+      source.start();
+    });
+    return;
+  }
   PLAYERS[name](a.c, a.out, a.c.currentTime + 0.01);
 }
 
-// ---------- background pulse ----------
+// ---------- upbeat background music ----------
 
-type Bed = { gain: GainNode; stop: () => void };
+type Bed = { tighten: (on: boolean) => void; stop: () => void };
 let bed: Bed | null = null;
-/** What the screen asked for, so the pulse can come back when music is switched on in the middle of a question. */
+/** Remember the question so switching music on mid-question starts the tune. */
 let wanted: { level: number; urgent: boolean } | null = null;
 
 const allowed = () => soundOn() && musicOn();
@@ -239,68 +307,54 @@ function buildBed(level: number, urgent: boolean): Bed | null {
   const a = audio();
   if (!a) return null;
   const { c, out } = a;
-  const base = 55 * Math.pow(2, (level - 1) / 26);
   const gain = c.createGain();
   gain.gain.setValueAtTime(0.0001, c.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.06, c.currentTime + 0.6);
-  const lp = c.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 520;
-  lp.connect(gain);
+  gain.gain.exponentialRampToValueAtTime(0.3, c.currentTime + 0.3);
   gain.connect(out);
 
-  const oscs = [c.createOscillator(), c.createOscillator(), c.createOscillator()];
-  oscs[0]!.type = "sine";
-  oscs[0]!.frequency.value = base;
-  oscs[1]!.type = "triangle";
-  oscs[1]!.frequency.value = base * 1.498; // a fifth up
-  oscs[2]!.type = "sawtooth";
-  oscs[2]!.frequency.value = base * 2.003;
-  const mix = oscs.map((o, i) => {
-    const g = c.createGain();
-    g.gain.value = [0.9, 0.5, 0.12][i]!;
-    o.connect(g);
-    g.connect(lp);
-    o.start();
-    return g;
-  });
-  // the drone breathes
-  const lfo = c.createOscillator();
-  const depth = c.createGain();
-  lfo.frequency.value = 0.35;
-  depth.gain.value = 0.25;
-  lfo.connect(depth);
-  depth.connect(mix[1]!.gain);
-  lfo.start();
-
+  // C–G–Am–F, with a bright, bouncing melody at two notes per beat.
+  const roots = [0, 7, 9, 5];
+  const melody = [
+    [12, 16, 19, 24, 19, 16, 21, 19],
+    [19, 23, 26, 31, 26, 23, 28, 26],
+    [21, 24, 28, 33, 28, 24, 31, 28],
+    [17, 21, 24, 29, 24, 21, 26, 24],
+  ];
   let timer: ReturnType<typeof setTimeout> | undefined;
   let tight = urgent;
+  let step = 0;
   const beat = () => {
     if (!allowed()) return;
-    tone(c, out, c.currentTime + 0.01, { freq: base * 1.5, to: base * 0.7, dur: 0.2, type: "sine", vol: 0.17 });
-    if (tight) tone(c, out, c.currentTime + 0.14, { freq: base * 1.5, to: base * 0.7, dur: 0.16, type: "sine", vol: 0.12 });
-    timer = setTimeout(beat, tight ? 520 : 940);
+    const bar = Math.floor(step / 8) % roots.length;
+    const eighth = step % 8;
+    const root = roots[bar]!;
+    const t = c.currentTime + 0.01;
+    tone(c, gain, t, { freq: hz(melody[bar]![eighth]!), dur: 0.18, type: "triangle", vol: 0.065, attack: 0.008 });
+    if (eighth % 2 === 0) {
+      tone(c, gain, t, { freq: hz(root - 12 + (eighth === 4 ? 7 : 0)), dur: 0.22, type: "triangle", vol: 0.13 });
+      tone(c, gain, t, { freq: 110, to: 48, dur: 0.12, vol: 0.18 });
+    }
+    if (eighth === 0 || eighth === 4) {
+      for (const note of [root, root + (bar === 2 ? 3 : 4), root + 7]) {
+        tone(c, gain, t, { freq: hz(note), dur: 0.25, type: "triangle", vol: 0.035 });
+      }
+    }
+    noise(c, gain, t, { dur: 0.035, freq: 6500, type: "highpass", vol: eighth % 2 ? 0.025 : 0.015 });
+    if (eighth === 2 || eighth === 6) noise(c, gain, t, { dur: 0.07, freq: 1800, vol: 0.04 });
+    step++;
+    const bpm = 116 + Math.min(Math.max(level - 1, 0), 14) + (tight ? 12 : 0);
+    timer = setTimeout(beat, 30_000 / bpm);
   };
   beat();
-  (gain as GainNode & { tighten?: (on: boolean) => void }).tighten = (on) => {
-    tight = on;
-  };
 
   return {
-    gain,
+    tighten: (on) => { tight = on; },
     stop: () => {
       clearTimeout(timer);
       const t = c.currentTime;
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-      [...oscs, lfo].forEach((o) => {
-        try {
-          o.stop(t + 0.22);
-        } catch {
-          /* already stopped */
-        }
-      });
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
     },
   };
 }
@@ -308,21 +362,21 @@ function buildBed(level: number, urgent: boolean): Bed | null {
 function syncBed(): void {
   if (wanted && allowed()) {
     if (!bed) bed = buildBed(wanted.level, wanted.urgent);
-    else (bed.gain as GainNode & { tighten?: (on: boolean) => void }).tighten?.(wanted.urgent);
+    else bed.tighten(wanted.urgent);
   } else if (bed) {
     bed.stop();
     bed = null;
   }
 }
 
-/** Starts the tense background pulse for a question; `level` (1-15) lifts its pitch a little each question. */
+/** Starts the cheerful tune; later questions and the last seconds gently raise the tempo. */
 export function startBed(level: number, urgent = false): void {
   stopBed();
   wanted = { level, urgent };
   syncBed();
 }
 
-/** Tightens the pulse, e.g. when the clock is nearly out. */
+/** Adds a little pace when the clock is nearly out. */
 export function tightenBed(urgent: boolean): void {
   if (!wanted || wanted.urgent === urgent) return;
   wanted = { ...wanted, urgent };
@@ -334,5 +388,7 @@ export function stopBed(): void {
   syncBed();
 }
 
-// switching sound or music off silences the pulse at once, and on brings it back
-if (typeof window !== "undefined") window.addEventListener(SOUND_EVENT, syncBed);
+if (typeof window !== "undefined") window.addEventListener(SOUND_EVENT, () => {
+  if (!soundOn()) stopAnswerSound();
+  syncBed();
+});

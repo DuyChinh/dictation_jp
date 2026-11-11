@@ -97,8 +97,8 @@ export const saveSound = (on: boolean) => {
   set(SOUND_KEY, on ? "on" : "off");
   announceSound();
 };
-/** The tense background music of the quiz show; off with the sound, or on its own. */
-export const musicOn = (): boolean => get(MUSIC_KEY) !== "off";
+/** The quiz show's background music is opt-in and also follows the sound switch. */
+export const musicOn = (): boolean => get(MUSIC_KEY) === "on";
 export const saveMusic = (on: boolean) => {
   set(MUSIC_KEY, on ? "on" : "off");
   announceSound();

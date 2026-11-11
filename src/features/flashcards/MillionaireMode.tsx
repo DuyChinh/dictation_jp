@@ -5,7 +5,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { MusicToggle, SoundToggle, Stars, useShake } from "./GameBits";
-import { playGameSound, startBed, stopBed, tightenBed } from "./gameSound";
+import { playGameSound, prepareAnswerSounds, startBed, stopAnswerSound, stopBed, tightenBed } from "./gameSound";
 import { useMillText } from "./millionaireText";
 import {
   LIFELINES,
@@ -129,6 +129,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     () => () => {
       timers.current.forEach(clearTimeout);
       stopBed();
+      stopAnswerSound();
     },
     [],
   );
@@ -150,7 +151,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     return next;
   }
 
-  /** Puts up question `number` (1-15): its card, the clock, the question sting and the tense music. */
+  /** Puts up question `number` (1-15), with optional background music. */
   function loadQuestion(number: number) {
     setItem(pullItem());
     setRemoved([]);
@@ -161,11 +162,13 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     deadline.current = Date.now() + QUESTION_SECONDS * 1000;
     setLeft(QUESTION_SECONDS);
     lastTick.current = -1;
+    prepareAnswerSounds();
     playGameSound("question");
     startBed(number);
   }
 
   function newGame() {
+    stopAnswerSound();
     timers.current.forEach(clearTimeout);
     timers.current = [];
     queueRef.current = [];
@@ -186,9 +189,8 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     setStage("over");
     setRecord({ best: getBest(deckId, "millionaire2"), improved: submitBest(deckId, "millionaire2", prize, "high") });
     stopBed();
-    if (reason === "win") playGameSound("win");
-    else if (reason === "walk") playGameSound("walk");
-    else if (prize > 0) playGameSound("levelClear");
+    // The answer recording continues through the result; don't cover it with another fanfare.
+    if (reason === "walk") playGameSound("walk");
     if (prize > 0) triggerConfetti({ particleCount: reason === "win" ? 200 : 70 });
   }
 
@@ -202,8 +204,8 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     if (right) {
       const n = correctRef.current + 1;
       setCorrectCount(n);
-      // a safe level gets the big fanfare, and then a card saying what is now certain
-      if (n < QUESTIONS) playGameSound(isMilestone(n) ? "milestone" : "correct");
+      // Every correct answer uses the supplied clip, including safe levels and the final question.
+      playGameSound("correct");
       later(() => {
         if (n >= QUESTIONS) finish("win", n);
         else if (isMilestone(n)) {
@@ -225,6 +227,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     if (phase !== "asking" || popup || removed.includes(i) || !item) return;
     setSelected(i);
     setPhase("locked");
+    stopAnswerSound();
     stopBed();
     playGameSound("lock");
     later(() => reveal(i), LOCK_MS);
@@ -237,7 +240,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
       const remaining = deadline.current - Date.now();
       const secs = Math.max(0, Math.ceil(remaining / 1000));
       setLeft(secs);
-      // the pulse tightens and the last seconds tick
+      // the music picks up and the last seconds tick
       tightenBed(secs <= 10);
       if (secs <= 5 && secs > 0 && secs !== lastTick.current) {
         lastTick.current = secs;
