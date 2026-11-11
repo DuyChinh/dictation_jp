@@ -55,3 +55,28 @@ describe("N4 labels", () => {
     expect(mondaiNo(6, "jlpt-n1-2024-12")).toBe(6);
   });
 });
+
+describe("N3 and N5 written groups", () => {
+  it("labels N3 vocabulary and the separate grammar/reading booklet", () => {
+    const lesson = "jlpt-n3-practice-02";
+    expect(mondaiLabel(3, "vi", lesson)).toBe("Từ hợp ngữ cảnh");
+    expect(mondaiLabel(4, "vi", lesson)).toBe("Từ đồng nghĩa");
+    expect(mondaiLabel(5, "ja", lesson)).toBe("用法");
+    expect(mondaiNo(7, lesson)).toBe(1);
+    expect(mondaiLabel(8, "vi", lesson)).toContain("★");
+    expect(mondaiNo(13, lesson)).toBe(6);
+    expect(mondaiLabel(14, "en", lesson)).toBe("Information retrieval");
+    expect(mondaiNo(14, lesson)).toBe(7);
+  });
+
+  it("labels N5 groups without N2 word formation or usage categories", () => {
+    const lesson = "jlpt-n5-practice-01";
+    expect(mondaiLabel(3, "vi", lesson)).toBe("Từ hợp ngữ cảnh");
+    expect(mondaiLabel(4, "vi", lesson)).toBe("Từ đồng nghĩa");
+    expect(mondaiNo(5, lesson)).toBe(1);
+    expect(mondaiLabel(6, "vi", lesson)).toContain("★");
+    expect(mondaiNo(8, lesson)).toBe(4);
+    expect(mondaiLabel(10, "vi", lesson)).toBe("Tìm thông tin");
+    expect(mondaiNo(10, lesson)).toBe(6);
+  });
+});

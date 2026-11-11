@@ -39,6 +39,36 @@ const N4_MONDAI: Record<number, L & { no: number }> = {
   11: { no: 6, ja: "情報検索", vi: "Tìm thông tin", en: "Information retrieval" },
 };
 
+/** N3 stores written groups in the existing 1–14 paper order, with no group 6 or 12. */
+const N3_MONDAI: Record<number, L & { no: number }> = {
+  1: N4_MONDAI[1]!,
+  2: N4_MONDAI[2]!,
+  3: N4_MONDAI[3]!,
+  4: N4_MONDAI[4]!,
+  5: N4_MONDAI[5]!,
+  7: N4_MONDAI[6]!,
+  8: N4_MONDAI[7]!,
+  9: N4_MONDAI[8]!,
+  10: N4_MONDAI[9]!,
+  11: N4_MONDAI[10]!,
+  13: { no: 6, ja: "内容理解（長文）", vi: "Bài dài", en: "Long passage" },
+  14: { no: 7, ...MONDAI[14]! },
+};
+
+/** N5 has four vocab groups, followed by a separate grammar/reading booklet. */
+const N5_MONDAI: Record<number, L & { no: number }> = {
+  1: N4_MONDAI[1]!,
+  2: N4_MONDAI[2]!,
+  3: N4_MONDAI[3]!,
+  4: N4_MONDAI[4]!,
+  5: N4_MONDAI[6]!,
+  6: N4_MONDAI[7]!,
+  7: N4_MONDAI[8]!,
+  8: N4_MONDAI[9]!,
+  9: N4_MONDAI[10]!,
+  10: N4_MONDAI[11]!,
+};
+
 /** N1 papers have no 語形成 group, so their 問題 numbers (printed 1–13) mean something else than N2/N3. */
 const N1_MONDAI: Record<number, L> = {
   1: { ja: "漢字読み", vi: "Cách đọc kanji", en: "Kanji readings" },
@@ -61,14 +91,16 @@ export function levelOfLesson(lessonId: string): string | undefined {
   return /^jlpt-(n[1-5])-/i.exec(lessonId)?.[1]?.toUpperCase();
 }
 
-/** The 問題 number as printed in the exam (N4 restarts it per booklet part). */
+/** The 問題 number as printed in the exam (N3–N5 restart per booklet part). */
 export function mondaiNo(mondai: number, lessonId?: string): number {
-  return lessonId && levelOfLesson(lessonId) === "N4" ? (N4_MONDAI[mondai]?.no ?? mondai) : mondai;
+  const level = lessonId ? levelOfLesson(lessonId) : undefined;
+  const table = level === "N3" ? N3_MONDAI : level === "N4" ? N4_MONDAI : level === "N5" ? N5_MONDAI : null;
+  return table?.[mondai]?.no ?? mondai;
 }
 
 export function mondaiLabel(mondai: number, lang: UiLang, lessonId?: string): string {
   const level = lessonId ? levelOfLesson(lessonId) : undefined;
-  const table: Record<number, L> = level === "N4" ? N4_MONDAI : level === "N1" ? N1_MONDAI : MONDAI;
+  const table: Record<number, L> = level === "N4" ? N4_MONDAI : level === "N3" ? N3_MONDAI : level === "N5" ? N5_MONDAI : level === "N1" ? N1_MONDAI : MONDAI;
   const l = table[mondai];
   if (!l) return `問題${mondai}`;
   return lang === "ja" ? l.ja : lang === "en" ? l.en : l.vi;
