@@ -1,3 +1,4 @@
+import type { DictEntry } from "../../shared/api/dictionary";
 import type { ImageHit } from "../../shared/api/images";
 import type { CardImage } from "./types";
 
@@ -32,16 +33,51 @@ export const toCardImage = (hit: ImageHit): CardImage => ({
 /** "Mathias Appel · CC0", the credit line shown with a picture. */
 export const creditText = (image: CardImage): string => [image.by, image.lic].filter(Boolean).join(" · ");
 
-/**
- * A search phrase from an English meaning: the first sense without its brackets or a leading "to"/"a"/"the", so
- * "to eat; to have a meal" looks for "eat" and "(sl) cool; (a) cute thing" for "cool".
- */
-export function imageQueryFrom(meaning: string): string {
-  const first = meaning.split(/[;,/]/)[0] ?? "";
-  return first
+/** One meaning as a search phrase: no brackets, no leading "to", "be", "a" or "the". */
+function phrase(meaning: string): string {
+  return meaning
     .replace(/\([^)]*\)/g, " ")
-    .replace(/^\s*(to|a|an|the)\s+/i, "")
+    .replace(/^\s*(to be|to|be|a|an|the)\s+/i, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 60);
+}
+
+/**
+ * A search phrase from an English meaning: the first sense without its brackets or a leading "to"/"be"/"a"/"the",
+ * so "to eat; to have a meal" looks for "eat", "be convinced" for "convinced" and "(sl) cool; (a) cute thing" for "cool".
+ */
+export function imageQueryFrom(meaning: string): string {
+  return phrase(meaning.split(/[;,/]/)[0] ?? "");
+}
+
+const MAX_KEYWORDS = 8;
+const MAX_KEYWORD = 40;
+
+/**
+ * Other things to look for, from the English meanings of a word: each meaning as a phrase, without repeats, and for
+ * a verb "person eat" as well, since a verb alone mostly finds animals and objects rather than someone doing it.
+ */
+export function imageKeywordsFrom(meanings: string[], opts: { verb?: boolean } = {}): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (k: string) => {
+    const key = k.toLowerCase();
+    if (!k || k.length > MAX_KEYWORD || seen.has(key)) return;
+    seen.add(key);
+    out.push(k);
+  };
+  const phrases = meanings.map(phrase).filter(Boolean);
+  for (const k of phrases) add(k);
+  if (opts.verb && phrases[0] && !/^person\b/i.test(phrases[0])) add(`person ${phrases[0]}`);
+  return out.slice(0, MAX_KEYWORDS);
+}
+
+/** Keywords from a dictionary entry: every English meaning of every sense. */
+export function imageKeywordsFromEntry(entry: DictEntry): string[] {
+  const verb = entry.senses.some((s) => s.pos.some((p) => /^v/.test(p)));
+  return imageKeywordsFrom(
+    entry.senses.flatMap((s) => s.glosses),
+    { verb },
+  );
 }

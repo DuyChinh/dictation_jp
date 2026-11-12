@@ -11,6 +11,8 @@ type Props = {
   initialQuery: string;
   /** The word the picture is for, shown as a reminder. */
   word?: string;
+  /** Other things to look for, shown as buttons that search at once. */
+  suggestions?: string[];
   /** The picture the card has now, if any. */
   current?: CardImage;
   onPick: (hit: ImageHit) => void;
@@ -26,7 +28,7 @@ type State = { status: "idle" } | { status: "loading" } | { status: "error" } | 
  * Openverse and Wikimedia Commons have, pick one. The first search of a word can take several seconds, because
  * Openverse is slow; the box says so rather than looking stuck.
  */
-export function ImagePicker({ initialQuery, word, current, onPick, onRemove, onClose }: Props) {
+export function ImagePicker({ initialQuery, word, suggestions, current, onPick, onRemove, onClose }: Props) {
   const it = useImgText();
   const [query, setQuery] = useState(initialQuery);
   const [state, setState] = useState<State>({ status: "idle" });
@@ -115,6 +117,29 @@ export function ImagePicker({ initialQuery, word, current, onPick, onRemove, onC
           </button>
         </form>
         <p className="fc-imgpick__hint">{it("img.searchLabel")}</p>
+        {suggestions && suggestions.length > 0 && (
+          <div className="fc-imgpick__chips" role="group" aria-label={it("img.suggest")}>
+            <span className="fc-imgpick__chips-label">{it("img.suggest")}</span>
+            {suggestions.map((k) => {
+              const on = k.toLowerCase() === query.trim().toLowerCase();
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  className={`fc-imgpick__chip${on ? " is-on" : ""}`}
+                  aria-pressed={on}
+                  onClick={() => {
+                    setQuery(k);
+                    run(k);
+                  }}
+                >
+                  {k}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <p className="fc-imgpick__tip">{it("img.tip")}</p>
 
         {current && isAllowedImage(current) && (
           <div className="fc-imgpick__current">

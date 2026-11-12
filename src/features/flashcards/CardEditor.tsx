@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "../../shared/api/dictionary";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
-import { creditText, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
+import { creditText, imageKeywordsFrom, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
 import { useFt } from "./flashText";
 import { ImagePicker } from "./ImagePicker";
 import { useImgText } from "./imageText";
@@ -196,6 +196,11 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     if (leftLang === "en") return imageQueryFrom(left);
     return "";
   };
+  /** Other things to look for: the chosen suggestion's English meanings. */
+  const pictureKeywords = (): string[] => {
+    const s = picked !== null ? suggestions[picked] : undefined;
+    return s?.en ? imageKeywordsFrom(s.en.split(";")) : [];
+  };
 
   const langName = (l: CardLang) => ft(`lang.${l}`);
 
@@ -317,6 +322,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
         <ImagePicker
           initialQuery={pictureQuery()}
           word={left.trim() || undefined}
+          suggestions={pictureKeywords()}
           current={image}
           onPick={(hit) => {
             setImage(toCardImage(hit));

@@ -11,7 +11,7 @@ import { ImagePicker } from "./ImagePicker";
 import { ImagesPicker } from "./ImagesPicker";
 import { SideView } from "./SideView";
 import { StudyModes } from "./StudyModes";
-import { creditText, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
+import { creditText, imageKeywordsFrom, imageKeywordsFromEntry, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
 import { showImages } from "./prefs";
 import { sidesOf } from "./quiz";
 import { addCard, createDeck, importSharedDeck, readState, updateCard } from "./store";
@@ -88,6 +88,32 @@ describe("picture references on the page", () => {
     expect(imageQueryFrom("  an   apple ")).toBe("apple");
     expect(imageQueryFrom("")).toBe("");
     expect(imageQueryFrom("x".repeat(100))).toHaveLength(60);
+  });
+
+  it("leaves out 'be' as well, which says nothing a picture could show", () => {
+    expect(imageQueryFrom("be convinced")).toBe("convinced");
+    expect(imageQueryFrom("to be sure; to be certain")).toBe("sure");
+    expect(imageQueryFrom("beautiful")).toBe("beautiful");
+    expect(imageQueryFrom("bean")).toBe("bean");
+  });
+
+  it("offers every meaning as something else to look for, once each", () => {
+    expect(imageKeywordsFrom(["to eat", "to have a meal", "Eat", "(sl) to live on"])).toEqual(["eat", "have a meal", "live on"]);
+    expect(imageKeywordsFrom([])).toEqual([]);
+    expect(imageKeywordsFrom(["x".repeat(41), "dog"])).toEqual(["dog"]);
+    expect(imageKeywordsFrom(Array.from({ length: 20 }, (_, i) => `word${i}`))).toHaveLength(8);
+  });
+
+  it("adds 'person …' for a verb, since a verb alone finds animals and objects, but not for other words", () => {
+    expect(imageKeywordsFrom(["to eat", "to have a meal"], { verb: true })).toEqual(["eat", "have a meal", "person eat"]);
+    expect(imageKeywordsFrom(["dog"], { verb: false })).toEqual(["dog"]);
+    expect(imageKeywordsFrom(["person"], { verb: true })).toEqual(["person"]);
+  });
+
+  it("reads them from a dictionary entry, every sense, and knows a verb by its word class", () => {
+    expect(imageKeywordsFromEntry(TABERU)).toEqual(["eat", "have a meal", "person eat"]);
+    const noun = { ...TABERU, senses: [{ ...TABERU.senses[0]!, pos: ["n"], glosses: ["dog"] }, { ...TABERU.senses[0]!, pos: ["n"], glosses: ["canine", "dog"] }] };
+    expect(imageKeywordsFromEntry(noun)).toEqual(["dog", "canine"]);
   });
 });
 
@@ -201,6 +227,28 @@ describe("ImagePicker", () => {
     expect(screen.getByText("Từ: 犬")).toBeTruthy();
   });
 
+  it("offers other things to look for as buttons that search at once, marking the one in use", async () => {
+    answer();
+    open({ suggestions: ["eat", "have a meal", "person eat"], initialQuery: "eat" });
+    const group = screen.getByRole("group", { name: "Gợi ý từ khóa" });
+    expect(within(group).getByRole("button", { name: "eat" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(group).getByRole("button", { name: "person eat" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(within(group).getByRole("button", { name: "person eat" }));
+    expect(searchImages).toHaveBeenLastCalledWith("person eat", expect.anything());
+    expect((screen.getByLabelText(/Tìm ảnh \(từ khóa/) as HTMLInputElement).value).toBe("person eat");
+    expect(within(group).getByRole("button", { name: "person eat" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(group).getByRole("button", { name: "eat" }).getAttribute("aria-pressed")).toBe("false");
+    await screen.findAllByRole("button", { name: /Dùng ảnh này/ });
+  });
+
+  it("shows no keyword buttons when there are none, and always tells how to look for an abstract word", async () => {
+    answer();
+    open();
+    expect(screen.queryByRole("group", { name: "Gợi ý từ khóa" })).toBeNull();
+    expect(screen.getByText(/Từ trừu tượng khó có ảnh đúng nghĩa/)).toBeTruthy();
+    await screen.findAllByRole("button", { name: /Dùng ảnh này/ });
+  });
+
   it("hands over the picture that is clicked", async () => {
     answer();
     const { onPick } = open();
@@ -312,6 +360,9 @@ describe("EntryImageButton", () => {
     fireEvent.click(button());
     expect(searchImages).toHaveBeenCalledWith("eat", expect.anything());
     expect(screen.getByText("Từ: 食べる")).toBeTruthy();
+    // and every meaning of the word is offered as another thing to look for
+    const keywords = within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent);
+    expect(keywords).toEqual(["eat", "have a meal", "person eat"]);
     fireEvent.click((await screen.findAllByRole("button", { name: /Dùng ảnh này/ }))[0]!);
     const cards = readState().cards;
     expect(cards).toHaveLength(1);
@@ -355,6 +406,7 @@ describe("CardEditor", () => {
     await waitFor(() => expect((screen.getByLabelText("Nghĩa") as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Thêm ảnh" }));
     expect(searchImages).toHaveBeenCalledWith("eat", expect.anything());
+    expect(within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["eat", "have a meal"]);
     fireEvent.click((await screen.findAllByRole("button", { name: /Dùng ảnh này/ }))[0]!);
     expect(screen.getByAltText("Ảnh của thẻ").getAttribute("src")).toBe(OV("aaa").url);
     expect(screen.getByRole("button", { name: "Đổi ảnh" })).toBeTruthy();
