@@ -3,22 +3,34 @@
 .fc-page--millionaire { width: 100%; max-width: 1600px; min-width: 0; }
 .fc-page--millionaire > .fc-pickers { gap: 12px 24px; padding: 16px 20px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; }
 
-.fc-mil { --gold: #f3cc7b; --orange: #ffd483; }
+.fc-mil {
+  --gold: #f3cc7b; --orange: #ffd483;
+  /*
+   * The whole game has to fit the window with no scrolling. Up to the studio's own chrome (the app's top bar, the
+   * stage's padding, the brand row, the lifelines row and the bottom row, about 400px) what is left of the window's
+   * height is shared between the question and the answers; the ladder's rows follow from them.
+   */
+  --mil-room: max(0px, calc(100dvh - 404px));
+  --mil-q: clamp(76px, calc(var(--mil-room) * 0.3), 190px);
+  --mil-a: clamp(50px, calc(var(--mil-room) * 0.33), 104px);
+  --mil-rung: clamp(17px, calc((var(--mil-q) + 2 * var(--mil-a) + 80px) / 15), 35px);
+}
 .fc-mil__stage {
-  grid-template-columns: minmax(0, 1fr) clamp(190px, 19cqw, 280px); gap: 22px 28px;
-  padding: clamp(18px, 2.2cqw, 34px); border: 1px solid #514b91; border-radius: 26px;
+  grid-template-columns: minmax(0, 1fr) clamp(190px, 19cqw, 280px); gap: clamp(10px, 1.8dvh, 18px) 24px;
+  padding: clamp(12px, 1.5cqw, 24px); border: 1px solid #514b91; border-radius: 26px;
   background: radial-gradient(ellipse at 40% -30%, #43358d 0, transparent 66%), radial-gradient(ellipse at 105% 100%, #242052 0, transparent 55%), #0c1028;
   box-shadow: 0 24px 70px #05051540, inset 0 1px #ffffff15;
 }
 .fc-mil__stage::before { opacity: 0.2; }
-.fc-mil__brand { grid-column: 1 / -1; display: flex; align-items: center; gap: 13px; padding-bottom: 20px; border-bottom: 1px solid #ffffff17; }
-.fc-mil__brand-mark { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: 15px; color: #ffe0a0; background: linear-gradient(145deg, #e5b75630, #e5b75608); border: 1px solid #e5b75650; }
+.fc-mil__brand { grid-column: 1 / -1; display: flex; align-items: center; gap: 13px; padding-bottom: clamp(8px, 1.6dvh, 14px); border-bottom: 1px solid #ffffff17; }
+.fc-mil__brand-mark { display: grid; place-items: center; width: 52px; height: 52px; flex: none; filter: drop-shadow(0 4px 10px #0009); }
+.fc-mil__brand-mark .icon-logo { width: 100%; height: 100%; }
 .fc-mil__brand > div { display: flex; flex-direction: column; gap: 4px; }
 .fc-mil__brand strong { font-size: 18px; letter-spacing: -0.02em; color: #f9f5ff; }
 .fc-mil__brand > div > span { font-size: 12px; color: #b1b2d1; }
 .fc-mil__grand-prize { margin-left: auto; display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 11px; color: #b1b2d1; }
 .fc-mil__grand-prize b { font-size: 22px; color: var(--gold); letter-spacing: 0.02em; }
-.fc-mil__main { gap: 22px; }
+.fc-mil__main { gap: clamp(8px, 1.8dvh, 16px); }
 .fc-mil__top { gap: 14px; }
 .fc-mil__life { width: 54px; height: 42px; border: 1px solid #cbb68385; box-shadow: inset 0 1px #ffffff28, 0 4px 12px #00000025; background: linear-gradient(160deg, #383568, #1c2046); }
 .fc-mil__life:hover:not(:disabled) { box-shadow: 0 0 20px #f3cc7b35; }
@@ -27,31 +39,32 @@
 .fc-mil__clock { flex: none; width: 54px; height: 54px; font-size: 21px; }
 .fc-mil .fc-sound { width: 36px; height: 36px; border: 1px solid #ffffff20; background: #ffffff08; border-radius: 12px; }
 .fc-mil__question {
-  position: relative; box-sizing: border-box; min-height: 160px; margin-top: 12px;
-  padding: 30px 38px; clip-path: none; border: 1px solid #a395cd70; border-radius: 20px;
+  position: relative; box-sizing: border-box; min-height: var(--mil-q); margin-top: 0;
+  padding: clamp(10px, 2dvh, 22px) 32px; clip-path: none; border: 1px solid #a395cd70; border-radius: 20px;
   background: radial-gradient(ellipse at 50% 0, #3b367a99, transparent 90%), linear-gradient(145deg, #242052, #131631);
   box-shadow: inset 0 1px #ffffff20, 0 10px 30px #00000020;
 }
 .fc-mil__question::before { content: ""; position: absolute; top: -1px; left: 22%; right: 22%; height: 2px; background: linear-gradient(90deg, transparent, #f3cc7b, transparent); }
-.fc-mil__question .fc-side--big { font-size: clamp(32px, 4cqw, 54px); line-height: 1.4; }
-.fc-mil__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.fc-mil__question .fc-side--big { font-size: clamp(24px, min(3.6cqw, 6dvh), 46px); line-height: 1.35; }
+.fc-mil__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(8px, 1.5dvh, 14px) 16px; }
 .fc-mil__ans {
   --edge: #8e83bd85; --fill-a: #292752; --fill-b: #1a1e3e;
-  min-width: 0; min-height: 90px; padding: 18px 22px; gap: 16px; border-radius: 16px; clip-path: none;
-  font-size: clamp(16px, 1.6cqw, 22px); line-height: 1.55; box-shadow: 0 6px 18px #05051530;
+  min-width: 0; min-height: var(--mil-a); padding: clamp(8px, 1.5dvh, 16px) 20px; gap: 14px; border-radius: 16px; clip-path: none;
+  font-size: clamp(15px, min(1.5cqw, 2.6dvh), 20px); line-height: 1.45; box-shadow: 0 6px 18px #05051530;
 }
 .fc-mil__ans::before { inset: 1px; clip-path: none; border-radius: 15px; }
-.fc-mil__letter { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #f3cc7b45; border-radius: 11px; background: #f3cc7b0d; font-size: 17px; }
+.fc-mil__letter { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border: 1px solid #f3cc7b45; border-radius: 11px; background: #f3cc7b0d; font-size: 17px; }
 .fc-mil__text { overflow-wrap: anywhere; }
 .fc-mil__text .fc-side__lead { color: #c2b8ef; }
 .fc-mil__ans:focus-visible, .fc-mil__life:focus-visible { outline: 3px solid #fff2bd; outline-offset: 4px; }
 .fc-mil__ans.is-right { --fill-a: #166c4a; --fill-b: #10442f; }
 .fc-mil__ans.is-wrong { --fill-a: #9c3649; --fill-b: #631f35; }
-.fc-mil__foot { align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; margin-top: auto; }
+.fc-mil__foot { align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 34px; padding-top: 0; margin-top: auto; }
+.fc-mil__foot .fc-mil__verdict { margin: 0; font-size: 15px; }
 .fc-mil__keyboard { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #b1b2d1; }
 .fc-mil__keyboard kbd { display: inline-grid; place-items: center; width: 21px; height: 23px; margin-right: 1px; font: inherit; border-radius: 5px; background: #ffffff08; border: 1px solid #ffffff25; }
-.fc-mil__ladder { padding: 12px; gap: 4px; border-radius: 18px; background: #080c21b3; border-color: #8074b14d; box-shadow: inset 0 1px #ffffff0d; }
-.fc-mil__ladder li { min-height: 27px; padding: 5px 12px; box-sizing: border-box; font-size: clamp(13px, 1.3cqw, 18px); color: #d5bb84; }
+.fc-mil__ladder { padding: 10px; gap: clamp(2px, 0.5dvh, 4px); border-radius: 18px; background: #080c21b3; border-color: #8074b14d; box-shadow: inset 0 1px #ffffff0d; }
+.fc-mil__ladder li { min-height: var(--mil-rung); padding: 2px 12px; box-sizing: border-box; font-size: clamp(11px, min(1.3cqw, 2.1dvh), 17px); color: #d5bb84; }
 .fc-mil__ladder .is-current { color: #30200a; background: linear-gradient(110deg, #ffe5a3, #e9af58); box-shadow: 0 3px 18px #efbb6040; }
 .fc-mil__ladder .is-safe { color: #f7f4ff; }
 .fc-mil__ladder .is-current.is-safe { color: #30200a; }
@@ -86,39 +99,39 @@
 .fc-mil-result .btn--ghost { color: #d9cdea; border: 1px solid #ffffff20; }
 .fc-mil-result.is-winner { border-color: #b9975f80; }
 
-@container (min-width: 1100px) {
-  .fc-mil__main { min-height: 590px; gap: 24px; }
-  .fc-mil__question { min-height: 190px; margin-top: 24px; }
-  .fc-mil__ans { min-height: 104px; }
-  .fc-mil__ladder li { min-height: 35px; }
-}
 @container (max-width: 850px) {
-  .fc-mil__stage { gap: 18px; padding: 18px; }
+  .fc-mil__stage { padding: 14px; }
   .fc-mil__top { gap: 10px; }
   .fc-mil__lifelines { gap: 6px; }
   .fc-mil__life { width: 44px; height: 38px; }
-  .fc-mil__question { min-height: 140px; padding: 22px; margin-top: 0; }
-  .fc-mil__ans { padding: 14px; gap: 10px; }
+  .fc-mil__question { padding: 12px 20px; }
+  .fc-mil__ans { padding: 8px 14px; gap: 10px; }
   .fc-mil__ladder { padding: 8px; }
   .fc-mil__ladder li { padding-inline: 7px; }
   .fc-mil__keyboard { display: none; }
 }
 @container (max-width: 699px) {
-  .fc-mil__stage { grid-template-columns: minmax(0, 1fr); }
-  .fc-mil__brand { padding-bottom: 14px; gap: 10px; }
+  /* one column: the answers stack, so each gets less of the height left */
+  .fc-mil__stage {
+    grid-template-columns: minmax(0, 1fr);
+    --mil-room: max(0px, calc(100dvh - 350px));
+    --mil-q: clamp(64px, calc(var(--mil-room) * 0.26), 120px);
+    --mil-a: clamp(44px, calc(var(--mil-room) * 0.17), 64px);
+  }
+  .fc-mil__brand { padding-bottom: 8px; gap: 10px; }
   .fc-mil__brand strong { font-size: 16px; }
-  .fc-mil__brand-mark { width: 40px; height: 40px; }
+  .fc-mil__brand > div > span { display: none; }
+  .fc-mil__brand-mark { width: 38px; height: 38px; }
   .fc-mil__grand-prize { display: none; }
-  .fc-mil__main { gap: 18px; }
+  .fc-mil__main { gap: 10px; }
   .fc-mil__clock { width: 44px; height: 44px; font-size: 18px; }
   .fc-mil__foot { justify-content: center; }
 }
 @container (max-width: 520px) {
   .fc-mil__stage { padding: 14px; border-radius: 20px; }
   .fc-mil__answers { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .fc-mil__ans { min-height: 68px; padding: 12px 16px; }
-  .fc-mil__question { min-height: 120px; }
-  .fc-mil__question .fc-side--big { font-size: 32px; }
+  .fc-mil__ans { padding: 8px 14px; }
+  .fc-mil__question .fc-side--big { font-size: clamp(22px, 5.5dvh, 30px); }
   .fc-mil__life { width: 42px; }
 }
 @media (max-width: 640px) {
@@ -132,4 +145,19 @@
   .fc-mil__main { min-height: 0; gap: 12px; }
   .fc-mil__question { min-height: 80px; margin-top: 0; padding-block: 12px; }
   .fc-mil__ans { min-height: 56px; }
+}
+
+/* Once a game is on, the settings above it (asked side, readings, pictures) give their room to the game; they are back on the start and result screens. */
+.fc-page--millionaire:has(.fc-mil__stage) > .fc-pickers { display: none; }
+
+/* the boxes laid over the game (audience, friend, walk away) scroll rather than being cut off when the game is short */
+.fc-mil__popup { overflow-y: auto; justify-content: safe center; }
+
+/* the emblem of the show */
+.fc-mil-start__logo { margin-bottom: 4px; filter: drop-shadow(0 8px 18px #0006); }
+.fc-mode > .icon-logo { width: 40px; height: 40px; }
+
+/* browsers without dynamic viewport units: the plain viewport height stands in */
+@supports not (height: 100dvh) {
+  .fc-mil { --mil-room: max(0px, calc(100vh - 404px)); }
 }

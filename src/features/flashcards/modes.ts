@@ -8,7 +8,7 @@ export const MODES = [
   { id: "memory", icon: "sparkles", min: 2 },
   { id: "drop", icon: "flag", min: 2 },
   { id: "blitz", icon: "clock", min: 2 },
-  { id: "millionaire", icon: "crown", min: 4 },
+  { id: "millionaire", icon: "millionaire", min: 4 },
   { id: "miner", icon: "gem", min: 2 },
 ] as const satisfies ReadonlyArray<{ id: string; icon: IconName; min: number }>;
 

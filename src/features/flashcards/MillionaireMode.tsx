@@ -334,6 +334,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     const best = getBest(deckId, "millionaire2");
     return (
       <section className="fc-panel fc-start fc-mil-start">
+        <Icon name="millionaire" size={104} className="fc-mil-start__logo" />
         <h2>{ft("mill.title")}</h2>
         <p>{ft("mill.intro")}</p>
         <ul className="fc-miner-rules">
@@ -401,7 +402,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     <section className={`fc-mil${shaking ? " is-shaking" : ""}`} aria-label={ft("mill.title")}>
       <div className="fc-mil__stage">
         <div className="fc-mil__brand" aria-hidden="true">
-          <span className="fc-mil__brand-mark"><Icon name="crown" size={25} /></span>
+          <span className="fc-mil__brand-mark"><Icon name="millionaire" size={52} /></span>
           <div><strong>{ft("mill.title")}</strong><span>{mt("stage.subtitle")}</span></div>
           <span className="fc-mil__grand-prize">{mt("stage.topPrize")}<b className="tabular">{money(PRIZES[QUESTIONS - 1]!)}</b></span>
         </div>
@@ -464,15 +465,17 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
             })}
           </div>
 
-          {revealed && (
-            <p className={`fc-mil__verdict${selected === correctIdx ? " is-right" : " is-wrong"}`} role="status">
-              {selected === correctIdx ? ft("mill.right") : timedOut ? ft("mill.timeUpLine") : fmt(ft("mill.wrongLine"), { letter: LETTERS[correctIdx]! })}
-            </p>
-          )}
-          {phase === "locked" && <p className="fc-mil__verdict is-locked" role="status">{fmt(ft("mill.locking"), { letter: LETTERS[selected ?? 0]! })}</p>}
-
+          {/* the verdict takes the place of the keyboard hint in the bottom row, so the game does not grow by a line while it is shown */}
           <footer className="fc-mil__foot">
-            <span className="fc-mil__keyboard"><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> {mt("stage.keyboard")}</span>
+            {revealed ? (
+              <p className={`fc-mil__verdict${selected === correctIdx ? " is-right" : " is-wrong"}`} role="status">
+                {selected === correctIdx ? ft("mill.right") : timedOut ? ft("mill.timeUpLine") : fmt(ft("mill.wrongLine"), { letter: LETTERS[correctIdx]! })}
+              </p>
+            ) : phase === "locked" ? (
+              <p className="fc-mil__verdict is-locked" role="status">{fmt(ft("mill.locking"), { letter: LETTERS[selected ?? 0]! })}</p>
+            ) : (
+              <span className="fc-mil__keyboard"><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> {mt("stage.keyboard")}</span>
+            )}
             <button type="button" className="btn btn--ghost btn--sm" disabled={phase !== "asking" || !!popup || correctCount === 0} onClick={() => openPopup({ kind: "walk" })}>
               {fmt(ft("mill.walk"), { prize: money(walkPrize) })}
             </button>

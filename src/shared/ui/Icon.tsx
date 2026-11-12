@@ -278,7 +278,7 @@ const paths = {
   ),
 } as const;
 
-export type IconName = keyof typeof paths | "play" | "pause";
+export type IconName = keyof typeof paths | "play" | "pause" | "millionaire";
 
 type Props = Omit<SVGProps<SVGSVGElement>, "name"> & {
   name: IconName;
@@ -295,6 +295,22 @@ export function Icon({ name, size = 20, strokeWidth = 1.8, ...rest }: Props) {
     focusable: false,
     ...rest,
   } as const;
+
+  // the quiz show's own emblem is a picture, not a stroke icon
+  if (name === "millionaire") {
+    return (
+      <img
+        src="/millionaire/logo.webp"
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={`icon-logo${rest.className ? ` ${rest.className}` : ""}`}
+        style={{ display: "block", objectFit: "contain" }}
+      />
+    );
+  }
 
   if (name === "play") {
     return (
