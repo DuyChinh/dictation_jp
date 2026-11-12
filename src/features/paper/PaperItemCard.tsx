@@ -112,132 +112,139 @@ export function PaperItemCard({ lessonId, item, saved, onAnswered, onRestored, o
           </span>
         )}
       </header>
-      <LookupLayer>
+      <LookupLayer className="paper-card__body">
         <p className="paper-stem jp" lang="ja">
           {stem.map((p, i) => (p.mark ? <u key={i}>{p.text}</u> : <span key={i}>{p.text}</span>))}
         </p>
-      </LookupLayer>
-      {answered && result.stem_vi && (
-        <p className="paper-stem-vi">
-          <span className="paper-trans-label">{t("paper.translation")}</span>
-          {result.stem_vi}
-        </p>
-      )}
+        {answered && result.stem_vi && (
+          <p className="paper-stem-vi" data-nolookup>
+            <span className="paper-trans-label">{t("paper.translation")}</span>
+            {result.stem_vi}
+          </p>
+        )}
 
-      <div className="paper-choices" role="radiogroup" aria-label={`${t("paper.question")} ${item.no}`}>
-        {item.choices.map((c) => {
-          const r = reveal(c.id);
-          const isCorrect = !!r?.correct;
-          const isWrongPick = answered && c.id === result.selected_choice_id && !isCorrect;
-          const state = isCorrect
-            ? " is-correct"
-            : isWrongPick
-              ? " is-wrong"
-              : !answered && selected === c.id
-                ? " is-selected"
-                : "";
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="radio"
-              aria-checked={answered ? c.id === result.selected_choice_id : selected === c.id}
-              aria-disabled={answered || busy ? true : undefined}
-              className={`paper-tile${state}`}
-              onClick={() => {
-                if (!answered && !busy && !review) setSelected(c.id);
-              }}
-            >
-              <span className="paper-tile__no">{c.id}</span>
-              <span className="paper-tile__body">
-                {isCorrect && <span className="paper-tag paper-tag--ok">{t("paper.tagAnswer")}</span>}
-                {isWrongPick && <span className="paper-tag paper-tag--bad">{t("paper.tagYours")}</span>}
-                <span className="paper-tile__text jp" lang="ja">
-                  {c.text}
-                </span>
-                {r?.sino_vi && (
-                  <span className="paper-sino">
-                    {t("paper.sino")}: <b>{r.sino_vi}</b>
+        <div className="paper-choices" role="radiogroup" aria-label={`${t("paper.question")} ${item.no}`}>
+          {item.choices.map((c) => {
+            const r = reveal(c.id);
+            const isCorrect = !!r?.correct;
+            const isWrongPick = answered && c.id === result.selected_choice_id && !isCorrect;
+            const state = isCorrect
+              ? " is-correct"
+              : isWrongPick
+                ? " is-wrong"
+                : !answered && selected === c.id
+                  ? " is-selected"
+                  : "";
+            const interactive = !answered && !busy && !review;
+            return (
+              <div
+                key={c.id}
+                role="radio"
+                tabIndex={interactive ? 0 : undefined}
+                aria-checked={answered ? c.id === result.selected_choice_id : selected === c.id}
+                aria-disabled={answered || busy ? true : undefined}
+                className={`paper-tile${state}`}
+                onClick={() => {
+                  if (interactive && !window.getSelection()?.toString().trim()) setSelected(c.id);
+                }}
+                onKeyDown={(e) => {
+                  if (interactive && (e.key === " " || e.key === "Enter")) {
+                    e.preventDefault();
+                    setSelected(c.id);
+                  }
+                }}
+              >
+                <span className="paper-tile__no">{c.id}</span>
+                <span className="paper-tile__body">
+                  {isCorrect && <span className="paper-tag paper-tag--ok">{t("paper.tagAnswer")}</span>}
+                  {isWrongPick && <span className="paper-tag paper-tag--bad">{t("paper.tagYours")}</span>}
+                  <span className="paper-tile__text jp" lang="ja">
+                    {c.text}
                   </span>
-                )}
-                {r?.meaning_vi && (
-                  <span className="paper-tile__meaning">
-                    <span className="paper-trans-label">{t("paper.translation")}</span>
-                    {r.meaning_vi}
-                  </span>
-                )}
-                {r && (
-                  <span className="paper-tile__why">
-                    <b>{t("paper.explain")}</b> {r.explanation_vi}
-                  </span>
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {error && (
-        <div className="notice notice--error" role="alert">
-          <Icon name="alert" />
-          {error}
-        </div>
-      )}
-
-      {answered && (
-        <div className="paper-result">
-          {review && review.selected === null ? (
-            <p className="paper-verdict is-blank">
-              <span className="paper-verdict__icon">
-                <Icon name="alert" size={16} strokeWidth={2.4} />
-              </span>
-              {t("exam.blankLabel")} · {t("exam.pill.answerIs")} {result.correct_choice_id ?? ""}
-            </p>
-          ) : (
-            <p className={`paper-verdict${result.correct ? " is-ok" : " is-bad"}`}>
-              <span className="paper-verdict__icon">
-                <Icon name={result.correct ? "check" : "close"} size={16} strokeWidth={3} />
-              </span>
-              {result.correct ? t("paper.correct") : `${t("paper.wrongIs")} ${result.correct_choice_id ?? ""}`}
-            </p>
-          )}
-          {summary && (
-            <p className="paper-remember">
-              <strong>{t("paper.remember")} · </strong>
-              {summary}
-            </p>
-          )}
-          {result.sort && (
-            <div className="paper-sort">
-              <strong>{t("paper.order")}:</strong>
-              <ol className="paper-sort__slots jp" lang="ja">
-                {result.sort.slots.map((s, i) => (
-                  <li key={i} className={i === result.sort!.star_index ? "is-star" : ""}>
-                    {i === result.sort!.star_index && <span aria-hidden="true">★ </span>}
-                    {s}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {result.vocab.length > 0 && (
-            <ul className="paper-words" aria-label={t("paper.vocab")}>
-              {result.vocab.map((v) => (
-                <li key={v.word}>
-                  <strong className="jp">{v.word}</strong>
-                  {v.reading && <span className="paper-words__read jp">{v.reading}</span>}
-                  <span>{v.meaning_vi}</span>
-                  {v.sino_vi && (
+                  {r?.sino_vi && (
                     <span className="paper-sino">
-                      {t("paper.sino")}: <b>{v.sino_vi}</b>
+                      {t("paper.sino")}: <b>{r.sino_vi}</b>
                     </span>
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
+                  {r?.meaning_vi && (
+                    <span className="paper-tile__meaning">
+                      <span className="paper-trans-label">{t("paper.translation")}</span>
+                      {r.meaning_vi}
+                    </span>
+                  )}
+                  {r && (
+                    <span className="paper-tile__why">
+                      <b>{t("paper.explain")}</b> {r.explanation_vi}
+                    </span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
         </div>
-      )}
+
+        {error && (
+          <div className="notice notice--error" role="alert" data-nolookup>
+            <Icon name="alert" />
+            {error}
+          </div>
+        )}
+
+        {answered && (
+          <div className="paper-result">
+            {review && review.selected === null ? (
+              <p className="paper-verdict is-blank" data-nolookup>
+                <span className="paper-verdict__icon">
+                  <Icon name="alert" size={16} strokeWidth={2.4} />
+                </span>
+                {t("exam.blankLabel")} · {t("exam.pill.answerIs")} {result.correct_choice_id ?? ""}
+              </p>
+            ) : (
+              <p className={`paper-verdict${result.correct ? " is-ok" : " is-bad"}`} data-nolookup>
+                <span className="paper-verdict__icon">
+                  <Icon name={result.correct ? "check" : "close"} size={16} strokeWidth={3} />
+                </span>
+                {result.correct ? t("paper.correct") : `${t("paper.wrongIs")} ${result.correct_choice_id ?? ""}`}
+              </p>
+            )}
+            {summary && (
+              <p className="paper-remember" data-nolookup>
+                <strong>{t("paper.remember")} · </strong>
+                {summary}
+              </p>
+            )}
+            {result.sort && (
+              <div className="paper-sort">
+                <strong data-nolookup>{t("paper.order")}:</strong>
+                <ol className="paper-sort__slots jp" lang="ja">
+                  {result.sort.slots.map((s, i) => (
+                    <li key={i} className={i === result.sort!.star_index ? "is-star" : ""}>
+                      {i === result.sort!.star_index && <span aria-hidden="true">★ </span>}
+                      {s}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {result.vocab.length > 0 && (
+              <ul className="paper-words" aria-label={t("paper.vocab")}>
+                {result.vocab.map((v) => (
+                  <li key={v.word}>
+                    <strong className="jp">{v.word}</strong>
+                    {v.reading && <span className="paper-words__read jp">{v.reading}</span>}
+                    <span data-nolookup>{v.meaning_vi}</span>
+                    {v.sino_vi && (
+                      <span className="paper-sino" data-nolookup>
+                        {t("paper.sino")}: <b>{v.sino_vi}</b>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </LookupLayer>
 
       <footer className={`paper-actions${review ? " is-review" : ""}`}>
         {!review && (

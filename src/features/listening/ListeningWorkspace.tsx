@@ -20,6 +20,7 @@ import { saveListeningAttempt } from "../../shared/storage/listeningAttemptStore
 import { fmt } from "../../shared/i18n/format";
 import { buildAttempt } from "./attempts";
 import { Icon } from "../../shared/ui/Icon";
+import { LookupLayer } from "../dictionary/LookupLayer";
 import { ChoiceCards } from "./ChoiceCards";
 import { ImageChoiceGrid } from "./ImageChoiceGrid";
 import { DialoguePanel } from "./ResultPanels";
@@ -246,7 +247,7 @@ export function ListeningWorkspace({
       if (e.isComposing || e.keyCode === 229) return;
       const target = e.target instanceof Element ? e.target : null;
       if (target?.closest("input, textarea, select")) return;
-      const onControl = !!target?.closest("button, a");
+      const onControl = !!target?.closest("button, a, [role='radio']");
       if (!e.altKey && !e.metaKey && !e.ctrlKey && /^[1-9]$/.test(e.key)) {
         e.preventDefault();
         pickForFirstOpenPart(Number(e.key));
@@ -389,12 +390,12 @@ export function ListeningWorkspace({
                 ? `${t("listening.subPart")} ${pi + 1}/${current.parts.length}`
                 : t("listening.question");
             return (
-              <div key={q.id} className="listen-q__part">
-                {current.parts.length > 1 && <span className="eyebrow">{label}</span>}
+              <LookupLayer key={q.id} className="listen-q__part">
+                {current.parts.length > 1 && <span className="eyebrow" data-nolookup>{label}</span>}
                 {showPrompt && (
                   <div className="listen-q__prompt">
                     <h2 className="jp">{prompt}</h2>
-                    {submitted && promptTr && promptTr !== prompt && <span>{promptTr}</span>}
+                    {submitted && promptTr && promptTr !== prompt && <span data-nolookup>{promptTr}</span>}
                   </div>
                 )}
                 {q.image?.url && (
@@ -424,8 +425,12 @@ export function ListeningWorkspace({
                     label={label}
                   />
                 )}
-                {result && <Verdict result={result} lang={translationLang} />}
-              </div>
+                {result && (
+                  <div data-nolookup>
+                    <Verdict result={result} lang={translationLang} />
+                  </div>
+                )}
+              </LookupLayer>
             );
           })}
 

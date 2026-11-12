@@ -68,6 +68,7 @@ describe("ChoiceCards", () => {
     expect(screen.getByRole("radio", { name: /Đáp án.*選択肢2/ })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Bạn chọn.*選択肢1/ })).toBeTruthy();
     expect(screen.getByText("Lựa chọn hai")).toBeTruthy();
+    expect(screen.getByText("選択肢2").closest("button")).toBeNull();
   });
 
   it("shows number buttons before reveal in numbers mode", () => {

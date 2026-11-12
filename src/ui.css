@@ -1952,10 +1952,13 @@
   align-items: center;
   gap: 14px;
   cursor: pointer;
+  -webkit-user-select: text;
+  user-select: text;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 .choice-card:hover { border-color: var(--input-border); }
 .choice-card[aria-disabled="true"] { cursor: default; }
+.choice-card[aria-disabled="true"] .choice-card__body { cursor: text; }
 .choice-card__no {
   width: 36px;
   height: 36px;

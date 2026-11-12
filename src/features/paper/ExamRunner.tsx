@@ -138,13 +138,21 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
       </p>
       <div className="paper-choices" role="radiogroup" aria-label={`${t("paper.question")} ${item.no}`}>
         {item.choices.map((c) => (
-          <button
+          <div
             key={c.id}
-            type="button"
             role="radio"
+            tabIndex={0}
             aria-checked={picked === c.id}
             className={`paper-tile${picked === c.id ? " is-selected" : ""}`}
-            onClick={() => pick(item, c.id)}
+            onClick={() => {
+              if (!window.getSelection()?.toString().trim()) pick(item, c.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                pick(item, c.id);
+              }
+            }}
           >
             <span className="paper-tile__no">{c.id}</span>
             <span className="paper-tile__body">
@@ -152,7 +160,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
                 {c.text}
               </span>
             </span>
-          </button>
+          </div>
         ))}
       </div>
       <footer className="paper-actions">

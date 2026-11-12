@@ -264,7 +264,60 @@ describe("PaperItemCard translations", () => {
     await waitFor(() => expect(screen.getByText("Dịch câu hỏi")).toBeTruthy());
     expect(screen.getByText("Dịch đáp án 3")).toBeTruthy();
     // The translation comes before the explanation inside the same choice.
-    const tile = screen.getByText("Dịch đáp án 3").closest("button")!;
+    const tile = screen.getByText("Dịch đáp án 3").closest('[role="radio"]')!;
     expect(tile.textContent!.indexOf("Dịch đáp án 3")).toBeLessThan(tile.textContent!.indexOf("Vì sao 3"));
+  });
+});
+
+describe("PaperItemCard selectable choices", () => {
+  it("renders choices as selectable elements instead of buttons and offers flashcard creation on selection", async () => {
+    evaluate.mockImplementation(async (body: { choice_id: string }) => ({
+      result: {
+        correct: body.choice_id === "4",
+        selected_choice_id: body.choice_id,
+        correct_choice_id: "4",
+        stem_vi: "Dịch câu",
+        summary_vi: "",
+        point_tags: [],
+        vocab: [],
+        choices: [
+          { id: "1", text: "潰れて", correct: false, explanation_vi: "Giải thích 1" },
+          { id: "2", text: "欠けて", correct: false, explanation_vi: "Giải thích 2" },
+          { id: "3", text: "尽きて", correct: false, explanation_vi: "Giải thích 3" },
+          { id: "4", text: "衰えて", correct: true, explanation_vi: "Giải thích 4" },
+        ],
+        evidence_sentence_ids: [],
+      },
+    }));
+    render(
+      <MemoryRouter>
+        <UiLanguageProvider>
+          <PaperItemCard
+            lessonId="l"
+            item={{
+              ...item(1),
+              choices: [
+                { id: "1", text: "潰れて" },
+                { id: "2", text: "欠けて" },
+                { id: "3", text: "尽きて" },
+                { id: "4", text: "衰えて" },
+              ],
+            }}
+            review={{ selected: "4", correctId: "4" }}
+            onAnswered={() => undefined}
+            onRetry={() => undefined}
+          />
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText("Giải thích 4")).toBeTruthy());
+    const answerText = screen.getByText("衰えて");
+    expect(answerText.closest("button")).toBeNull();
+    expect(answerText.closest('[role="radio"]')).toBeTruthy();
+
+    window.getSelection()!.selectAllChildren(answerText);
+    document.dispatchEvent(new Event("selectionchange"));
+    expect(await screen.findByRole("button", { name: /Tạo flashcard/ })).toBeTruthy();
+    window.getSelection()?.removeAllRanges();
   });
 });

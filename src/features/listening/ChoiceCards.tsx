@@ -77,15 +77,22 @@ export function ChoiceCards({ choices, mode, selectedId, onSelect, reveal, trans
                 ? " is-selected"
                 : "";
         return (
-          <button
+          <div
             key={c.id}
-            type="button"
             role="radio"
+            tabIndex={reveal ? undefined : 0}
             aria-checked={reveal ? c.id === reveal.selectedId : selectedId === c.id}
             aria-disabled={reveal ? true : undefined}
             className={`choice-card${state}`}
             onClick={() => {
-              if (!reveal) onSelect(c.id);
+              if (!reveal && !window.getSelection()?.toString().trim()) onSelect(c.id);
+            }}
+            onKeyDown={(e) => {
+              if (!reveal && (e.key === " " || e.key === "Enter")) {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(c.id);
+              }
             }}
           >
             <span className="choice-card__no">{c.id}</span>
@@ -105,7 +112,7 @@ export function ChoiceCards({ choices, mode, selectedId, onSelect, reveal, trans
               <span className="choice-card__ja jp">{showJa ? ja : `${t("listening.option")} ${c.id}`}</span>
               {showTr && <span className="choice-card__tr">{tr}</span>}
             </span>
-          </button>
+          </div>
         );
       })}
     </div>
