@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { DirectionPicker, HanVietPicker, HiraganaPicker } from "../features/flashcards/DirectionPicker";
 import { useFt } from "../features/flashcards/flashText";
 import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
-import { cardsOf, deckStats, deleteDeck, renameDeck, useFlashcards } from "../features/flashcards/store";
+import { cardsOf, deckStats, deleteDeck, isReviewDue, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
 import { acceptedAnswers } from "../features/flashcards/quiz";
@@ -56,6 +56,7 @@ export function FlashcardDeckPage() {
   }
 
   const stats = deckStats(cards);
+  const reviewCount = cards.filter((c) => isReviewDue(c)).length;
   const q = query.trim().toLowerCase();
   const shown = q
     ? cards.filter((c) => c.term.toLowerCase().includes(q) || c.definition.toLowerCase().includes(q) || (c.reading ?? "").includes(q) || (c.hanViet ?? "").toLowerCase().includes(q) || acceptedAnswers({ text: c.term, lang: c.termLang, reading: c.reading }).some((a) => a.includes(q)))
@@ -102,6 +103,17 @@ export function FlashcardDeckPage() {
             </div>
           )}
         </header>
+
+        {reviewCount > 0 && (
+          <aside className="fc-remind fc-remind--deck">
+            <span className="fc-remind__icon" aria-hidden="true"><Icon name="clock" size={22} /></span>
+            <div className="fc-remind__text">
+              <strong>{fmt(ft("remind.title"), { n: reviewCount })}</strong>
+              <span>{ft("remind.sub")}</span>
+            </div>
+            <Link to={`/flashcards/${deck.id}/learn?review=1`} className="btn btn--primary">{fmt(ft("remind.deck"), { n: reviewCount })}</Link>
+          </aside>
+        )}
 
         <DeckShare deck={deck} />
 

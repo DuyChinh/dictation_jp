@@ -6,6 +6,8 @@ import {
   cardsOf,
   createDeck,
   deckStats,
+  isReviewDue,
+  reviewDue,
   deleteCard,
   deleteDeck,
   ensureDefaultDeck,
@@ -110,6 +112,27 @@ describe("review", () => {
     const mk = (over: Partial<Card>): Card => ({ ...card, ...over });
     const s = deckStats([mk({ right: 0, wrong: 0, box: 0 }), mk({ box: 1, due: 9e15 }), mk({ box: 4, due: 9e15 })], 100);
     expect(s).toEqual({ total: 3, fresh: 1, learning: 1, learned: 1, due: 1 });
+  });
+
+  it("reminds only about cards that were answered before and are now due", () => {
+    const mk = (over: Partial<Card>): Card => ({ ...card, ...over });
+    const cards = [
+      mk({ id: "new", right: 0, wrong: 0, due: 0 }),
+      mk({ id: "a", deckId: "d1", right: 1, due: 50 }),
+      mk({ id: "b", deckId: "d1", wrong: 2, due: 100 }),
+      mk({ id: "c", deckId: "d2", right: 3, due: 100 }),
+      mk({ id: "later", deckId: "d2", right: 1, due: 9e15 }),
+    ];
+    expect(isReviewDue(cards[0]!, 100)).toBe(false);
+    expect(isReviewDue(cards[4]!, 100)).toBe(false);
+    expect(reviewDue(cards, 100)).toEqual({ total: 3, byDeck: { d1: 2, d2: 1 }, topDeckId: "d1" });
+    expect(reviewDue([cards[0]!], 100)).toEqual({ total: 0, byDeck: {}, topDeckId: null });
+  });
+
+  it("brings back a card answered wrong straight away and puts a known one off", () => {
+    const c: Card = { ...card, box: 3, right: 3, due: 0 };
+    expect(isReviewDue(reviewed(c, false, 1000), 1000)).toBe(true);
+    expect(isReviewDue(reviewed(c, true, 1000), 1000 + DAY)).toBe(false);
   });
 });
 

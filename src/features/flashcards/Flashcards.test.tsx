@@ -252,6 +252,68 @@ describe("LearnMode", () => {
   });
 });
 
+describe("LearnMode shuffle button", () => {
+  const terms = ["犬", "猫", "水", "火"];
+  const shown = () => terms.find((t) => screen.queryByText(t)) ?? null;
+  const open = () => {
+    render(wrap(<LearnMode deckId="deck1" cards={seed()} direction="term" />));
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+  };
+
+  it("shuffles by default and remembers the choice", () => {
+    open();
+    expect(screen.getByRole("button", { name: /Xáo trộn/ }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: /Xáo trộn/ }));
+    expect(localStorage.getItem("jd.flash_shuffle.v1")).toBe("off");
+  });
+
+  it("goes in the order the cards were added once it is off, also for the cards still to come", () => {
+    open();
+    fireEvent.click(screen.getByRole("button", { name: /Xáo trộn/ }));
+    expect(screen.getByRole("button", { name: /Theo thứ tự/ }).getAttribute("aria-pressed")).toBe("false");
+    // whatever card is on screen stays; the rest follow in the added order
+    const first = shown()!;
+    const rest = terms.filter((t) => t !== first);
+    const seen: string[] = [first];
+    for (let i = 0; i < 3; i++) {
+      fireEvent.keyDown(window, { key: "ArrowRight" });
+      seen.push(shown()!);
+    }
+    expect(seen.slice(1)).toEqual(rest);
+  });
+
+  it("starts in the added order when the choice was already off", () => {
+    localStorage.setItem("jd.flash_shuffle.v1", "off");
+    open();
+    expect(shown()).toBe("犬");
+  });
+});
+
+describe("LearnMode review reminder", () => {
+  const studied = () => {
+    const cards = seed([["犬", "chó"], ["猫", "mèo"], ["鳥", "chim"]]);
+    // 犬 was answered and is due, 猫 is new, 鳥 was answered and is not due until later
+    return cards.map((c, i) => (i === 0 ? { ...c, right: 1, due: 1 } : i === 2 ? { ...c, right: 1, due: Date.now() + 1e9 } : c));
+  };
+  const wrapAt = (url: string, ui: React.ReactNode) => (
+    <MemoryRouter initialEntries={[url]}>
+      <UiLanguageProvider>{ui}</UiLanguageProvider>
+    </MemoryRouter>
+  );
+
+  it("starts on the cards waiting for a review when the reminder link is followed", () => {
+    render(wrapAt("/flashcards/deck1/learn?review=1", <LearnMode deckId="deck1" cards={studied()} direction="term" />));
+    expect(screen.getByRole("radio", { name: "Thẻ đến hạn ôn lại (1)" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+    expect(screen.getByText("1 / 1")).toBeTruthy();
+  });
+
+  it("offers no review choice when nothing has been answered yet", () => {
+    render(wrapAt("/flashcards/deck1/learn?review=1", <LearnMode deckId="deck1" cards={seed([["犬", "chó"]])} direction="term" />));
+    expect(screen.queryByRole("radio", { name: /Thẻ đến hạn ôn lại/ })).toBeNull();
+  });
+});
+
 describe("LearnMode flip and auto-flip", () => {
   const begin = (cards = seed([["犬", "chó"], ["猫", "mèo"]])) => {
     render(wrap(<LearnMode deckId="deck1" cards={cards} direction="term" />));

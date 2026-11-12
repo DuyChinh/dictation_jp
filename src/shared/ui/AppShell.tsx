@@ -9,6 +9,9 @@ import { Flag } from "./Flag";
 import { PRICING_READY } from "../../config/pricing";
 import { Icon, type IconName } from "./Icon";
 import { loadCollapsed, saveCollapsed } from "../storage/sidebarPref";
+import { useReviewDue } from "../../features/flashcards/store";
+import { useFt } from "../../features/flashcards/flashText";
+import { fmt } from "../i18n/format";
 
 export type Crumb = { label: string; to?: string };
 
@@ -105,6 +108,8 @@ export function AppShell({
   title?: string;
 }) {
   const { t, uiLang, setUiLang } = useUiLanguage();
+  const ft = useFt();
+  const due = useReviewDue();
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -182,7 +187,13 @@ export function AppShell({
                 >
                   <Icon name={item.icon} />
                   <span className="shell-nav__label">{t(item.label)}</span>
-                  {item.isNew && <span className="shell-nav__new">{t("nav.new")}</span>}
+                  {item.to === "/flashcards" && due.total > 0 ? (
+                    <span className="shell-nav__due" title={fmt(ft("remind.navTitle"), { n: due.total })} aria-label={fmt(ft("remind.navTitle"), { n: due.total })}>
+                      {due.total > 99 ? "99+" : due.total}
+                    </span>
+                  ) : (
+                    item.isNew && <span className="shell-nav__new">{t("nav.new")}</span>
+                  )}
                 </NavLink>
               ))}
             </div>

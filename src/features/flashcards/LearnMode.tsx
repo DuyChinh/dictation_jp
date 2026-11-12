@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Icon } from "../../shared/ui/Icon";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
 import { fmt } from "../../shared/i18n/format";
 import { useFt } from "./flashText";
 import { useBackTo } from "./StudyContext";
 import { pickFlip, shuffle, sidesOf } from "./quiz";
-import { AUTO_FLIP_CHOICES, loadAutoFlip, saveAutoFlip, type AutoFlip } from "./prefs";
+import { AUTO_FLIP_CHOICES, loadAutoFlip, saveAutoFlip, useShuffle, type AutoFlip } from "./prefs";
 import { clearLearn, resumeLearn, saveLearn } from "./learnProgress";
-import { recordAnswer } from "./store";
+import { isReviewDue, recordAnswer } from "./store";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
 type Props = { deckId: string; cards: Card[]; direction: Direction };
-type Scope = "all" | "due";
+type Scope = "all" | "due" | "review";
 
 type Item = { card: Card; flip: boolean };
 
@@ -31,8 +31,13 @@ export function LearnMode({ deckId, cards, direction }: Props) {
   const backTo = useBackTo(deckId);
   const now = Date.now();
   const due = useMemo(() => cards.filter((c) => c.due <= now), [cards, now]);
-  const [scope, setScope] = useState<Scope>(due.length > 0 && due.length < cards.length ? "due" : "all");
-  const [mix, setMix] = useState(true);
+  const review = useMemo(() => cards.filter((c) => isReviewDue(c, now)), [cards, now]);
+  // the reminder links here with ?review=1: start on the cards that are waiting for a review
+  const [params] = useSearchParams();
+  const [scope, setScope] = useState<Scope>(() =>
+    params.get("review") === "1" && review.length > 0 ? "review" : due.length > 0 && due.length < cards.length ? "due" : "all",
+  );
+  const [mix, setMix] = useShuffle();
   // a round left half way is picked up again where it stopped
   const [resumed] = useState(() => resumeLearn(deckId, cards));
   const [session, setSession] = useState<Item[] | null>(resumed?.items ?? null);
@@ -56,8 +61,16 @@ export function LearnMode({ deckId, cards, direction }: Props) {
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
+  /** Random order, or the order the cards were added in. */
+  const arrange = (from: Card[], random: boolean) => {
+    if (random) return shuffle(from);
+    // cards added in the same instant (a bulk add) keep the order they have in the deck
+    const place = new Map(cards.map((c, i) => [c.id, i]));
+    return [...from].sort((a, b) => a.createdAt - b.createdAt || (place.get(a.id) ?? 0) - (place.get(b.id) ?? 0));
+  };
+
   function start(from: Card[]) {
-    const ordered = mix ? shuffle(from) : [...from].sort((a, b) => a.createdAt - b.createdAt);
+    const ordered = arrange(from, mix);
     setSession(ordered.map((card) => ({ card, flip: pickFlip(direction) })));
     setIndex(0);
     setFlipped(false);
@@ -70,6 +83,18 @@ export function LearnMode({ deckId, cards, direction }: Props) {
     if (index >= session.length) clearLearn(deckId);
     else saveLearn(deckId, { order: session.map((x) => x.card.id), flips: session.map((x) => x.flip), index, unknown, at: Date.now() });
   }, [deckId, session, index, unknown]);
+
+  /** The shuffle button in a round: the card on screen stays, the ones still to come are re-ordered. */
+  function toggleShuffle() {
+    const next = !mix;
+    setMix(next);
+    setSession((s) => {
+      if (!s) return s;
+      const rest = s.slice(index + 1);
+      const byCard = new Map(rest.map((x) => [x.card.id, x]));
+      return [...s.slice(0, index + 1), ...arrange(rest.map((x) => x.card), next).map((c) => byCard.get(c.id)!)];
+    });
+  }
 
   function restart() {
     clearLearn(deckId);
@@ -176,7 +201,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
   }, [item, index]);
 
   if (!session) {
-    const pool = scope === "due" ? due : cards;
+    const pool = scope === "review" ? review : scope === "due" ? due : cards;
     return (
       <section className="fc-panel fc-start">
         <h2>{ft("learn.title")}</h2>
@@ -185,6 +210,11 @@ export function LearnMode({ deckId, cards, direction }: Props) {
           <button type="button" role="radio" aria-checked={scope === "all"} className={`fc-choice__item${scope === "all" ? " is-on" : ""}`} onClick={() => setScope("all")}>
             {fmt(ft("learn.scopeAll"), { n: cards.length })}
           </button>
+          {review.length > 0 && review.length !== due.length && (
+            <button type="button" role="radio" aria-checked={scope === "review"} className={`fc-choice__item${scope === "review" ? " is-on" : ""}`} onClick={() => setScope("review")}>
+              {fmt(ft("learn.scopeReview"), { n: review.length })}
+            </button>
+          )}
           <button type="button" role="radio" aria-checked={scope === "due"} className={`fc-choice__item${scope === "due" ? " is-on" : ""}`} onClick={() => setScope("due")} disabled={due.length === 0}>
             {fmt(ft("learn.scopeDue"), { n: due.length })}
           </button>
@@ -255,6 +285,15 @@ export function LearnMode({ deckId, cards, direction }: Props) {
           title={ft("learn.auto")}
         >
           <Icon name="clock" size={16} /> {auto.on ? fmt(ft("learn.autoChip"), { n: auto.seconds }) : ft("learn.autoOff")}
+        </button>
+        <button
+          type="button"
+          className={`fc-autochip${mix ? " is-on" : ""}`}
+          aria-pressed={mix}
+          onClick={toggleShuffle}
+          title={mix ? ft("learn.shuffleOnHint") : ft("learn.shuffleOffHint")}
+        >
+          <Icon name="shuffle" size={16} /> {mix ? ft("learn.shuffleOn") : ft("learn.shuffleOff")}
         </button>
         <button type="button" className="fc-autochip" onClick={restart}>
           <Icon name="refresh" size={16} /> {ft("learn.restart")}

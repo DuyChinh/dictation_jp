@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { mergeState } from "./merge";
 import { isAllowedImage } from "./cardImage";
 import { CARD_LANGS, type Card, type CardImage, type CardLang, type Deck, type FlashState } from "./types";
@@ -268,6 +268,29 @@ export function deckStats(cards: Card[], now = Date.now()): DeckStats {
     if (c.due <= now) due++;
   }
   return { total: cards.length, fresh, learning: cards.length - fresh - learned, learned, due };
+}
+
+/** A card that has been answered before and whose review date has come. A brand-new card is something to learn, not to review. */
+export const isReviewDue = (c: Card, now = Date.now()): boolean => c.right + c.wrong > 0 && c.due <= now;
+
+export type ReviewDue = { total: number; byDeck: Record<string, number>; topDeckId: string | null };
+
+/** How many cards are waiting for a review, in all, per deck, and which deck has the most. */
+export function reviewDue(cards: Card[], now = Date.now()): ReviewDue {
+  const byDeck: Record<string, number> = {};
+  let total = 0;
+  for (const c of cards) {
+    if (!isReviewDue(c, now)) continue;
+    total++;
+    byDeck[c.deckId] = (byDeck[c.deckId] ?? 0) + 1;
+  }
+  const top = Object.entries(byDeck).sort((a, b) => b[1] - a[1])[0];
+  return { total, byDeck, topDeckId: top ? top[0] : null };
+}
+
+export function useReviewDue(): ReviewDue {
+  const { cards } = useFlashcards();
+  return useMemo(() => reviewDue(cards), [cards]);
 }
 
 export const isCardLang = (v: unknown): v is CardLang => CARD_LANGS.includes(v as CardLang);

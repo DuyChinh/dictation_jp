@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useFt } from "../features/flashcards/flashText";
-import { createDeck, deckStats, useFlashcards } from "../features/flashcards/store";
+import { createDeck, deckStats, useFlashcards, useReviewDue } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { fmt } from "../shared/i18n/format";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
@@ -14,6 +14,7 @@ export function FlashcardsPage() {
   const ft = useFt();
   const { user } = useAuth();
   const { decks, cards } = useFlashcards();
+  const due = useReviewDue();
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -39,6 +40,17 @@ export function FlashcardsPage() {
             <Icon name="plus" size={18} /> {ft("create.title")}
           </Link>
         </header>
+
+        {due.total > 0 && due.topDeckId && (
+          <aside className="fc-remind" aria-label={fmt(ft("remind.title"), { n: due.total })}>
+            <span className="fc-remind__icon" aria-hidden="true"><Icon name="clock" size={22} /></span>
+            <div className="fc-remind__text">
+              <strong>{fmt(ft("remind.title"), { n: due.total })}</strong>
+              <span>{ft("remind.sub")}</span>
+            </div>
+            <Link to={`/flashcards/${due.topDeckId}/learn?review=1`} className="btn btn--primary">{ft("remind.go")}</Link>
+          </aside>
+        )}
 
         <form className="fc-newdeck" onSubmit={submit}>
           <input

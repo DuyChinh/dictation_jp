@@ -154,6 +154,31 @@ export function useShowHiragana(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribeHiragana, showHiragana, () => true), saveShowHiragana];
 }
 
+const SHUFFLE_KEY = "jd.flash_shuffle.v1";
+const shuffleListeners = new Set<() => void>();
+
+/** Whether a study round comes in random order. On unless turned off; off keeps the order the cards were added in. */
+export const shuffleOn = (): boolean => get(SHUFFLE_KEY) !== "off";
+
+export function saveShuffle(on: boolean): void {
+  set(SHUFFLE_KEY, on ? "on" : "off");
+  shuffleListeners.forEach((l) => l());
+}
+
+function subscribeShuffle(l: () => void): () => void {
+  shuffleListeners.add(l);
+  const onStorage = (e: StorageEvent) => e.key === SHUFFLE_KEY && l();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    shuffleListeners.delete(l);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useShuffle(): [boolean, (on: boolean) => void] {
+  return [useSyncExternalStore(subscribeShuffle, shuffleOn, () => true), saveShuffle];
+}
+
 const IMAGES_KEY = "jd.flash_images.v1";
 const imageListeners = new Set<() => void>();
 
