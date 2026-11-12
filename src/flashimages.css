@@ -27,7 +27,8 @@
 }
 
 /* ---------- the picker ---------- */
-.fc-imgpick-modal { z-index: 90; }
+/* the picker opens from the select-to-create panel and from the dictionary popup (both at 1200), so it has to sit above them */
+.fc-imgpick-modal { z-index: 1300; }
 .fc-imgpick { width: min(780px, 100%); max-height: min(88vh, 780px); max-height: min(88dvh, 780px); gap: 12px; }
 .fc-imgpick__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .fc-imgpick__head h2 { margin: 0; font-size: 20px; }
