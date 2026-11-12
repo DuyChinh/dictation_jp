@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { searchImages, type ImageHit } from "../../shared/api/images";
+import { searchImages, suggestImageQueries, type ImageHit } from "../../shared/api/images";
 import { Icon } from "../../shared/ui/Icon";
 import { isAllowedImage } from "./cardImage";
 import { useImgText } from "./imageText";
 import type { CardImage } from "./types";
+
+export type ImagePickerAi = {
+  word: string;
+  reading?: string;
+  meanings: string[];
+  example?: string;
+};
 
 type Props = {
   /** What to look for to begin with; searched at once when there is something. */
@@ -15,6 +22,8 @@ type Props = {
   suggestions?: string[];
   /** The picture the card has now, if any. */
   current?: CardImage;
+  /** Word data for AI visual search suggestions. */
+  ai?: ImagePickerAi;
   onPick: (hit: ImageHit) => void;
   /** Offered when the card has a picture: take it off. */
   onRemove?: () => void;
@@ -23,17 +32,34 @@ type Props = {
 
 type State = { status: "idle" } | { status: "loading" } | { status: "error" } | { status: "done"; results: ImageHit[]; partial: boolean };
 
+type AiState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "done"; queries: string[]; picturable: boolean };
+
+let aiDisabledForSession = false;
+
+export function resetAiSessionForTests() {
+  aiDisabledForSession = false;
+}
+
 /**
  * A box over the page to choose a picture for a card: search (the word's English meaning is filled in), see what
  * Openverse and Wikimedia Commons have, pick one. The first search of a word can take several seconds, because
  * Openverse is slow; the box says so rather than looking stuck.
  */
-export function ImagePicker({ initialQuery, word, suggestions, current, onPick, onRemove, onClose }: Props) {
+export function ImagePicker({ initialQuery, word, suggestions, current, ai, onPick, onRemove, onClose }: Props) {
   const it = useImgText();
   const [query, setQuery] = useState(initialQuery);
   const [state, setState] = useState<State>({ status: "idle" });
   const [broken, setBroken] = useState<Set<string>>(new Set());
+  const [aiState, setAiState] = useState<AiState>({ status: "idle" });
+  const [desc, setDesc] = useState("");
+  const [aiHidden, setAiHidden] = useState(aiDisabledForSession);
   const controller = useRef<AbortController | null>(null);
+  const aiController = useRef<AbortController | null>(null);
+  const lastDescRef = useRef<string | undefined>(undefined);
   const opener = useRef<Element | null>(typeof document === "undefined" ? null : document.activeElement);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -53,9 +79,51 @@ export function ImagePicker({ initialQuery, word, suggestions, current, onPick, 
       .catch(() => !c.signal.aborted && setState({ status: "error" }));
   }
 
+  function requestAi(descriptionOverride?: string) {
+    if (!ai || aiDisabledForSession) return;
+    aiController.current?.abort();
+    const c = new AbortController();
+    aiController.current = c;
+    const text = (descriptionOverride !== undefined ? descriptionOverride : desc).trim();
+    lastDescRef.current = text || undefined;
+    setAiState({ status: "loading" });
+
+    suggestImageQueries(
+      {
+        word: ai.word,
+        reading: ai.reading,
+        meanings: ai.meanings,
+        example: ai.example,
+        description: text || undefined,
+      },
+      c.signal,
+    )
+      .then((r) => {
+        if (c.signal.aborted) return;
+        setAiState({ status: "done", queries: r.queries, picturable: r.picturable });
+        if (r.queries[0]) {
+          setQuery(r.queries[0]);
+          run(r.queries[0]);
+        }
+      })
+      .catch((err: unknown) => {
+        if (c.signal.aborted) return;
+        const status = (err as { status?: number })?.status;
+        if (status === 501) {
+          aiDisabledForSession = true;
+          setAiHidden(true);
+          return;
+        }
+        setAiState({ status: "error" });
+      });
+  }
+
   useEffect(() => {
     run(initialQuery);
-    return () => controller.current?.abort();
+    return () => {
+      controller.current?.abort();
+      aiController.current?.abort();
+    };
     // only the first search is automatic
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -117,6 +185,96 @@ export function ImagePicker({ initialQuery, word, suggestions, current, onPick, 
           </button>
         </form>
         <p className="fc-imgpick__hint">{it("img.searchLabel")}</p>
+
+        {ai && !aiHidden && (
+          <div className="fc-imgpick__ai" aria-busy={aiState.status === "loading"}>
+            <div className="fc-imgpick__ai-bar">
+              <button
+                type="button"
+                className="btn btn--outline btn--sm fc-imgpick__ai-btn"
+                disabled={aiState.status === "loading"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  requestAi(desc.trim() ? desc : undefined);
+                }}
+              >
+                <Icon name="sparkles" size={16} />
+                {it("img.aiSuggest")}
+              </button>
+              <form
+                className="fc-imgpick__ai-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  requestAi(desc);
+                }}
+              >
+                <input
+                  className="fc-input"
+                  type="text"
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  placeholder={it("img.aiDescPlaceholder")}
+                  aria-label={it("img.aiDescLabel")}
+                  disabled={aiState.status === "loading"}
+                  maxLength={200}
+                />
+                <button
+                  type="submit"
+                  className="btn btn--outline btn--sm"
+                  disabled={!desc.trim() || aiState.status === "loading"}
+                >
+                  {it("img.aiDescSubmit")}
+                </button>
+              </form>
+            </div>
+
+            {aiState.status === "error" && (
+              <div className="fc-imgpick__ai-error" role="alert">
+                <span>{it("img.aiError")}</span>
+                <button
+                  type="button"
+                  className="btn btn--outline btn--sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    requestAi(lastDescRef.current);
+                  }}
+                >
+                  {it("img.retry")}
+                </button>
+              </div>
+            )}
+
+            {aiState.status === "done" && !aiState.picturable && (
+              <p className="fc-imgpick__ai-note">{it("img.aiNotPicturable")}</p>
+            )}
+
+            {aiState.status === "done" && aiState.queries.length > 0 && (
+              <div className="fc-imgpick__chips fc-imgpick__chips--ai" role="group" aria-label={it("img.aiSuggest")}>
+                <span className="fc-imgpick__chips-label">{it("img.aiSuggest")}</span>
+                {aiState.queries.map((k) => {
+                  const on = k.toLowerCase() === query.trim().toLowerCase();
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`fc-imgpick__chip${on ? " is-on" : ""}`}
+                      aria-pressed={on}
+                      onClick={() => {
+                        setQuery(k);
+                        run(k);
+                      }}
+                    >
+                      {k}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         {suggestions && suggestions.length > 0 && (
           <div className="fc-imgpick__chips" role="group" aria-label={it("img.suggest")}>
             <span className="fc-imgpick__chips-label">{it("img.suggest")}</span>

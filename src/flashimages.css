@@ -36,6 +36,14 @@
 .fc-imgpick__search { display: flex; gap: 8px; }
 .fc-imgpick__search .fc-input { flex: 1; min-width: 0; }
 .fc-imgpick__hint { margin: -6px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.fc-imgpick__ai { display: flex; flex-direction: column; gap: 8px; }
+.fc-imgpick__ai-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fc-imgpick__ai-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.fc-imgpick__ai-form { display: flex; flex: 1 1 240px; min-width: 0; gap: 6px; }
+.fc-imgpick__ai-form .fc-input { flex: 1; min-width: 0; }
+.fc-imgpick__ai-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+.fc-imgpick__ai-error { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--bad); }
+.fc-imgpick__chips--ai .fc-imgpick__chips-label { color: var(--primary-color); }
 .fc-imgpick__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .fc-imgpick__chips-label { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-right: 2px; }
 .fc-imgpick__chip {
@@ -72,6 +80,10 @@
 @media (max-width: 480px) {
   .fc-imgpick__search { flex-wrap: wrap; }
   .fc-imgpick__search .btn { flex: 1 1 100%; }
+  .fc-imgpick__ai-bar { flex-direction: column; align-items: stretch; }
+  .fc-imgpick__ai-btn { width: 100%; justify-content: center; }
+  .fc-imgpick__ai-form { width: 100%; flex-wrap: wrap; }
+  .fc-imgpick__ai-form .btn { flex: 1 1 100%; }
   .fc-imgpick__grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 }
 

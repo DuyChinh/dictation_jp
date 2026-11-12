@@ -7,7 +7,7 @@ import type { ImageHit } from "../../shared/api/images";
 import { CardEditor } from "./CardEditor";
 import { CardRow } from "./CardRow";
 import { EntryImageButton } from "./EntryImageButton";
-import { ImagePicker } from "./ImagePicker";
+import { ImagePicker, resetAiSessionForTests } from "./ImagePicker";
 import { ImagesPicker } from "./ImagesPicker";
 import { SideView } from "./SideView";
 import { StudyModes } from "./StudyModes";
@@ -18,9 +18,11 @@ import { addCard, createDeck, importSharedDeck, readState, updateCard } from "./
 import type { Card, CardImage } from "./types";
 
 const searchImages = vi.fn();
+const suggestImageQueries = vi.fn();
 vi.mock("../../shared/api/images", async (orig) => ({
   ...(await orig<typeof import("../../shared/api/images")>()),
   searchImages: (...a: unknown[]) => searchImages(...a),
+  suggestImageQueries: (...a: unknown[]) => suggestImageQueries(...a),
 }));
 const searchDictionary = vi.fn();
 vi.mock("../../shared/api/dictionary", async (orig) => ({
@@ -56,7 +58,9 @@ const card = (extra: Partial<Card> = {}): Card => ({
 
 beforeEach(() => {
   localStorage.clear();
+  resetAiSessionForTests();
   searchImages.mockReset();
+  suggestImageQueries.mockReset();
   searchDictionary.mockReset();
   searchDictionary.mockResolvedValue({ query: "", lang: "ja", entries: [], kanji: [] });
 });
@@ -349,6 +353,123 @@ describe("ImagePicker", () => {
     expect(outerSubmit).not.toHaveBeenCalled();
     expect(searchImages).toHaveBeenCalledTimes(2);
   });
+
+  it("shows the AI button and description box only when ai prop is given", () => {
+    answer();
+    open({ ai: undefined });
+    expect(screen.queryByRole("button", { name: "AI gợi ý" })).toBeNull();
+    expect(screen.queryByLabelText("Mô tả ảnh bạn muốn")).toBeNull();
+
+    cleanup();
+    open({ ai: { word: "犬", meanings: ["dog"] } });
+    expect(screen.getByRole("button", { name: "AI gợi ý" })).toBeTruthy();
+    expect(screen.getByLabelText("Mô tả ảnh bạn muốn")).toBeTruthy();
+  });
+
+  it("calls suggestImageQueries and searches the first phrase upon clicking AI gợi ý", async () => {
+    answer();
+    suggestImageQueries.mockResolvedValueOnce({
+      queries: ["man nodding", "thinking person", "convinced face"],
+      picturable: true,
+    });
+    open({ ai: { word: "思い込む", reading: "おもいこむ", meanings: ["to be convinced", "to assume"] } });
+    fireEvent.click(screen.getByRole("button", { name: "AI gợi ý" }));
+
+    expect(suggestImageQueries).toHaveBeenCalledWith(
+      {
+        word: "思い込む",
+        reading: "おもいこむ",
+        meanings: ["to be convinced", "to assume"],
+        example: undefined,
+        description: undefined,
+      },
+      expect.anything(),
+    );
+
+    await waitFor(() => expect(searchImages).toHaveBeenLastCalledWith("man nodding", expect.anything()));
+    expect((screen.getByLabelText(/Tìm ảnh \(từ khóa/) as HTMLInputElement).value).toBe("man nodding");
+
+    const aiGroup = screen.getByRole("group", { name: "AI gợi ý" });
+    expect(within(aiGroup).getByRole("button", { name: "man nodding" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(aiGroup).getByRole("button", { name: "thinking person" }).getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(within(aiGroup).getByRole("button", { name: "thinking person" }));
+    expect(searchImages).toHaveBeenLastCalledWith("thinking person", expect.anything());
+    expect((screen.getByLabelText(/Tìm ảnh \(từ khóa/) as HTMLInputElement).value).toBe("thinking person");
+  });
+
+  it("submits learner custom description when description box is used", async () => {
+    answer();
+    suggestImageQueries.mockResolvedValueOnce({
+      queries: ["last cookie on plate", "apple on table"],
+      picturable: true,
+    });
+    open({ ai: { word: "残る", meanings: ["to remain"] } });
+
+    const descInput = screen.getByLabelText("Mô tả ảnh bạn muốn");
+    fireEvent.change(descInput, { target: { value: "cái bánh quy cuối cùng trên đĩa" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm bằng mô tả" }));
+
+    expect(suggestImageQueries).toHaveBeenCalledWith(
+      expect.objectContaining({
+        word: "残る",
+        description: "cái bánh quy cuối cùng trên đĩa",
+      }),
+      expect.anything(),
+    );
+
+    await waitFor(() => expect(searchImages).toHaveBeenLastCalledWith("last cookie on plate", expect.anything()));
+  });
+
+  it("displays a note when picturable is false but keeps phrases usable", async () => {
+    answer();
+    suggestImageQueries.mockResolvedValueOnce({
+      queries: ["topic marker", "conversation subject"],
+      picturable: false,
+    });
+    open({ ai: { word: "は", meanings: ["topic particle"] } });
+    fireEvent.click(screen.getByRole("button", { name: "AI gợi ý" }));
+
+    expect(await screen.findByText("Từ này khó minh hoạ bằng ảnh; thử các cụm gợi ý hoặc bỏ qua")).toBeTruthy();
+    const aiGroup = screen.getByRole("group", { name: "AI gợi ý" });
+    expect(within(aiGroup).getByRole("button", { name: "topic marker" })).toBeTruthy();
+    expect(within(aiGroup).getByRole("button", { name: "conversation subject" })).toBeTruthy();
+  });
+
+  it("shows an error message on failure and retries on request", async () => {
+    answer();
+    suggestImageQueries.mockRejectedValueOnce({ status: 502, message: "AI_FAILED" });
+    open({ ai: { word: "犬", meanings: ["dog"] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "AI gợi ý" }));
+    expect(await screen.findByText("Không thể tạo gợi ý lúc này.")).toBeTruthy();
+
+    suggestImageQueries.mockResolvedValueOnce({
+      queries: ["dog", "puppy outdoors"],
+      picturable: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+
+    await waitFor(() => expect(screen.queryByText("Không thể tạo gợi ý lúc này.")).toBeNull());
+    expect(searchImages).toHaveBeenLastCalledWith("dog", expect.anything());
+  });
+
+  it("hides the AI UI for the rest of the session when server returns 501", async () => {
+    answer();
+    suggestImageQueries.mockRejectedValueOnce({ status: 501, message: "AI_UNAVAILABLE" });
+    open({ ai: { word: "犬", meanings: ["dog"] } });
+
+    expect(screen.getByRole("button", { name: "AI gợi ý" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "AI gợi ý" }));
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: "AI gợi ý" })).toBeNull());
+    expect(screen.queryByLabelText("Mô tả ảnh bạn muốn")).toBeNull();
+
+    // A newly opened picker in the same session also hides AI UI
+    cleanup();
+    open({ ai: { word: "猫", meanings: ["cat"] } });
+    expect(screen.queryByRole("button", { name: "AI gợi ý" })).toBeNull();
+  });
 });
 
 describe("EntryImageButton", () => {
@@ -360,6 +481,7 @@ describe("EntryImageButton", () => {
     fireEvent.click(button());
     expect(searchImages).toHaveBeenCalledWith("eat", expect.anything());
     expect(screen.getByText("Từ: 食べる")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "AI gợi ý" })).toBeTruthy();
     // and every meaning of the word is offered as another thing to look for
     const keywords = within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent);
     expect(keywords).toEqual(["eat", "have a meal", "person eat"]);
@@ -439,6 +561,7 @@ describe("CardEditor", () => {
     await act(async () => undefined);
     fireEvent.click(screen.getByRole("button", { name: "Thêm ảnh" }));
     expect(searchImages).toHaveBeenCalledWith("dog", expect.anything());
+    expect(screen.queryByRole("button", { name: "AI gợi ý" })).toBeNull();
   });
 });
 

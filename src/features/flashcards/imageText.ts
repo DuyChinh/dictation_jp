@@ -32,6 +32,13 @@ const vi = {
   "img.on": "Hiện",
   "img.off": "Ẩn",
   "img.cardPicture": "Ảnh của thẻ",
+  "img.aiSuggest": "AI gợi ý",
+  "img.aiDescLabel": "Mô tả ảnh bạn muốn",
+  "img.aiDescPlaceholder": "Mô tả ảnh bạn muốn (tiếng Việt, Nhật hoặc Anh)…",
+  "img.aiDescSubmit": "Tìm bằng mô tả",
+  "img.aiLoading": "Đang tạo cụm từ gợi ý…",
+  "img.aiError": "Không thể tạo gợi ý lúc này.",
+  "img.aiNotPicturable": "Từ này khó minh hoạ bằng ảnh; thử các cụm gợi ý hoặc bỏ qua",
 } as const;
 
 type Key = keyof typeof vi;
@@ -65,6 +72,13 @@ const ja: Record<Key, string> = {
   "img.on": "表示",
   "img.off": "非表示",
   "img.cardPicture": "カードの画像",
+  "img.aiSuggest": "AIの提案",
+  "img.aiDescLabel": "欲しい画像の説明",
+  "img.aiDescPlaceholder": "欲しい画像の説明（日本語、ベトナム語、英語など）…",
+  "img.aiDescSubmit": "説明で探す",
+  "img.aiLoading": "キーワード候補を生成中…",
+  "img.aiError": "候補を生成できませんでした。",
+  "img.aiNotPicturable": "この単語は画像で表すのが難しいです。候補を試すか、スキップしてください",
 };
 
 const en: Record<Key, string> = {
@@ -96,6 +110,13 @@ const en: Record<Key, string> = {
   "img.on": "Show",
   "img.off": "Hide",
   "img.cardPicture": "Card picture",
+  "img.aiSuggest": "AI ideas",
+  "img.aiDescLabel": "Describe the picture you want",
+  "img.aiDescPlaceholder": "Describe the picture you want (any language)…",
+  "img.aiDescSubmit": "Search with description",
+  "img.aiLoading": "Generating search phrases…",
+  "img.aiError": "Could not generate ideas right now.",
+  "img.aiNotPicturable": "This word is hard to picture; try the suggested phrases or skip",
 };
 
 const tables: Record<string, Record<Key, string>> = { vi, ja, en };

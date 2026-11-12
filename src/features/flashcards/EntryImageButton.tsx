@@ -38,6 +38,17 @@ export function EntryImageButton({ entry, meaning }: { entry: DictEntry; meaning
   }
 
   const label = said ?? (card?.image ? it("img.entryDone") : it("img.entry"));
+  const glosses = entry.senses.flatMap((s) => s.glosses).map((g) => g.trim()).filter(Boolean);
+  const firstExample = entry.senses.flatMap((s) => s.examples).find((ex) => ex.ja?.trim())?.ja?.trim();
+  const aiData = suggestion.ja && (glosses.length > 0 || suggestion.en)
+    ? {
+        word: suggestion.ja,
+        reading: entry.kana[0]?.text || undefined,
+        meanings: glosses.length > 0 ? glosses.slice(0, 8) : [suggestion.en],
+        example: firstExample || undefined,
+      }
+    : undefined;
+
   return (
     <>
       <button type="button" className={`fc-add fc-add--image${card?.image || said ? " is-done" : ""}`} onClick={() => setOpen(true)} aria-label={label} title={label} aria-haspopup="dialog">
@@ -49,6 +60,7 @@ export function EntryImageButton({ entry, meaning }: { entry: DictEntry; meaning
           word={suggestion.ja}
           suggestions={imageKeywordsFromEntry(entry)}
           current={card?.image}
+          ai={aiData}
           onPick={pick}
           onRemove={
             card?.image

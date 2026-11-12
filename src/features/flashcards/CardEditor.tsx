@@ -202,6 +202,30 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     return s?.en ? imageKeywordsFrom(s.en.split(";")) : [];
   };
 
+  const pictureAi = (): { word: string; reading?: string; meanings: string[] } | undefined => {
+    const jaTerm = leftLang === "ja" ? left.trim() : rightLang === "ja" ? right.trim() : "";
+    if (!jaTerm) return undefined;
+    const s = picked !== null ? suggestions[picked] : undefined;
+    const readVal = (leftLang === "ja" ? reading.trim() : "") || s?.reading || undefined;
+    let meanings: string[] = [];
+    if (s?.en) {
+      meanings = s.en.split(/[;,]/).map((m) => m.trim()).filter(Boolean);
+    } else if (rightLang === "en" && right.trim()) {
+      meanings = right.split(/[;,]/).map((m) => m.trim()).filter(Boolean);
+    } else if (leftLang === "en" && left.trim()) {
+      meanings = left.split(/[;,]/).map((m) => m.trim()).filter(Boolean);
+    } else if (right.trim()) {
+      meanings = [right.trim()];
+    } else {
+      meanings = [jaTerm];
+    }
+    return {
+      word: jaTerm,
+      reading: readVal,
+      meanings: meanings.slice(0, 8),
+    };
+  };
+
   const langName = (l: CardLang) => ft(`lang.${l}`);
 
   return (
@@ -324,6 +348,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
           word={left.trim() || undefined}
           suggestions={pictureKeywords()}
           current={image}
+          ai={pictureAi()}
           onPick={(hit) => {
             setImage(toCardImage(hit));
             setPicking(false);
