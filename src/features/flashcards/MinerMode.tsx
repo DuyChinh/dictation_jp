@@ -5,6 +5,7 @@ import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
 import {
+  MAX_LIVES,
   MINER_LIVES,
   SHOP_ITEMS,
   PIVOT,
@@ -54,6 +55,8 @@ import type { Card, Direction } from "./types";
 
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
+type SideOf = DropItem["options"][number]["side"];
+const MIN_LABEL_PX = 7;
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
 type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
@@ -137,12 +140,88 @@ function nuggetsFor(item: DropItem, scene: Scene): Nugget[] {
   return item.options.map((o, i) => ({ cardId: o.cardId, side: o.side, box: boxes[i]!, skin: pickSkin() }));
 }
 
+/** A long meaning is cut to its first senses so it can be read on a nugget. */
+export function shortenMeaning(text: string, max = 44): string {
+  if (text.length <= max) return text;
+  const parts = text.split(/;\s*/);
+  let out = "";
+  for (const part of parts) {
+    const next = out ? `${out}; ${part}` : part;
+    if (next.length > max) break;
+    out = next;
+  }
+  return out || `${text.slice(0, max - 1).trimEnd()}…`;
+}
+
+/** The words on a nugget, shrunk until they sit inside it. */
+function NuggetLabel({ side }: { side: SideOf }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const shown = side.lang === "ja" ? side : { ...side, text: shortenMeaning(side.text) };
+  useLayoutEffect(() => {
+    const el = box.current;
+    const inner = el?.firstElementChild as HTMLElement | null;
+    if (!el || !inner) return;
+    const fit = () => {
+      el.style.fontSize = "";
+      if (!el.clientHeight) return;
+      let size = parseFloat(getComputedStyle(el).fontSize) || 14;
+      while (size > MIN_LABEL_PX && (inner.offsetHeight > el.clientHeight || inner.scrollWidth > el.clientWidth + 1)) {
+        size -= 0.5;
+        el.style.fontSize = `${size}px`;
+      }
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [shown.text, shown.reading, shown.lead]);
+  return (
+    <span ref={box} className="fc-miner__label">
+      <SideView side={shown} speak={false} />
+    </span>
+  );
+}
+
+/** A gold coin: what things cost in the shop. */
+function Coin() {
+  return (
+    <svg className="fc-shop__coin" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="10.5" fill="#f5b72e" stroke="#a86d0c" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="7.3" fill="#ffd45a" stroke="#d99a1c" strokeWidth="1.2" />
+      <path d="m12 7.2 1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z" fill="#e3951a" />
+    </svg>
+  );
+}
+
 /** The picture on a shop item. */
 function ShopArt({ id }: { id: (typeof SHOP_ITEMS)[number]["id"] }) {
   if (id === "dynamite") return <Dynamite />;
-  if (id === "heart") return <Icon name="heart" size={28} />;
-  if (id === "time") return <Icon name="clock" size={28} />;
-  return <b>×2</b>;
+  if (id === "heart") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <path d="M16 28S3.5 20.6 3.5 11.6C3.5 7.4 6.6 4.6 10.2 4.6c2.4 0 4.4 1.2 5.8 3.4 1.4-2.2 3.4-3.4 5.8-3.4 3.6 0 6.7 2.8 6.7 7C28.5 20.6 16 28 16 28z" fill="#ef3f78" stroke="#8f1743" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M8.2 10.4c.4-1.8 1.8-2.8 3.4-2.8" stroke="#ffb3cb" strokeWidth="2" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
+  if (id === "time") {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="17.5" r="10.5" fill="#f6efd8" stroke="#3b6fc2" strokeWidth="2.6" />
+        <path d="M11 5.2h10M16 5.2v2.6" stroke="#3b6fc2" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M16 11v6.6l4 2.4" stroke="#1f3f7a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M25 8.5l2-2" stroke="#3b6fc2" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <circle cx="16" cy="16" r="12.5" fill="#f5b72e" stroke="#a86d0c" strokeWidth="2" />
+      <circle cx="16" cy="16" r="9" fill="#ffd45a" stroke="#d99a1c" strokeWidth="1.4" />
+      <text x="16" y="21.4" textAnchor="middle" fontSize="13.5" fontWeight="900" fill="#7a4a06" fontFamily="system-ui, sans-serif">×2</text>
+    </svg>
+  );
 }
 
 function Dynamite() {
@@ -468,42 +547,59 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   }
 
   if (stage === "shop") {
+    /** What the miner already has of each item, shown on its picture. */
+    const owned: Record<string, string | null> = {
+      dynamite: `×${miner.dynamite}`,
+      heart: `${miner.lives}/${MAX_LIVES}`,
+      time: miner.extraSeconds > 0 ? `+${miner.extraSeconds}s` : null,
+      double: miner.double ? "✓" : null,
+    };
     return (
-      <section className="fc-panel fc-miner-shop" aria-label={ft("miner.shop.title")}>
-        <h2>{ft("miner.shop.title")}</h2>
-        <p className="fc-miner-shop__coins" aria-live="polite">
-          {ft("miner.shop.coins")} <strong className="tabular">{miner.coins}</strong>
-        </p>
-        <p className="fc-note">{fmt(ft("miner.shop.sub"), { n: miner.level })}</p>
-        <ul className="fc-miner-shop__list">
-          {SHOP_ITEMS.map((it) => {
-            const block = shopBlock(miner, it.id);
-            return (
-              <li key={it.id} className="fc-shopitem">
-                <span className={`fc-shopitem__art fc-shopitem__art--${it.id}`} aria-hidden="true"><ShopArt id={it.id} /></span>
-                <span className="fc-shopitem__text">
-                  <strong>{ft(`miner.shop.${it.id}`)}</strong>
-                  <small>{ft(`miner.shop.${it.id}.desc`)}</small>
-                </span>
-                <button
-                  type="button"
-                  className="btn btn--outline fc-shopitem__buy"
-                  disabled={block !== null}
-                  onClick={() => {
-                    setMiner((m) => buy(m, it.id));
-                    playGameSound("grab");
-                  }}
-                  aria-label={fmt(ft("miner.shop.buyLabel"), { item: ft(`miner.shop.${it.id}`), price: it.price })}
-                >
-                  {block === "full" ? ft("miner.shop.have") : <><Icon name="gem" size={16} /> {it.price}</>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <button type="button" className="btn btn--primary btn--lg" onClick={() => beginLevel(miner)} autoFocus>
-          {fmt(ft("miner.shop.play"), { n: miner.level })}
-        </button>
+      <section className="fc-shop" aria-label={ft("miner.shop.title")}>
+        <header className="fc-shop__ribbon"><h2>{ft("miner.shop.title")}</h2></header>
+        <div className="fc-shop__board">
+          <ul className="fc-shop__grid">
+            {SHOP_ITEMS.map((it) => {
+              const block = shopBlock(miner, it.id);
+              return (
+                <li key={it.id} className={`fc-shopcard fc-shopcard--${it.id}`}>
+                  <span className="fc-shopcard__slot" aria-hidden="true">
+                    <ShopArt id={it.id} />
+                    {owned[it.id] && <span className="fc-shopcard__qty">{owned[it.id]}</span>}
+                  </span>
+                  <span className="fc-shopcard__body">
+                    <strong className="fc-shopcard__name">{ft(`miner.shop.${it.id}`)}</strong>
+                    <small className="fc-shopcard__desc">{ft(`miner.shop.${it.id}.desc`)}</small>
+                    <button
+                      type="button"
+                      className={`fc-shopcard__price${block === "coins" ? " is-poor" : block === "full" ? " is-full" : ""}`}
+                      disabled={block !== null}
+                      onClick={() => {
+                        setMiner((m) => buy(m, it.id));
+                        playGameSound("grab");
+                      }}
+                      aria-label={fmt(ft("miner.shop.buyLabel"), { item: ft(`miner.shop.${it.id}`), price: it.price })}
+                    >
+                      {block === "full" ? ft("miner.shop.have") : <><Coin /> {it.price}</>}
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <aside className="fc-shop__keeper">
+            <p className="fc-shop__bubble">{fmt(ft("miner.shop.sub"), { n: miner.level })}</p>
+            <img src="/miner/old-miner.webp" alt="" draggable={false} />
+          </aside>
+        </div>
+        <footer className="fc-shop__foot">
+          <p className="fc-miner-shop__coins" aria-live="polite">
+            <Coin /> {ft("miner.shop.coins")} <strong className="tabular">{miner.coins}</strong>
+          </p>
+          <button type="button" className="btn btn--lg fc-shop__play" onClick={() => beginLevel(miner)} autoFocus>
+            {fmt(ft("miner.shop.play"), { n: miner.level })}
+          </button>
+        </footer>
       </section>
     );
   }
@@ -590,7 +686,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           {hold && (
             <div ref={carryRef} className={`fc-miner__nugget fc-miner__carry fc-skin--${hold.skin}${feedback ? (feedback.correct ? " is-right" : " is-wrong") : ""}`}>
               <SkinArt skin={hold.skin} />
-              <span className="fc-miner__label"><SideView side={hold.side} speak={false} /></span>
+              <NuggetLabel side={hold.side} />
               {feedback?.correct && <Burst />}
             </div>
           )}
@@ -611,7 +707,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
             }}
           >
             <SkinArt skin={n.skin} />
-            <span className="fc-miner__label"><SideView side={n.side} speak={false} /></span>
+            <NuggetLabel side={n.side} />
             <span className="fc-miner__value" aria-hidden="true">+{potential(n)}</span>
           </button>
         ))}

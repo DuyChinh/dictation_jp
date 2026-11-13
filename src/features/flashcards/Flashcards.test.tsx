@@ -10,7 +10,7 @@ import { MatchMode } from "./MatchMode";
 import { MemoryMode } from "./MemoryMode";
 import { BlitzMode } from "./BlitzMode";
 import { MillionaireMode } from "./MillionaireMode";
-import { MinerMode } from "./MinerMode";
+import { MinerMode, shortenMeaning } from "./MinerMode";
 import { TestMode } from "./TestMode";
 import { StudyModes } from "./StudyModes";
 import { AddEntryButton } from "./AddEntryButton";
@@ -1035,6 +1035,22 @@ describe("MillionaireMode", () => {
     expect(screen.getByText("Chúc mừng! Bạn là triệu phú!")).toBeTruthy();
     expect(document.querySelector(".fc-result__big")!.textContent).toBe("250.000.000");
     expect(screen.getByRole("img", { name: /3/ })).toBeTruthy();
+  });
+});
+
+describe("shortenMeaning", () => {
+  it("leaves a short meaning alone and cuts a long one after its last whole sense that fits", () => {
+    expect(shortenMeaning("nhà mới; tổ ấm mới")).toBe("nhà mới; tổ ấm mới");
+    const long = "trình (hộ chiếu, giấy tờ); trình ra; đưa ra (kế hoạch, phản ánh ý kiến); nộp";
+    const cut = shortenMeaning(long);
+    expect(cut).toBe("trình (hộ chiếu, giấy tờ); trình ra");
+    expect(cut.length).toBeLessThanOrEqual(44);
+  });
+  it("cuts inside a single long sense with an ellipsis", () => {
+    const one = "một nghĩa duy nhất rất dài không có dấu chấm phẩy nào để cắt cho gọn";
+    const cut = shortenMeaning(one);
+    expect(cut.endsWith("…")).toBe(true);
+    expect(cut.length).toBeLessThanOrEqual(44);
   });
 });
 

@@ -422,9 +422,10 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-miner__nugget:hover:not(.is-taken):not(.fc-miner__carry), .fc-miner__nugget:focus-visible { transform: scale(1.06); filter: drop-shadow(0 0 10px var(--glow)) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)); }
 .fc-miner__nugget:active:not(.fc-miner__carry) { transform: scale(0.97); }
 .fc-miner__art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.fc-miner__label { position: absolute; inset: 6% 11%; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
+.fc-miner__label { position: absolute; inset: 12% 15%; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
   font-size: 15px; font-size: clamp(11px, 2.35cqw, 16px); font-weight: 800; line-height: 1.2; text-shadow: var(--ink-shadow, none); }
 .fc-miner__label .fc-side { gap: 0 6px; justify-content: center; }
+.fc-skin--chest .fc-miner__label { inset: 30% 14% 12%; }
 .fc-miner__label .fc-side__reading { color: inherit; opacity: 0.7; }
 .fc-miner__value { position: absolute; right: -2%; top: -14%; z-index: 2; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 1.5; color: #fff; background: #1f2937; border: 1.5px solid rgba(255, 255, 255, 0.85); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
 .fc-skin--emerald, .fc-skin--ruby, .fc-skin--chest { --ink: #fff; --ink-shadow: 0 1px 2px rgba(0, 0, 0, 0.75); }
@@ -597,7 +598,8 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-combo { top: 6px; right: 8px; font-size: 12.5px; padding: 3px 10px; }
   .fc-result__big { font-size: 40px; }
   .fc-stars svg { width: 38px; height: 38px; }
-  .fc-miner__scene.is-tall .fc-miner__label { font-size: 12px; font-size: clamp(11px, 3.3cqw, 15px); inset: 6% 9%; }
+  .fc-miner__scene.is-tall .fc-miner__label { font-size: 12px; font-size: clamp(11px, 3.3cqw, 15px); inset: 12% 12%; }
+  .fc-miner__scene.is-tall .fc-skin--chest .fc-miner__label { inset: 30% 12% 12%; }
   .fc-mhud { gap: 8px; }
   .fc-mhud__sign strong { font-size: 19px; }
   .fc-mhud__time { font-size: 19px; min-width: 76px; }
@@ -875,17 +877,54 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 /* Gold miner: the shop between levels, and the money and boost chips in the bar. */
 .fc-mhud__coins, .fc-mhud__boost { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 13.5px; font-weight: 800; color: var(--text-main); background: var(--card-bg); border: 1px solid var(--card-border); }
 .fc-mhud__boost { color: #30200a; background: linear-gradient(120deg, #ffe6ab, #eab764); border-color: #ffe6ab; }
-.fc-miner-shop { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.fc-miner-shop h2 { margin: 0; }
-.fc-miner-shop__coins { margin: 0; font-size: 17px; color: var(--ink-2); }
-.fc-miner-shop__coins strong { margin-left: 6px; font-size: 26px; color: #d97706; }
-.fc-miner-shop__list { list-style: none; margin: 4px 0; padding: 0; width: min(560px, 100%); display: flex; flex-direction: column; gap: 10px; }
-.fc-shopitem { display: flex; align-items: center; gap: 14px; padding: 12px 14px; text-align: left; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--card-border); }
-.fc-shopitem__art { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 14px; font-size: 20px; color: var(--primary-color); background: var(--primary-light); }
-.fc-shopitem__art--heart { color: var(--heart); background: var(--heart-soft); }
-.fc-shopitem__art--double { color: #30200a; background: linear-gradient(120deg, #ffe6ab, #eab764); }
-.fc-shopitem__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.fc-shopitem__text strong { font-size: 16px; color: var(--text-main); }
-.fc-shopitem__text small { font-size: 13px; line-height: 1.45; color: var(--ink-2); }
-.fc-shopitem__buy { flex: none; gap: 6px; min-width: 84px; justify-content: center; font-variant-numeric: tabular-nums; }
-@media (max-width: 480px) { .fc-shopitem { gap: 10px; padding: 10px; } .fc-shopitem__art { width: 44px; height: 44px; } }
+
+/* Gold miner shop: a wooden frame round a parchment board, item cards with a framed picture and a price bar, and the old miner as the shopkeeper. */
+.fc-shop { --wood: #6b4220; --wood-hi: #8d5a2c; --paper: #f7e8c4; --paper-2: #fff6dc; --edge: #d8b673; --ink: #4b3216; --ink-2: #7a5a31;
+  display: flex; flex-direction: column; gap: 14px; padding: 12px; border-radius: 26px; color: var(--ink);
+  background: linear-gradient(160deg, var(--wood-hi), var(--wood)); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35), inset 0 2px rgba(255, 255, 255, 0.18); }
+.fc-shop__ribbon { align-self: center; margin: -26px 0 -2px; padding: 8px 34px 10px; border-radius: 14px 14px 18px 18px; background: linear-gradient(#58a6e6, #2f78bd); border: 2px solid #1d5a96; box-shadow: 0 5px 0 #1d4f84, 0 10px 18px rgba(0, 0, 0, 0.3); }
+.fc-shop__ribbon h2 { margin: 0; font-size: 22px; letter-spacing: 0.02em; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); }
+.fc-shop__board { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 14px; padding: 16px; border-radius: 18px; background: radial-gradient(ellipse at 30% 0, #fff3d0, var(--paper)); border: 2px solid var(--edge); box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.35); }
+.fc-shop__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; }
+.fc-shopcard { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--paper-2); border: 2px solid var(--edge); box-shadow: 0 2px 0 #c9a45e; transition: transform 0.15s ease, border-color 0.15s ease; }
+.fc-shopcard:hover { transform: translateY(-2px); border-color: #e0a526; }
+.fc-shopcard__slot { position: relative; flex: none; width: 76px; height: 76px; display: grid; place-items: center; border-radius: 14px; background: radial-gradient(circle at 35% 25%, #4a5d86, #1f2a44); border: 3px solid var(--tone); box-shadow: 0 0 0 2px #2b1d0d, inset 0 0 18px rgba(0, 0, 0, 0.4); }
+.fc-shopcard__slot svg { width: 46px; height: 46px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+.fc-shopcard__qty { position: absolute; right: -2px; bottom: -2px; padding: 0 6px; border-radius: 8px 0 10px 0; font-size: 12px; font-weight: 800; line-height: 1.5; color: #fff; background: rgba(15, 12, 8, 0.82); font-variant-numeric: tabular-nums; }
+.fc-shopcard--dynamite { --tone: #e0602a; }
+.fc-shopcard--time { --tone: #3b82f6; }
+.fc-shopcard--double { --tone: #e8a516; }
+.fc-shopcard--heart { --tone: #ec4899; }
+.fc-shopcard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.fc-shopcard__name { font-size: 16.5px; font-weight: 800; line-height: 1.2; color: var(--tone); filter: brightness(0.82); }
+.fc-shopcard__desc { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+.fc-shopcard__price { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; margin-top: 2px; padding: 0 10px; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; color: var(--ink); background: linear-gradient(#e2cba0, #cfb283); border: 1.5px solid #b3925a; border-radius: 10px; box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.6); font-variant-numeric: tabular-nums; }
+.fc-shopcard__price:hover:not(:disabled) { filter: brightness(1.07); border-color: #e0a526; }
+.fc-shopcard__price:active:not(:disabled) { transform: translateY(1px); }
+.fc-shopcard__price:disabled { cursor: not-allowed; opacity: 0.8; }
+.fc-shopcard__price.is-poor { color: #b91c1c; }
+.fc-shopcard__price.is-full { color: #3f7d32; background: linear-gradient(#cfe6b8, #b4d397); border-color: #8fb56f; }
+.fc-shop__coin { width: 20px; height: 20px; flex: none; }
+.fc-shop__keeper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; }
+.fc-shop__bubble { position: relative; margin: 0; padding: 10px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; text-align: left; color: var(--ink); background: #fffdf5; border: 1.5px solid var(--edge); box-shadow: 0 2px 0 #c9a45e; }
+.fc-shop__bubble::after { content: ""; position: absolute; left: 36px; bottom: -9px; width: 14px; height: 14px; background: #fffdf5; border-right: 1.5px solid var(--edge); border-bottom: 1.5px solid var(--edge); transform: rotate(45deg); }
+.fc-shop__keeper img { width: 150px; max-width: 100%; height: auto; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)); }
+.fc-shop__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.fc-miner-shop__coins { display: inline-flex; align-items: center; gap: 10px; margin: 0; padding: 6px 16px 6px 10px; border-radius: 999px; font-size: 14px; font-weight: 700; color: #f6dfa6; background: rgba(20, 12, 4, 0.55); border: 2px solid #3d2710; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4); }
+.fc-miner-shop__coins strong { font-size: 24px; line-height: 1; color: #ffd45a; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.fc-shop__play { min-width: 190px; font-weight: 800; color: #3a2408; background: linear-gradient(#ffe69a, #f0b83c); border: 2px solid #ffeab0; box-shadow: 0 4px 0 #b07a14, 0 10px 20px rgba(0, 0, 0, 0.3); }
+.fc-shop__play:hover { filter: brightness(1.06); }
+@media (max-width: 760px) {
+  .fc-shop__board { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .fc-shop__keeper { flex-direction: row-reverse; align-items: flex-end; justify-content: flex-start; }
+  .fc-shop__keeper img { width: 78px; }
+  .fc-shop__bubble { flex: 1; }
+  .fc-shop__bubble::after { left: auto; right: 22px; bottom: -9px; }
+  .fc-shop__grid { order: 2; }
+}
+@media (max-width: 560px) {
+  .fc-shop__grid { grid-template-columns: minmax(0, 1fr); }
+  .fc-shop__foot { justify-content: center; }
+  .fc-shop__play { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .fc-shopcard { transition: none; } }
