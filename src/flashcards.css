@@ -871,3 +871,21 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-editor__status { margin-right: auto; align-self: center; }
 .fc-addcount { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--ok, var(--primary-color)); background: var(--primary-light); font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .fc-editor__status { flex-basis: 100%; margin-right: 0; } }
+
+/* Gold miner: the shop between levels, and the money and boost chips in the bar. */
+.fc-mhud__coins, .fc-mhud__boost { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 13.5px; font-weight: 800; color: var(--text-main); background: var(--card-bg); border: 1px solid var(--card-border); }
+.fc-mhud__boost { color: #30200a; background: linear-gradient(120deg, #ffe6ab, #eab764); border-color: #ffe6ab; }
+.fc-miner-shop { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.fc-miner-shop h2 { margin: 0; }
+.fc-miner-shop__coins { margin: 0; font-size: 17px; color: var(--ink-2); }
+.fc-miner-shop__coins strong { margin-left: 6px; font-size: 26px; color: #d97706; }
+.fc-miner-shop__list { list-style: none; margin: 4px 0; padding: 0; width: min(560px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.fc-shopitem { display: flex; align-items: center; gap: 14px; padding: 12px 14px; text-align: left; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--card-border); }
+.fc-shopitem__art { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 14px; font-size: 20px; color: var(--primary-color); background: var(--primary-light); }
+.fc-shopitem__art--heart { color: var(--heart); background: var(--heart-soft); }
+.fc-shopitem__art--double { color: #30200a; background: linear-gradient(120deg, #ffe6ab, #eab764); }
+.fc-shopitem__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fc-shopitem__text strong { font-size: 16px; color: var(--text-main); }
+.fc-shopitem__text small { font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.fc-shopitem__buy { flex: none; gap: 6px; min-width: 84px; justify-content: center; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .fc-shopitem { gap: 10px; padding: 10px; } .fc-shopitem__art { width: 44px; height: 44px; } }

@@ -1197,6 +1197,72 @@ describe("MinerMode", () => {
     expect(total).toBeGreaterThanOrEqual(100 + bonus);
   });
 
+  /** Plays right answers until the "level cleared" card shows, then goes on. */
+  const clearLevel = async () => {
+    for (let q = 0; q < 20 && !document.querySelector('[role="dialog"]'); q++) {
+      fireEvent.click(rightOne());
+      await untilJudged();
+      await frames(900);
+    }
+  };
+
+  it("goes straight on after level 1, then opens the shop after level 2 with the money earned so far", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    await clearLevel();
+    expect(screen.getByRole("button", { name: "Sang màn 2" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Sang màn 2" }));
+    await clearLevel();
+    expect(screen.queryByRole("button", { name: "Sang màn 3" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Vào cửa hàng" }));
+    const shop = screen.getByRole("region", { name: "Cửa hàng" });
+    expect(within(shop).getByText("Thuốc nổ")).toBeTruthy();
+    expect(within(shop).getByText("Thêm giờ")).toBeTruthy();
+    expect(within(shop).getByText("Gấp đôi điểm")).toBeTruthy();
+    expect(within(shop).getByText("Thêm 1 tim")).toBeTruthy();
+    const coins = Number(shop.querySelector(".fc-miner-shop__coins strong")!.textContent);
+    expect(coins).toBeGreaterThan(200);
+
+    // buying dynamite costs 50 and the next level starts with it, along with the boosts bought
+    fireEvent.click(within(shop).getByRole("button", { name: "Mua Thuốc nổ, giá 50" }));
+    fireEvent.click(within(shop).getByRole("button", { name: "Mua Gấp đôi điểm, giá 110" }));
+    expect(Number(shop.querySelector(".fc-miner-shop__coins strong")!.textContent)).toBe(coins - 50 - 110);
+    expect(within(shop).getByRole("button", { name: "Mua Gấp đôi điểm, giá 110" }).textContent).toBe("Đã đủ");
+    fireEvent.click(within(shop).getByRole("button", { name: "Mua Thêm giờ, giá 70" }));
+    fireEvent.click(within(shop).getByRole("button", { name: "Chơi màn 3" }));
+    expect(screen.getByText("Màn 3")).toBeTruthy();
+    expect(screen.getByText("×2")).toBeTruthy();
+    // 50 + 2 * 3 seconds + 15 bought (the clock may already have ticked a little)
+    expect(Number(screen.getByLabelText(/^Còn \d+ giây$/).getAttribute("aria-label")!.match(/\d+/)![0])).toBeGreaterThanOrEqual(70);
+    expect(screen.getByRole("button", { name: /^Thuốc nổ, còn \d+$/ })).toBeTruthy();
+  });
+
+  it("only lets the shop sell what the money covers", async () => {
+    render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
+    play();
+    await clearLevel();
+    fireEvent.click(screen.getByRole("button", { name: "Sang màn 2" }));
+    await clearLevel();
+    fireEvent.click(screen.getByRole("button", { name: "Vào cửa hàng" }));
+    const shop = screen.getByRole("region", { name: "Cửa hàng" });
+    const money = () => Number(shop.querySelector(".fc-miner-shop__coins strong")!.textContent);
+    const prices: Record<string, number> = { "Thuốc nổ": 50, "Thêm giờ": 70, "Gấp đôi điểm": 110, "Thêm 1 tim": 130 };
+    // buy the dearest things until the money runs low, then every button must match what is left
+    for (let i = 0; i < 12; i++) {
+      const buyable = Object.entries(prices).find(([name, price]) => {
+        const b = within(shop).queryByRole("button", { name: `Mua ${name}, giá ${price}` }) as HTMLButtonElement | null;
+        return b && !b.disabled && money() >= price;
+      });
+      if (!buyable) break;
+      fireEvent.click(within(shop).getByRole("button", { name: `Mua ${buyable[0]}, giá ${buyable[1]}` }));
+    }
+    for (const [name, price] of Object.entries(prices)) {
+      const b = within(shop).getByRole("button", { name: `Mua ${name}, giá ${price}` }) as HTMLButtonElement;
+      if (money() < price) expect(b.disabled).toBe(true);
+    }
+    expect(money()).toBeGreaterThanOrEqual(0);
+  });
+
   it("ends when the clock runs out short of the target", async () => {
     render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
     play();

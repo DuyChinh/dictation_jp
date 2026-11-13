@@ -254,7 +254,9 @@ export function pickSkin(rng: Rng = Math.random): SkinId {
 // ---------- levels and scoring ----------
 
 export const MINER_LIVES = 3;
-export const MAX_DYNAMITE = 5;
+/** The shop can sell hearts up to here, above the three a game starts with. */
+export const MAX_LIVES = 5;
+export const MAX_DYNAMITE = 8;
 export const START_DYNAMITE = 3;
 /** Time added to the clock for each right answer. */
 export const TIME_PER_RIGHT_MS = 2000;
@@ -289,6 +291,12 @@ export type MinerState = {
   right: number;
   wrong: number;
   dynamite: number;
+  /** Money to spend in the shop: every point earned, and the time bonus, less what was bought. */
+  coins: number;
+  /** Bought for the coming level: every point it earns counts twice. */
+  double: boolean;
+  /** Bought for the coming level: seconds added to its clock. */
+  extraSeconds: number;
 };
 
 export const startMiner = (): MinerState => ({
@@ -301,11 +309,17 @@ export const startMiner = (): MinerState => ({
   right: 0,
   wrong: 0,
   dynamite: START_DYNAMITE,
+  coins: 0,
+  double: false,
+  extraSeconds: 0,
 });
+
+/** What a haul is worth now: twice as much while the "double points" boost is on. */
+export const boosted = (s: MinerState, points: number): number => (s.double ? points * 2 : points);
 
 export function minerRight(s: MinerState, points: number): MinerState {
   const streak = s.streak + 1;
-  return { ...s, score: s.score + points, levelScore: s.levelScore + points, streak, bestStreak: Math.max(s.bestStreak, streak), right: s.right + 1 };
+  return { ...s, score: s.score + points, levelScore: s.levelScore + points, coins: s.coins + points, streak, bestStreak: Math.max(s.bestStreak, streak), right: s.right + 1 };
 }
 
 export const minerWrong = (s: MinerState): MinerState => ({ ...s, lives: s.lives - 1, streak: 0, wrong: s.wrong + 1 });
@@ -315,16 +329,60 @@ export const igniteDynamite = (s: MinerState): MinerState => (s.dynamite > 0 ? {
 export const levelCleared = (s: MinerState): boolean => s.levelScore >= levelTarget(s.level);
 export const minerOver = (s: MinerState): boolean => s.lives <= 0;
 
-/** On to the next level: the time left is paid out, a stick of dynamite is added and a lost life comes back. */
+/**
+ * On to the next level: the time left is paid out, a stick of dynamite is added and a lost life comes back (hearts
+ * bought in the shop above the usual three are kept). The boosts of the level just played are used up.
+ */
 export function nextLevel(s: MinerState, msLeft: number): MinerState {
+  const bonus = timeBonus(msLeft);
   return {
     ...s,
     level: s.level + 1,
-    score: s.score + timeBonus(msLeft),
+    score: s.score + bonus,
+    coins: s.coins + bonus,
     levelScore: 0,
-    lives: Math.min(MINER_LIVES, s.lives + 1),
+    lives: s.lives < MINER_LIVES ? s.lives + 1 : s.lives,
     dynamite: Math.min(MAX_DYNAMITE, s.dynamite + 1),
+    double: false,
+    extraSeconds: 0,
   };
+}
+
+// ---------- the shop ----------
+
+/** After clearing every this-many levels the miner passes through the shop. */
+export const SHOP_EVERY = 2;
+export const shopDue = (clearedLevel: number): boolean => clearedLevel > 0 && clearedLevel % SHOP_EVERY === 0;
+
+export type ShopItemId = "dynamite" | "double" | "heart" | "time";
+export const EXTRA_SECONDS = 15;
+
+export const SHOP_ITEMS: ReadonlyArray<{ id: ShopItemId; price: number }> = [
+  { id: "dynamite", price: 50 },
+  { id: "time", price: 70 },
+  { id: "double", price: 110 },
+  { id: "heart", price: 130 },
+];
+
+export const priceOf = (id: ShopItemId): number => SHOP_ITEMS.find((i) => i.id === id)!.price;
+
+/** Why an item cannot be bought right now: not enough money, or there is nothing to gain from it. */
+export function shopBlock(s: MinerState, id: ShopItemId): "coins" | "full" | null {
+  if (s.coins < priceOf(id)) return "coins";
+  if (id === "dynamite" && s.dynamite >= MAX_DYNAMITE) return "full";
+  if (id === "heart" && s.lives >= MAX_LIVES) return "full";
+  if (id === "double" && s.double) return "full";
+  if (id === "time" && s.extraSeconds > 0) return "full";
+  return null;
+}
+
+export function buy(s: MinerState, id: ShopItemId): MinerState {
+  if (shopBlock(s, id)) return s;
+  const paid = { ...s, coins: s.coins - priceOf(id) };
+  if (id === "dynamite") return { ...paid, dynamite: s.dynamite + 1 };
+  if (id === "heart") return { ...paid, lives: s.lives + 1 };
+  if (id === "double") return { ...paid, double: true };
+  return { ...paid, extraSeconds: EXTRA_SECONDS };
 }
 
 /** 1 to 3 stars for how far the miner got. */

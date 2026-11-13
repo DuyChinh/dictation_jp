@@ -30,6 +30,14 @@ import {
   minerWrong,
   newClaw,
   nextLevel,
+  MAX_DYNAMITE,
+  MAX_LIVES,
+  EXTRA_SECONDS,
+  boosted,
+  buy,
+  priceOf,
+  shopBlock,
+  shopDue,
   payout,
   pickSkin,
   startMiner,
@@ -312,8 +320,9 @@ describe("levels", () => {
     s = nextLevel(s, 20_000);
     expect(s).toMatchObject({ level: 2, score: 220, levelScore: 0, lives: 2, dynamite: 5, streak: 5 });
     s = nextLevel(s, 0);
-    expect(s).toMatchObject({ level: 3, score: 220, lives: 3, dynamite: 5 });
+    expect(s).toMatchObject({ level: 3, score: 220, lives: 3, dynamite: 6 });
     expect(nextLevel(s, 0).lives).toBe(3);
+    expect(nextLevel({ ...s, dynamite: MAX_DYNAMITE }, 0).dynamite).toBe(MAX_DYNAMITE);
   });
   it("gives stars for how far the miner got", () => {
     expect([minerStars(startMiner(), 0), minerStars({ ...startMiner(), score: 5 }, 0), minerStars(startMiner(), 2), minerStars(startMiner(), 4)]).toEqual([0, 1, 2, 3]);
@@ -322,3 +331,53 @@ describe("levels", () => {
     expect(maxLen(0, SCENES.tall) / EXTEND_SPEED).toBeLessThan(2500);
   });
 });
+
+describe("the shop between levels", () => {
+  const rich = { ...startMiner(), coins: 1000 };
+
+  it("opens after every second level", () => {
+    expect([1, 2, 3, 4, 6].map(shopDue)).toEqual([false, true, false, true, true]);
+    expect(shopDue(0)).toBe(false);
+  });
+
+  it("pays for what is earned and the time bonus, so the points are the money", () => {
+    let s = minerRight(startMiner(), 25);
+    expect(s).toMatchObject({ score: 25, coins: 25 });
+    s = nextLevel({ ...s, coins: 40 }, 10_000);
+    expect(s.coins).toBe(40 + 50);
+    expect(s.score).toBe(25 + 50);
+  });
+
+  it("sells a stick of dynamite, a heart, double points and extra time, each for its price", () => {
+    expect(buy(rich, "dynamite")).toMatchObject({ dynamite: rich.dynamite + 1, coins: 1000 - priceOf("dynamite") });
+    expect(buy(rich, "heart")).toMatchObject({ lives: rich.lives + 1, coins: 1000 - priceOf("heart") });
+    expect(buy(rich, "double")).toMatchObject({ double: true, coins: 1000 - priceOf("double") });
+    expect(buy(rich, "time")).toMatchObject({ extraSeconds: EXTRA_SECONDS, coins: 1000 - priceOf("time") });
+  });
+
+  it("refuses what cannot be afforded or would add nothing, and charges nothing then", () => {
+    const poor = { ...startMiner(), coins: priceOf("dynamite") - 1 };
+    expect(shopBlock(poor, "dynamite")).toBe("coins");
+    expect(buy(poor, "dynamite")).toBe(poor);
+    expect(shopBlock({ ...rich, dynamite: MAX_DYNAMITE }, "dynamite")).toBe("full");
+    expect(shopBlock({ ...rich, lives: MAX_LIVES }, "heart")).toBe("full");
+    expect(shopBlock({ ...rich, double: true }, "double")).toBe("full");
+    expect(shopBlock({ ...rich, extraSeconds: 15 }, "time")).toBe("full");
+    expect(buy({ ...rich, lives: MAX_LIVES }, "heart").coins).toBe(1000);
+  });
+
+  it("lets hearts go above the usual three and keeps them when the next level comes", () => {
+    const s = buy({ ...rich, lives: 3 }, "heart");
+    expect(s.lives).toBe(4);
+    expect(nextLevel(s, 0).lives).toBe(4);
+  });
+
+  it("doubles what is earned while the boost is on, and uses the boost up with the level", () => {
+    const on = buy(rich, "double");
+    expect(boosted(on, 30)).toBe(60);
+    expect(boosted(startMiner(), 30)).toBe(30);
+    expect(nextLevel(on, 0).double).toBe(false);
+    expect(nextLevel(buy(rich, "time"), 0).extraSeconds).toBe(0);
+  });
+});
+

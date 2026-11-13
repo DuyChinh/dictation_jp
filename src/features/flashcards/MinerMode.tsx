@@ -6,12 +6,15 @@ import { triggerConfetti } from "../../shared/utils/confetti";
 import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
 import {
   MINER_LIVES,
+  SHOP_ITEMS,
   PIVOT,
   SCENES,
   SKINS,
   TIME_PER_RIGHT_MS,
   W,
   aimAt,
+  boosted,
+  buy,
   dropCatch,
   igniteDynamite,
   launch,
@@ -27,6 +30,8 @@ import {
   nextLevel,
   payout,
   pickSkin,
+  shopBlock,
+  shopDue,
   skinPoints,
   startMiner,
   stepClaw,
@@ -50,7 +55,7 @@ import type { Card, Direction } from "./types";
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
-type Stage = "idle" | "playing" | "cleared" | "over";
+type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
 type Feedback = { correct: boolean };
 
@@ -130,6 +135,14 @@ function useNarrow(): boolean {
 function nuggetsFor(item: DropItem, scene: Scene): Nugget[] {
   const boxes = layoutNuggets(item.options.length, Math.random, scene);
   return item.options.map((o, i) => ({ cardId: o.cardId, side: o.side, box: boxes[i]!, skin: pickSkin() }));
+}
+
+/** The picture on a shop item. */
+function ShopArt({ id }: { id: (typeof SHOP_ITEMS)[number]["id"] }) {
+  if (id === "dynamite") return <Dynamite />;
+  if (id === "heart") return <Icon name="heart" size={28} />;
+  if (id === "time") return <Icon name="clock" size={28} />;
+  return <b>×2</b>;
 }
 
 function Dynamite() {
@@ -229,11 +242,13 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   function beginLevel(state: MinerState) {
     timers.current.forEach(clearTimeout);
     timers.current = [];
-    setMiner(state);
+    // the time bought in the shop is for this level only
+    const seconds = levelSeconds(state.level) + state.extraSeconds;
+    setMiner({ ...state, extraSeconds: 0 });
     setClearInfo(null);
     setMood("idle");
-    deadline.current = Date.now() + levelSeconds(state.level) * 1000;
-    setLeft(levelSeconds(state.level) * 1000);
+    deadline.current = Date.now() + seconds * 1000;
+    setLeft(seconds * 1000);
     setStage("playing");
     ask();
   }
@@ -271,9 +286,11 @@ export function MinerMode({ deckId, cards, direction }: Props) {
 
     if (correct) {
       const pay = payout(picked.skin, state.streak, Date.now() - askedAt.current);
-      const next = minerRight(state, pay.points);
+      const earned = boosted(state, pay.points);
+      const next = minerRight(state, earned);
       setMiner(next);
-      pop(`+${pay.points}`, "good", 50);
+      pop(`+${earned}`, "good", 50);
+      if (state.double) pop(ft("miner.pop.double"), "info", 64);
       if (pay.combo > 0) pop(fmt(ft("miner.pop.combo"), { n: pay.combo }), "info", 24);
       if (pay.speed > 0) pop(fmt(ft("miner.pop.fast"), { n: pay.speed }), "info", 76);
       deadline.current += TIME_PER_RIGHT_MS;
@@ -340,6 +357,15 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
 
+  /** After a cleared level: straight on, or through the shop first when it is due. */
+  function leaveLevel() {
+    const next = nextLevel(miner, deadline.current - clearedAt.current);
+    if (shopDue(miner.level)) {
+      setMiner(next);
+      setStage("shop");
+    } else beginLevel(next);
+  }
+
   const idle = () => clawRef.current.phase === "swing" && !pausedRef.current;
 
   function drop() {
@@ -402,7 +428,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         <h2>{ft("miner.title")}</h2>
         <p>{ft("miner.intro")}</p>
         <ul className="fc-miner-rules">
-          {(["miner.rule1", "miner.rule2", "miner.rule3", "miner.rule4"] as const).map((k) => (
+          {(["miner.rule1", "miner.rule2", "miner.rule3", "miner.rule4", "miner.rule5"] as const).map((k) => (
             <li key={k}>{ft(k)}</li>
           ))}
         </ul>
@@ -437,6 +463,47 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           <button type="button" className="btn btn--primary" onClick={newGame}>{ft("common.playAgain")}</button>
           <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
         </div>
+      </section>
+    );
+  }
+
+  if (stage === "shop") {
+    return (
+      <section className="fc-panel fc-miner-shop" aria-label={ft("miner.shop.title")}>
+        <h2>{ft("miner.shop.title")}</h2>
+        <p className="fc-miner-shop__coins" aria-live="polite">
+          {ft("miner.shop.coins")} <strong className="tabular">{miner.coins}</strong>
+        </p>
+        <p className="fc-note">{fmt(ft("miner.shop.sub"), { n: miner.level })}</p>
+        <ul className="fc-miner-shop__list">
+          {SHOP_ITEMS.map((it) => {
+            const block = shopBlock(miner, it.id);
+            return (
+              <li key={it.id} className="fc-shopitem">
+                <span className={`fc-shopitem__art fc-shopitem__art--${it.id}`} aria-hidden="true"><ShopArt id={it.id} /></span>
+                <span className="fc-shopitem__text">
+                  <strong>{ft(`miner.shop.${it.id}`)}</strong>
+                  <small>{ft(`miner.shop.${it.id}.desc`)}</small>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn--outline fc-shopitem__buy"
+                  disabled={block !== null}
+                  onClick={() => {
+                    setMiner((m) => buy(m, it.id));
+                    playGameSound("grab");
+                  }}
+                  aria-label={fmt(ft("miner.shop.buyLabel"), { item: ft(`miner.shop.${it.id}`), price: it.price })}
+                >
+                  {block === "full" ? ft("miner.shop.have") : <><Icon name="gem" size={16} /> {it.price}</>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <button type="button" className="btn btn--primary btn--lg" onClick={() => beginLevel(miner)} autoFocus>
+          {fmt(ft("miner.shop.play"), { n: miner.level })}
+        </button>
       </section>
     );
   }
@@ -477,11 +544,15 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       </div>
       <div className="fc-mhud fc-mhud--sub">
         <span className="fc-drop__lives" aria-label={fmt(ft("drop.lives"), { n: miner.lives })}>
-          {Array.from({ length: MINER_LIVES }, (_, i) => (
+          {Array.from({ length: Math.max(MINER_LIVES, miner.lives) }, (_, i) => (
             <Icon key={i} name="heart" size={20} className={i < miner.lives ? "is-full" : "is-empty"} />
           ))}
         </span>
         <span className="fc-drop__score tabular">{fmt(ft("drop.score"), { score: miner.score })}</span>
+        {miner.double && <span className="fc-mhud__boost" title={ft("miner.shop.double")}>×2</span>}
+        <span className="fc-mhud__coins tabular" aria-label={fmt(ft("miner.shop.coinsLabel"), { n: miner.coins })}>
+          <Icon name="gem" size={15} /> {miner.coins}
+        </span>
         <SoundToggle />
       </div>
 
@@ -560,8 +631,8 @@ export function MinerMode({ deckId, cards, direction }: Props) {
               <p>{fmt(ft("miner.clearScore"), { score: miner.levelScore })}</p>
               <p className="fc-miner__bonus">{fmt(ft("miner.clearBonus"), { n: clearInfo.bonus })}</p>
               <p className="fc-note">{ft("miner.clearPerks")}</p>
-              <button type="button" className="btn btn--primary btn--lg" onClick={() => beginLevel(nextLevel(miner, deadline.current - clearedAt.current))} autoFocus>
-                {fmt(ft("miner.next"), { n: miner.level + 1 })}
+              <button type="button" className="btn btn--primary btn--lg" onClick={leaveLevel} autoFocus>
+                {shopDue(miner.level) ? ft("miner.toShop") : fmt(ft("miner.next"), { n: miner.level + 1 })}
               </button>
             </div>
           </div>
