@@ -270,6 +270,7 @@
 /* the notice, letter or e-mail wraps to the screen; only a drawn table or frame keeps its width and scrolls */
 .paper-layout--wrap { white-space: normal; overflow-x: visible; }
 .paper-layout__lines { margin: 0; }
+.paper-layout__lines.is-framed { margin: 8px 0; padding: 10px 14px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--card-bg); }
 .paper-layout__line { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-break: strict; }
 .paper-layout__line:empty { min-height: 1.7em; }
 .paper-layout__line.is-end { text-align: right; }

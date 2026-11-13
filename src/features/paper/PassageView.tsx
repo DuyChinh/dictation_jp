@@ -112,7 +112,7 @@ export function PassageView({
                 run.kind === "grid" ? (
                   <pre key={ri} className="paper-layout__grid">{run.text}</pre>
                 ) : (
-                  <div key={ri} className="paper-layout__lines">
+                  <div key={ri} className={`paper-layout__lines${run.framed ? " is-framed" : ""}`}>
                     {run.lines.map((l, li) => (
                       <p key={li} className={`paper-layout__line${l.end ? " is-end" : ""}`} style={l.indent ? { paddingLeft: `${l.indent}em` } : undefined}>{l.text}</p>
                     ))}
