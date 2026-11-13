@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { fmt } from "../../shared/i18n/format";
-import { Burst, SoundToggle, Stars, playFx } from "./GameBits";
+import { Burst, SoundToggle, StartButtons, Stars, playFx } from "./GameBits";
+import { clearGame, isRecord, isStringArray, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { getBest, submitBest } from "./prefs";
 import { buildMatchRound, matchStars, type MatchTile } from "./quiz";
 import { useFt } from "./flashText";
@@ -14,6 +15,10 @@ type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 const ROUND = 6;
 const WRONG_FLASH_MS = 500;
+
+type Saved = { direction: Direction; tiles: MatchTile[]; matched: string[]; mistakes: number; elapsed: number };
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) && Array.isArray(d.tiles) && d.tiles.length >= 4 && isStringArray(d.matched) && typeof d.mistakes === "number" && typeof d.elapsed === "number";
 
 export const formatSeconds = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
 
@@ -30,6 +35,31 @@ export function MatchMode({ deckId, cards, direction }: Props) {
   const [record, setRecord] = useState<{ best: number | null; improved: boolean } | null>(null);
   const startedAt = useRef(0);
   const finished = tiles !== null && matched.size === tiles.length / 2;
+  // a round left half way offers to carry on
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "match", isSaved);
+    return s && s.direction === direction && s.matched.length < s.tiles.length / 2 ? s : null;
+  });
+
+  function resume() {
+    if (!saved) return;
+    setTiles(saved.tiles);
+    setMatched(new Set(saved.matched));
+    setSelected(null);
+    setWrong(null);
+    setMistakes(saved.mistakes);
+    setElapsed(saved.elapsed);
+    setRecord(null);
+    startedAt.current = Date.now() - saved.elapsed;
+  }
+
+  const keep = () => {
+    if (!tiles) return;
+    if (finished) clearGame(deckId, "match");
+    else saveGame(deckId, "match", { direction, tiles, matched: [...matched], mistakes, elapsed: Date.now() - startedAt.current } satisfies Saved);
+  };
+  useEffect(keep, [tiles, matched, mistakes, finished]);
+  useSaveOnLeave(keep);
 
   const play = useCallback(() => {
     setTiles(buildMatchRound(cards, ROUND, direction));
@@ -91,7 +121,7 @@ export function MatchMode({ deckId, cards, direction }: Props) {
         <h2>{ft("match.title")}</h2>
         <p>{ft("match.intro")}</p>
         {best !== null && <p className="fc-note">{fmt(ft("match.best"), { time: formatSeconds(best) })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={play}>{ft("common.start")}</button>
+        <StartButtons onStart={play} onContinue={saved ? resume : undefined} />
       </section>
     );
   }

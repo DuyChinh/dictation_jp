@@ -928,3 +928,4 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-shop__play { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .fc-shopcard { transition: none; } }
+.fc-actions--center { justify-content: center; }

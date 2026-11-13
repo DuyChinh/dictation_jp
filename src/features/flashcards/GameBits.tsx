@@ -134,3 +134,15 @@ export function useShake(): { shaking: boolean; shake: () => void } {
   }, []);
   return { shaking, shake };
 }
+
+/** The start button of a game; when a game was left half way it is "Continue" with a "new game" beside it. */
+export function StartButtons({ onStart, onContinue }: { onStart: () => void; onContinue?: () => void }) {
+  const ft = useFt();
+  if (!onContinue) return <button type="button" className="btn btn--primary btn--lg" onClick={onStart}>{ft("common.start")}</button>;
+  return (
+    <div className="fc-actions fc-actions--center">
+      <button type="button" className="btn btn--primary btn--lg" onClick={onContinue} autoFocus>{ft("common.continue")}</button>
+      <button type="button" className="btn btn--outline btn--lg" onClick={onStart}>{ft("common.startNew")}</button>
+    </div>
+  );
+}

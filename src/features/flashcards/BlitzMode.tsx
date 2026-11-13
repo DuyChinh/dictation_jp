@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
-import { Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
+import { Pops, SoundToggle, StartButtons, Stars, playFx, usePops, useShake } from "./GameBits";
+import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { getBest, submitBest } from "./prefs";
 import {
   BLITZ_PENALTY,
@@ -25,6 +26,10 @@ type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 type Feedback = { chosen: string; correct: boolean };
 
+type Saved = { direction: Direction; state: BlitzState; left: number };
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) && isRecord(d.state) && typeof d.state.score === "number" && typeof d.left === "number" && d.left > 1000;
+
 /** Speed round: 60 seconds of multiple choice. Right answers in a row build a combo; a wrong one costs time. */
 export function BlitzMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
@@ -43,6 +48,31 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
   const { shaking, shake } = useShake();
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // a round left half way offers to carry on with the time it had left
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "blitz", isSaved);
+    return s && s.direction === direction ? s : null;
+  });
+  const keep = () => {
+    if (running) saveGame(deckId, "blitz", { direction, state, left: Math.max(0, deadline.current - Date.now()) } satisfies Saved);
+    else if (over) clearGame(deckId, "blitz");
+  };
+  useEffect(keep, [running, over, state]);
+  useSaveOnLeave(keep);
+
+  function resume() {
+    if (!saved) return;
+    clearTimeout(timer.current);
+    queue.current = [];
+    deadline.current = Date.now() + saved.left;
+    setState(saved.state);
+    setLeft(saved.left);
+    setOver(false);
+    setRecord(null);
+    setRunning(true);
+    nextItem();
+  }
 
   function nextItem() {
     if (queue.current.length === 0) queue.current = buildDropRound(cards, cards.length, direction);
@@ -126,7 +156,7 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
         <h2>{ft("blitz.title")}</h2>
         <p>{ft("blitz.intro")}</p>
         {best !== null && <p className="fc-note">{fmt(ft("blitz.best"), { score: best })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={start}>{ft("common.start")}</button>
+        <StartButtons onStart={start} onContinue={saved ? resume : undefined} />
       </section>
     );
   }

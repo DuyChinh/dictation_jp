@@ -1038,6 +1038,75 @@ describe("MillionaireMode", () => {
   });
 });
 
+describe("games carry on where they were left", () => {
+  const cards = () => seed([["犬", "chó"], ["猫", "mèo"], ["水", "nước"], ["火", "lửa"], ["木", "cây"], ["金", "vàng"], ["土", "đất"], ["日", "ngày"]]);
+  const open = (mode: "test" | "match" | "memory" | "drop" | "blitz" | "millionaire" | "miner") => render(wrap(<StudyModes deckId="deck1" cards={cards()} mode={mode} />));
+  const start = () => fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
+  const carryOn = () => fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+
+  it.each(["match", "memory", "drop", "blitz", "millionaire", "miner"] as const)("%s offers Continue after a reload, and New game starts afresh", (mode) => {
+    // nothing saved yet: only Start
+    const first = open(mode);
+    expect(screen.queryByRole("button", { name: "Tiếp tục" })).toBeNull();
+    start();
+    first.unmount();
+
+    // coming back: Continue puts the game on screen again, without the start screen
+    open(mode);
+    expect(screen.getByRole("button", { name: "Chơi mới" })).toBeTruthy();
+    carryOn();
+    expect(screen.queryByRole("button", { name: "Tiếp tục" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Bắt đầu" })).toBeNull();
+    expect(document.querySelector(".fc-panel.fc-start")).toBeNull();
+  });
+
+  it("test: carries on with the questions and the answers given so far", () => {
+    const first = open("test");
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
+    const before = document.body.textContent;
+    first.unmount();
+    open("test");
+    carryOn();
+    expect(document.body.textContent).toContain(before!.slice(0, 20));
+    expect(screen.queryByRole("button", { name: "Bắt đầu kiểm tra" })).toBeNull();
+  });
+
+  it("match: keeps the matched pairs, the mistakes and the time", () => {
+    const first = open("match");
+    start();
+    const tiles = () => [...document.querySelectorAll<HTMLButtonElement>("button.fc-tile")];
+    // one right pair: two tiles whose sides are a card's word and its meaning
+    const pairs: Record<string, string> = { 犬: "chó", 猫: "mèo", 水: "nước", 火: "lửa", 木: "cây", 金: "vàng", 土: "đất", 日: "ngày" };
+    const byText = (t: string) => tiles().find((b) => b.textContent === t);
+    const word = Object.keys(pairs).find((w) => byText(w))!;
+    fireEvent.click(byText(word)!);
+    fireEvent.click(byText(pairs[word]!)!);
+    const goneBefore = tiles().filter((b) => b.disabled).length;
+    expect(goneBefore).toBe(2);
+    first.unmount();
+    open("match");
+    carryOn();
+    expect(tiles().filter((b) => b.disabled)).toHaveLength(goneBefore);
+  });
+
+  it("does not offer a game that is a week old", () => {
+    localStorage.setItem("jd.flash_game.v1", JSON.stringify({ "deck1:blitz": { at: Date.now() - 8 * 24 * 3600 * 1000, data: {} } }));
+    open("blitz");
+    expect(screen.queryByRole("button", { name: "Tiếp tục" })).toBeNull();
+  });
+
+  it("blitz: a round that has run out of time is not offered again", async () => {
+    vi.useFakeTimers();
+    const first = open("blitz");
+    start();
+    await act(async () => void vi.advanceTimersByTime(61000));
+    expect(screen.getByText("Hết giờ!")).toBeTruthy();
+    first.unmount();
+    open("blitz");
+    expect(screen.queryByRole("button", { name: "Tiếp tục" })).toBeNull();
+  });
+});
+
 describe("shortenMeaning", () => {
   it("leaves a short meaning alone and cuts a long one after its last whole sense that fits", () => {
     expect(shortenMeaning("nhà mới; tổ ấm mới")).toBe("nhà mới; tổ ấm mới");
@@ -1110,6 +1179,7 @@ describe("MinerMode", () => {
       expect(field.style.maxWidth).toBe("522px");
       expect(field.style.marginInline).toBe("auto");
       cleanup();
+      localStorage.removeItem("jd.flash_game.v1");
 
       Object.defineProperty(window, "innerHeight", { configurable: true, value: 1400 });
       render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
@@ -1464,6 +1534,7 @@ describe("hiragana display preference for tests and games", () => {
     expect(leads.length).toBeGreaterThan(0);
     for (const lead of leads) expect(lead.parentElement!.textContent).toMatch(/(こうにゅう: mua|いぬ: chó|ねこ: mèo|みず: nước)/);
     unmount();
+    localStorage.removeItem("jd.flash_game.v1"); // the game left half way would otherwise offer to continue
 
     render(wrap(<StudyModes deckId="deck1" cards={cards} mode={mode} />));
     fireEvent.click(screen.getByRole("radio", { name: "Không Hiragana" }));

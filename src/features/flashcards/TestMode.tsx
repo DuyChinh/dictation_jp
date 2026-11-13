@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { useFt, type Ft } from "./flashText";
@@ -13,6 +13,7 @@ import {
   type QuestionKind,
   type QuestionResult,
 } from "./quiz";
+import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { recordAnswers } from "./store";
 import { useShowHiragana } from "./prefs";
 import { SideView } from "./SideView";
@@ -21,6 +22,16 @@ import type { Card, Direction, Side } from "./types";
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 const DEFAULT_KINDS: Record<QuestionKind, boolean> = { mc: true, tf: true, write: true, match: true };
+
+type Saved = { direction: Direction; questions: Question[]; answers: Record<string, Answer>; view: "single" | "all"; current: number };
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) &&
+  Array.isArray(d.questions) &&
+  d.questions.length > 0 &&
+  d.questions.every((q) => isRecord(q) && typeof q.id === "string" && typeof q.kind === "string") &&
+  isRecord(d.answers) &&
+  (d.view === "single" || d.view === "all") &&
+  typeof d.current === "number";
 
 /** A Quizlet-style test: pick the question types and length, answer everything on one page, then submit for a score. */
 export function TestMode({ deckId, cards, direction }: Props) {
@@ -36,6 +47,32 @@ export function TestMode({ deckId, cards, direction }: Props) {
 
   const anyKind = QUESTION_KINDS.some((k) => kinds[k]);
 
+  // a test left half way offers to carry on with the answers given so far
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "test", isSaved);
+    return s && s.direction === direction ? s : null;
+  });
+  const keep = () => {
+    if (questions && !graded) saveGame(deckId, "test", { direction, questions, answers, view, current } satisfies Saved);
+  };
+  useEffect(keep, [questions, answers, view, current, graded]);
+  useSaveOnLeave(keep);
+
+  function resume() {
+    if (!saved) return;
+    setQuestions(saved.questions);
+    setAnswers(saved.answers);
+    setView(saved.view);
+    setCurrent(Math.min(saved.current, saved.questions.length - 1));
+    setGraded(null);
+    window.scrollTo?.({ top: 0 });
+  }
+  /** Back to the settings: the test in progress is given up. */
+  function leave() {
+    clearGame(deckId, "test");
+    setQuestions(null);
+  }
+
   function begin(pool: Card[], n: number) {
     setQuestions(buildTest(pool, { count: n, direction, kinds }));
     setAnswers({});
@@ -47,6 +84,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
   function submit() {
     if (!questions) return;
     const g = gradeTest(questions, answers);
+    clearGame(deckId, "test");
     setGraded(g);
     recordAnswers(g.results.flatMap((r) => r.cards.map((c) => ({ cardId: c.cardId, correct: c.correct }))));
     window.scrollTo?.({ top: 0 });
@@ -86,9 +124,16 @@ export function TestMode({ deckId, cards, direction }: Props) {
             </label>
           ))}
         </fieldset>
-        <button type="button" className="btn btn--primary btn--lg" disabled={!anyKind} onClick={() => begin(cards, count)}>
-          {ft("test.begin")}
-        </button>
+        <div className="fc-actions fc-actions--center">
+          {saved && (
+            <button type="button" className="btn btn--primary btn--lg" onClick={resume} autoFocus>
+              {ft("common.continue")}
+            </button>
+          )}
+          <button type="button" className={`btn ${saved ? "btn--outline" : "btn--primary"} btn--lg`} disabled={!anyKind} onClick={() => begin(cards, count)}>
+            {ft("test.begin")}
+          </button>
+        </div>
       </section>
     );
   }
@@ -111,7 +156,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
                 {fmt(ft("test.retryWrong"), { n: retry.length })}
               </button>
             )}
-            <button type="button" className="btn btn--outline" onClick={() => setQuestions(null)}>
+            <button type="button" className="btn btn--outline" onClick={leave}>
               {ft("test.newTest")}
             </button>
             <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
@@ -126,7 +171,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
 
   const submitBar = (
     <div className="fc-actions fc-actions--end">
-      <button type="button" className="btn btn--outline" onClick={() => setQuestions(null)}>
+      <button type="button" className="btn btn--outline" onClick={leave}>
         {ft("common.cancel")}
       </button>
       <button type="button" className="btn btn--primary btn--lg" onClick={submit}>
@@ -208,7 +253,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
         )}
       </div>
       <div className="fc-actions fc-actions--end">
-        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setQuestions(null)}>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={leave}>
           {ft("common.cancel")}
         </button>
       </div>

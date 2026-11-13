@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
-import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
+import { Burst, Pops, SoundToggle, StartButtons, Stars, playFx, usePops, useShake } from "./GameBits";
+import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import {
   MAX_LIVES,
   MINER_LIVES,
@@ -61,6 +62,27 @@ type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: 
 type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
 type Feedback = { correct: boolean };
+
+/** A game left half way: where it stood (in a level, at the "cleared" card or in the shop), with the time left. */
+type Saved = {
+  direction: Direction;
+  field: "wide" | "tall";
+  stage: "playing" | "cleared" | "shop";
+  miner: MinerState;
+  left: number;
+  clearedLeft: number;
+};
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) &&
+  (d.field === "wide" || d.field === "tall") &&
+  (d.stage === "playing" || d.stage === "cleared" || d.stage === "shop") &&
+  isRecord(d.miner) &&
+  typeof d.miner.level === "number" &&
+  typeof d.miner.lives === "number" &&
+  typeof d.miner.score === "number" &&
+  typeof d.miner.coins === "number" &&
+  typeof d.left === "number" &&
+  typeof d.clearedLeft === "number";
 
 const RESULT_MS = 900;
 const CHEER_MS = 520;
@@ -318,18 +340,45 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     paint();
   }
 
-  function beginLevel(state: MinerState) {
+  /** Starts a level; `ms` is the clock to start with when a game carries on where it stopped. */
+  function beginLevel(state: MinerState, ms?: number) {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     // the time bought in the shop is for this level only
-    const seconds = levelSeconds(state.level) + state.extraSeconds;
+    const clock = ms ?? (levelSeconds(state.level) + state.extraSeconds) * 1000;
     setMiner({ ...state, extraSeconds: 0 });
     setClearInfo(null);
     setMood("idle");
-    deadline.current = Date.now() + seconds * 1000;
-    setLeft(seconds * 1000);
+    deadline.current = Date.now() + clock;
+    setLeft(clock);
     setStage("playing");
     ask();
+  }
+
+  // a game left half way offers to carry on from the same level
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "miner", isSaved);
+    return s && s.direction === direction ? s : null;
+  });
+
+  function resume() {
+    if (!saved) return;
+    const field = saved.field === "tall" ? SCENES.tall : SCENES.wide;
+    sceneRef.current = field;
+    setScene(field);
+    setHighScore(null);
+    queueRef.current = [];
+    if (saved.stage === "playing") return beginLevel(saved.miner, Math.max(1000, saved.left));
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    setMiner(saved.miner);
+    if (saved.stage === "shop") return setStage("shop");
+    // the "cleared" card sits over a field, so there is a question behind it
+    ask();
+    clearedAt.current = Date.now();
+    deadline.current = clearedAt.current + saved.clearedLeft;
+    setClearInfo({ bonus: timeBonus(saved.clearedLeft) });
+    setStage("cleared");
   }
 
   function newGame() {
@@ -445,6 +494,22 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     } else beginLevel(next);
   }
 
+  const keep = () => {
+    if (stage === "over") clearGame(deckId, "miner");
+    else if (stage === "playing" || stage === "cleared" || stage === "shop") {
+      saveGame(deckId, "miner", {
+        direction,
+        field: scene === SCENES.tall ? "tall" : "wide",
+        stage,
+        miner,
+        left: Math.max(0, deadline.current - Date.now()),
+        clearedLeft: Math.max(0, deadline.current - clearedAt.current),
+      } satisfies Saved);
+    }
+  };
+  useEffect(keep, [stage, miner]);
+  useSaveOnLeave(keep);
+
   const idle = () => clawRef.current.phase === "swing" && !pausedRef.current;
 
   function drop() {
@@ -521,7 +586,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           ))}
         </ul>
         {best !== null && <p className="fc-note">{fmt(ft("drop.best"), { score: best })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={newGame}>{ft("common.start")}</button>
+        <StartButtons onStart={newGame} onContinue={saved ? resume : undefined} />
       </section>
     );
   }

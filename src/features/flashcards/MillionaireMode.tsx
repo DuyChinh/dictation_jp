@@ -4,7 +4,8 @@ import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
-import { MusicToggle, SoundToggle, Stars, useShake } from "./GameBits";
+import { MusicToggle, SoundToggle, StartButtons, Stars, useShake } from "./GameBits";
+import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { playGameSound, prepareAnswerSounds, startBed, startResultMusic, stopAnswerSound, stopBed, stopResultMusic, tightenBed } from "./gameSound";
 import { useMillText } from "./millionaireText";
 import {
@@ -38,6 +39,30 @@ type Phase = "asking" | "locked" | "revealed";
 type Milestone = { n: number };
 type Popup = { kind: "audience"; votes: number[] } | { kind: "phone"; advice: Advice; typing: boolean } | { kind: "walk" } | null;
 type End = { reason: "wrong" | "time" | "walk" | "win"; prize: number; correct: number };
+
+/** A game left half way: the question it was on (or the milestone card it had reached), and the lifelines used. */
+type Saved = {
+  direction: Direction;
+  index: number;
+  correct: number;
+  item: DropItem;
+  removed: number[];
+  used: Partial<Record<Lifeline, boolean>>;
+  milestone: number | null;
+  left: number;
+};
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) &&
+  typeof d.index === "number" &&
+  d.index >= 0 &&
+  d.index < QUESTIONS &&
+  typeof d.correct === "number" &&
+  isRecord(d.item) &&
+  typeof d.item.cardId === "string" &&
+  Array.isArray(d.item.options) &&
+  Array.isArray(d.removed) &&
+  isRecord(d.used) &&
+  typeof d.left === "number";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 const LOCK_MS = 1300;
@@ -135,6 +160,64 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     [],
   );
   const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
+
+  // a game left half way offers to carry on from the same question
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "millionaire", isSaved);
+    return s && s.direction === direction ? s : null;
+  });
+  const keep = () => {
+    if (stage === "over") clearGame(deckId, "millionaire");
+    else if (stage === "playing" && item && (phase === "asking" || milestone)) {
+      saveGame(deckId, "millionaire", {
+        direction,
+        index,
+        correct: correctCount,
+        item,
+        removed,
+        used,
+        milestone: milestone ? milestone.n : null,
+        left: Math.max(1, Math.ceil((deadline.current - Date.now()) / 1000)),
+      } satisfies Saved);
+    }
+  };
+  useEffect(keep, [stage, index, correctCount, item, removed, used, milestone, phase]);
+  useSaveOnLeave(keep);
+
+  function resume() {
+    if (!saved) return;
+    stopResultMusic();
+    stopAnswerSound();
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    queueRef.current = [];
+    lastCard.current = saved.item.cardId;
+    setIndex(saved.index);
+    setCorrectCount(saved.correct);
+    setUsed(saved.used);
+    setEnd(null);
+    setRecord(null);
+    setItem(saved.item);
+    setSelected(null);
+    setPopup(null);
+    setTimedOut(false);
+    lastTick.current = -1;
+    if (saved.milestone !== null) {
+      setRemoved([]);
+      setPhase("revealed");
+      setMilestone({ n: saved.milestone });
+    } else {
+      setMilestone(null);
+      setRemoved(saved.removed);
+      setPhase("asking");
+      deadline.current = Date.now() + saved.left * 1000;
+      setLeft(saved.left);
+      prepareAnswerSounds();
+      playGameSound("question");
+      startBed(saved.index + 1);
+    }
+    setStage("playing");
+  }
 
   const options = item?.options ?? [];
   const correctIdx = item ? item.options.findIndex((o) => o.cardId === item.cardId) : -1;
@@ -360,7 +443,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
           <span>{mt("sound.music")}</span>
         </div>
         {best !== null && <p className="fc-note">{fmt(ft("mill.best"), { prize: money(best) })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={newGame}>{ft("common.start")}</button>
+        <StartButtons onStart={newGame} onContinue={saved ? resume : undefined} />
       </section>
     );
   }

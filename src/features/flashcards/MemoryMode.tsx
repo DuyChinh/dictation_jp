@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
-import { Burst, SoundToggle, Stars, playFx } from "./GameBits";
+import { Burst, SoundToggle, StartButtons, Stars, playFx } from "./GameBits";
+import { clearGame, isRecord, isStringArray, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { getBest, submitBest } from "./prefs";
 import { buildMatchRound, memoryStars, type MatchTile } from "./quiz";
 import { useFt } from "./flashText";
@@ -16,6 +17,10 @@ type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 const PAIRS = 6;
 const REVEAL_MS = 900;
+
+type Saved = { direction: Direction; tiles: MatchTile[]; matched: string[]; mistakes: number; elapsed: number };
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) && Array.isArray(d.tiles) && d.tiles.length >= 4 && isStringArray(d.matched) && typeof d.mistakes === "number" && typeof d.elapsed === "number";
 
 /** Memory: every tile starts face down; turn two at a time and keep the pairs where a word meets its meaning. */
 export function MemoryMode({ deckId, cards, direction }: Props) {
@@ -33,6 +38,32 @@ export function MemoryMode({ deckId, cards, direction }: Props) {
   const finished = tiles !== null && matched.size === pairs;
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // a round left half way offers to carry on (the tiles turned up at that moment turn back down)
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "memory", isSaved);
+    return s && s.direction === direction && s.matched.length < s.tiles.length / 2 ? s : null;
+  });
+
+  function resume() {
+    if (!saved) return;
+    clearTimeout(timer.current);
+    setTiles(saved.tiles);
+    setUp([]);
+    setMatched(new Set(saved.matched));
+    setMistakes(saved.mistakes);
+    setElapsed(saved.elapsed);
+    setRecord(null);
+    startedAt.current = Date.now() - saved.elapsed;
+  }
+
+  const keep = () => {
+    if (!tiles) return;
+    if (finished) clearGame(deckId, "memory");
+    else saveGame(deckId, "memory", { direction, tiles, matched: [...matched], mistakes, elapsed: Date.now() - startedAt.current } satisfies Saved);
+  };
+  useEffect(keep, [tiles, matched, mistakes, finished]);
+  useSaveOnLeave(keep);
 
   const play = useCallback(() => {
     clearTimeout(timer.current);
@@ -92,7 +123,7 @@ export function MemoryMode({ deckId, cards, direction }: Props) {
         <h2>{ft("memory.title")}</h2>
         <p>{ft("memory.intro")}</p>
         {best !== null && <p className="fc-note">{fmt(ft("memory.best"), { time: formatSeconds(best) })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={play}>{ft("common.start")}</button>
+        <StartButtons onStart={play} onContinue={saved ? resume : undefined} />
       </section>
     );
   }

@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
-import { Burst, Pops, SoundToggle, Stars, playFx, usePops, useShake } from "./GameBits";
+import { Burst, Pops, SoundToggle, StartButtons, Stars, playFx, usePops, useShake } from "./GameBits";
+import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { getBest, submitBest } from "./prefs";
 import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, fallSeconds, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
@@ -18,6 +19,10 @@ const FEEDBACK_MS = 1000;
 
 type Feedback = { chosen: string | null; correct: boolean };
 
+type Saved = { direction: Direction; items: DropItem[]; game: DropState };
+const isSaved = (d: unknown): d is Saved =>
+  isRecord(d) && Array.isArray(d.items) && d.items.length > 0 && isRecord(d.game) && d.game.status === "playing" && typeof d.game.index === "number" && d.game.index < d.items.length;
+
 /** Falling words: a word drops from the top; pick its meaning before it hits the ground. Three lives. */
 export function DropMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
@@ -31,6 +36,26 @@ export function DropMode({ deckId, cards, direction }: Props) {
   const { shaking, shake } = useShake();
 
   const item = items && game && game.status === "playing" ? items[game.index] : null;
+  // a game left half way offers to carry on, at the word it had reached
+  const [saved] = useState(() => {
+    const s = loadGame(deckId, "drop", isSaved);
+    return s && s.direction === direction ? s : null;
+  });
+  const keep = () => {
+    if (!items || !game) return;
+    if (game.status === "playing") saveGame(deckId, "drop", { direction, items, game } satisfies Saved);
+    else clearGame(deckId, "drop");
+  };
+  useEffect(keep, [items, game]);
+  useSaveOnLeave(keep);
+
+  function resume() {
+    if (!saved) return;
+    setItems(saved.items);
+    setGame(saved.game);
+    setFeedback(null);
+    setHighScore(null);
+  }
   const seconds = useMemo(() => fallSeconds(game?.right ?? 0), [game?.right]);
 
   useEffect(() => () => {
@@ -90,7 +115,7 @@ export function DropMode({ deckId, cards, direction }: Props) {
         <h2>{ft("drop.title")}</h2>
         <p>{ft("drop.intro")}</p>
         {best !== null && <p className="fc-note">{fmt(ft("drop.best"), { score: best })}</p>}
-        <button type="button" className="btn btn--primary btn--lg" onClick={play}>{ft("common.start")}</button>
+        <StartButtons onStart={play} onContinue={saved ? resume : undefined} />
       </section>
     );
   }
