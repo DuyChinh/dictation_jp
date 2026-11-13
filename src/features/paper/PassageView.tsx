@@ -3,6 +3,7 @@ import type { PaperPassage, PassageTranslation } from "../../shared/api/paper";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { LookupLayer } from "../dictionary/LookupLayer";
+import { splitLayout } from "./layoutLines";
 
 type Props = {
   passage: PaperPassage;
@@ -106,9 +107,19 @@ export function PassageView({
           </ol>
         ) : passage.layout_ja ? (
           <>
-            <pre className="paper-layout jp" lang="ja">
-              {passage.layout_ja}
-            </pre>
+            <div className="paper-layout paper-layout--wrap jp" lang="ja">
+              {splitLayout(passage.layout_ja).map((run, ri) =>
+                run.kind === "grid" ? (
+                  <pre key={ri} className="paper-layout__grid">{run.text}</pre>
+                ) : (
+                  <div key={ri} className="paper-layout__lines">
+                    {run.lines.map((l, li) => (
+                      <p key={li} className={`paper-layout__line${l.end ? " is-end" : ""}`} style={l.indent ? { paddingLeft: `${l.indent}em` } : undefined}>{l.text}</p>
+                    ))}
+                  </div>
+                ),
+              )}
+            </div>
             {evidence.length > 0 && (
               <ul className="paper-evidence">
                 {evidence.map((s) => (

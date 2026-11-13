@@ -267,6 +267,13 @@
   margin: 0; padding: 16px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-2);
   font-size: 14px; line-height: 1.7; overflow-x: auto; white-space: pre;
 }
+/* the notice, letter or e-mail wraps to the screen; only a drawn table or frame keeps its width and scrolls */
+.paper-layout--wrap { white-space: normal; overflow-x: visible; }
+.paper-layout__lines { margin: 0; }
+.paper-layout__line { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-break: strict; }
+.paper-layout__line:empty { min-height: 1.7em; }
+.paper-layout__line.is-end { text-align: right; }
+.paper-layout__grid { margin: 6px 0; padding: 0; overflow-x: auto; font: inherit; line-height: 1.5; white-space: pre; }
 .paper-evidence { margin: 0; padding-left: 20px; }
 .paper-evidence li { background: var(--acc-soft); margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; }
 .paper-footnotes { margin: 0; padding: 14px 0 0; border-top: 1px dashed var(--card-border); list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-muted); }
