@@ -119,7 +119,7 @@ export function OverviewPage() {
             <div className="panel kpi">
               <span className="kpi__label">Tổng người dùng</span>
               <span className="kpi__value">{num(data.users.total)}</span>
-              <span className="kpi__note">+{num(data.users.new)} đăng ký mới</span>
+              <span className="kpi__note">{num(data.users.new)} đăng ký mới trong {days} ngày qua (đã nằm trong tổng)</span>
             </div>
             <div className="panel kpi">
               <span className="kpi__label">Đang luyện</span>
