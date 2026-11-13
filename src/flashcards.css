@@ -866,3 +866,8 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-remind { flex-wrap: wrap; }
   .fc-remind .btn { width: 100%; }
 }
+
+/* How many cards were added on this visit, left of the add button. */
+.fc-editor__status { margin-right: auto; align-self: center; }
+.fc-addcount { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--ok, var(--primary-color)); background: var(--primary-light); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .fc-editor__status { flex-basis: 100%; margin-right: 0; } }

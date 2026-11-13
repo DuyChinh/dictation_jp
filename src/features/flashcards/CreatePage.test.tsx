@@ -55,6 +55,25 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("the create page's count of added cards", () => {
+  it("shows nothing at first, then how many cards were added on this visit", () => {
+    open(["/before", CREATE]);
+    expect(screen.queryByText(/Đã thêm \d+ từ/)).toBeNull();
+    type("犬", "chó");
+    fireEvent.click(screen.getByRole("button", { name: "Thêm thẻ" }));
+    expect(screen.getByText("Đã thêm 1 từ")).toBeTruthy();
+    type("猫", "mèo");
+    fireEvent.click(screen.getByRole("button", { name: "Thêm thẻ" }));
+    expect(screen.getByText("Đã thêm 2 từ")).toBeTruthy();
+  });
+
+  it("does not count cards that were already in the deck", () => {
+    addCard({ deckId: "deck1", term: "水", definition: "nước", ...base });
+    open(["/before", CREATE]);
+    expect(screen.queryByText(/Đã thêm \d+ từ/)).toBeNull();
+  });
+});
+
 describe("the create page's Back and Save", () => {
   it("has both buttons at the top and again under the list", () => {
     open(["/before", CREATE]);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "../../shared/api/dictionary";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
@@ -35,6 +35,8 @@ type Props = {
   autoFocus?: boolean;
   /** Told what is typed in the boxes whenever it changes: a complete card, or null while a box is empty. */
   onDraft?: (draft: CardValue | null) => void;
+  /** Shown at the left of the buttons, e.g. how many cards were added so far. */
+  status?: ReactNode;
 };
 
 const SEARCH_DELAY = 300;
@@ -47,7 +49,7 @@ const meaningHint = (leftLang: CardLang, rightLang: CardLang): MeaningPair =>
  * its own language. Typing in the left box looks the word up and fills the right box with the meaning in the
  * language chosen there, until the learner types in the right box themselves.
  */
-export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft }: Props) {
+export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft, status }: Props) {
   const { uiLang } = useUiLanguage();
   const ft = useFt();
   const it = useImgText();
@@ -405,6 +407,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       {message && <p className="fc-editor__message" role="alert">{message}</p>}
 
       <div className="fc-editor__actions">
+        {status && <div className="fc-editor__status">{status}</div>}
         {onCancel && (
           <button type="button" className="btn btn--outline" onClick={onCancel}>
             {ft("common.cancel")}

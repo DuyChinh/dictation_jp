@@ -37,6 +37,8 @@ export function FlashcardCreatePage() {
   // A remembered deck may be gone; fall back to the first one that exists.
   const effective = decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
   const deck = decks.find((d) => d.id === effective);
+  // cards made on this visit that are still there (one that was deleted again does not count)
+  const addedCount = useMemo(() => state.cards.filter((c) => !c.deleted && added.has(c.id)).length, [state, added]);
   const deckCards = useMemo(() => cardsOf(state, effective).sort((a, b) => b.createdAt - a.createdAt), [state, effective]);
 
   /** Adds a card to the chosen deck (making the default deck if there is none). A repeat of a card already there is skipped. */
@@ -122,7 +124,14 @@ export function FlashcardCreatePage() {
             }}
             label={ft("create.deck")}
           />
-          <CardEditor submitLabel={ft("create.add")} onSubmit={save} onDraft={(d) => (draft.current = d)} clearAfterSubmit autoFocus />
+          <CardEditor
+            submitLabel={ft("create.add")}
+            onSubmit={save}
+            onDraft={(d) => (draft.current = d)}
+            clearAfterSubmit
+            autoFocus
+            status={addedCount > 0 ? <span className="fc-addcount" role="status"><Icon name="check" size={16} strokeWidth={2.4} /> {fmt(ft("create.addedCount"), { n: addedCount })}</span> : undefined}
+          />
           <p className="fc-note">{ft("create.autosave")}</p>
         </div>
 
