@@ -14,6 +14,8 @@ export type Suggestion = {
   /** Sino-Vietnamese reading of the headword, when it has one, e.g. "CẤU NHẬP". */
   hanViet: string;
   jlpt: number | null;
+  /** Concrete English picture-search phrases */
+  pictureQueries?: string[];
 };
 
 /** Same choice of headword as the dictionary page: the first usable kanji spelling, or the kana. */
@@ -30,7 +32,17 @@ export function suggestionFromEntry(entry: DictEntry): Suggestion {
   const { word, reading } = headword(entry);
   const en = entry.senses.flatMap((s) => s.glosses.slice(0, 2)).slice(0, MAX_PARTS).join("; ");
   const vi = entry.senses.flatMap((s) => s.vi.slice(0, 2)).slice(0, MAX_PARTS).join("; ");
-  return { entryId: entry.id, reading, ja: word, vi: vi || en, en, viFallback: !vi && !!en, hanViet: entry.hanViet?.[word] ?? "", jlpt: entry.jlpt };
+  return {
+    entryId: entry.id,
+    reading,
+    ja: word,
+    vi: vi || en,
+    en,
+    viFallback: !vi && !!en,
+    hanViet: entry.hanViet?.[word] ?? "",
+    jlpt: entry.jlpt,
+    pictureQueries: entry.pictureQueries ?? [],
+  };
 }
 
 export const suggestionsFromEntries = (entries: DictEntry[], max = 6): Suggestion[] =>

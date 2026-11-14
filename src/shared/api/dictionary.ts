@@ -22,6 +22,8 @@ export type DictEntry = {
   viSource: "ai" | "reviewed" | "manual" | null;
   /** Sino-Vietnamese reading of each kanji spelling that has one, e.g. { "以前": "DĨ TIỀN" } */
   hanViet?: Record<string, string>;
+  /** Concrete English picture-search phrases, empty if unpicturable or none written */
+  pictureQueries?: string[];
 };
 
 export type DictKanji = {

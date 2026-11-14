@@ -190,18 +190,30 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, right, leftLang, rightLang, reading, hanViet, entryId, hasJapanese, image]);
 
-  /** What to look for: the English meaning of the chosen suggestion, else whatever box is in English. */
+  /** What to look for: the handwritten picture query or English meaning of the chosen suggestion, else whatever box is in English. */
   const pictureQuery = (): string => {
     const s = picked !== null ? suggestions[picked] : undefined;
+    if (s?.pictureQueries?.[0]) return s.pictureQueries[0];
     if (s?.en) return imageQueryFrom(s.en);
     if (rightLang === "en") return imageQueryFrom(right);
     if (leftLang === "en") return imageQueryFrom(left);
     return "";
   };
-  /** Other things to look for: the chosen suggestion's English meanings. */
+  /** Other things to look for: the chosen suggestion's handwritten picture queries first, then English meanings. */
   const pictureKeywords = (): string[] => {
     const s = picked !== null ? suggestions[picked] : undefined;
-    return s?.en ? imageKeywordsFrom(s.en.split(";")) : [];
+    const fromQueries = s?.pictureQueries ?? [];
+    const fromGloss = s?.en ? imageKeywordsFrom(s.en.split(";")) : [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const q of [...fromQueries, ...fromGloss]) {
+      const k = q.toLowerCase().trim();
+      if (k && !seen.has(k)) {
+        seen.add(k);
+        out.push(q.trim());
+      }
+    }
+    return out.slice(0, 8);
   };
 
   const pictureAi = (): { word: string; reading?: string; meanings: string[] } | undefined => {

@@ -51,6 +51,14 @@ export function imageQueryFrom(meaning: string): string {
   return phrase(meaning.split(/[;,/]/)[0] ?? "");
 }
 
+/** The primary search query for a dictionary entry: uses handwritten pictureQueries first, then gloss. */
+export function imageQueryFromEntry(entry: DictEntry): string {
+  if (entry.pictureQueries && entry.pictureQueries.length > 0 && entry.pictureQueries[0]) {
+    return entry.pictureQueries[0];
+  }
+  return imageQueryFrom(entry.senses[0]?.glosses[0] ?? "");
+}
+
 const MAX_KEYWORDS = 8;
 const MAX_KEYWORD = 40;
 
@@ -73,11 +81,27 @@ export function imageKeywordsFrom(meanings: string[], opts: { verb?: boolean } =
   return out.slice(0, MAX_KEYWORDS);
 }
 
-/** Keywords from a dictionary entry: every English meaning of every sense. */
+/** Keywords from a dictionary entry: pictureQueries first, then English meanings of every sense. */
 export function imageKeywordsFromEntry(entry: DictEntry): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (k: string) => {
+    const key = k.toLowerCase().trim();
+    if (!key || key.length > MAX_KEYWORD || seen.has(key)) return;
+    seen.add(key);
+    out.push(k.trim());
+  };
+
+  if (entry.pictureQueries) {
+    for (const q of entry.pictureQueries) add(q);
+  }
+
   const verb = entry.senses.some((s) => s.pos.some((p) => /^v/.test(p)));
-  return imageKeywordsFrom(
+  const glossKeywords = imageKeywordsFrom(
     entry.senses.flatMap((s) => s.glosses),
     { verb },
   );
+  for (const k of glossKeywords) add(k);
+
+  return out.slice(0, MAX_KEYWORDS);
 }

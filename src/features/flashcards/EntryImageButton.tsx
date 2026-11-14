@@ -3,7 +3,7 @@ import type { DictEntry } from "../../shared/api/dictionary";
 import type { ImageHit } from "../../shared/api/images";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
-import { imageKeywordsFromEntry, imageQueryFrom, toCardImage } from "./cardImage";
+import { imageKeywordsFromEntry, imageQueryFromEntry, toCardImage } from "./cardImage";
 import { placeEntry, targetDeckId } from "./entryCard";
 import { useFt } from "./flashText";
 import { ImagePicker } from "./ImagePicker";
@@ -56,7 +56,7 @@ export function EntryImageButton({ entry, meaning }: { entry: DictEntry; meaning
       </button>
       {open && (
         <ImagePicker
-          initialQuery={imageQueryFrom(suggestion.en)}
+          initialQuery={imageQueryFromEntry(entry)}
           word={suggestion.ja}
           suggestions={imageKeywordsFromEntry(entry)}
           current={card?.image}

@@ -11,7 +11,7 @@ import { ImagePicker, resetAiSessionForTests } from "./ImagePicker";
 import { ImagesPicker } from "./ImagesPicker";
 import { SideView } from "./SideView";
 import { StudyModes } from "./StudyModes";
-import { creditText, imageKeywordsFrom, imageKeywordsFromEntry, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
+import { creditText, imageKeywordsFrom, imageKeywordsFromEntry, imageQueryFrom, imageQueryFromEntry, isAllowedImage, toCardImage } from "./cardImage";
 import { showImages } from "./prefs";
 import { sidesOf } from "./quiz";
 import { addCard, createDeck, importSharedDeck, readState, updateCard } from "./store";
@@ -118,6 +118,23 @@ describe("picture references on the page", () => {
     expect(imageKeywordsFromEntry(TABERU)).toEqual(["eat", "have a meal", "person eat"]);
     const noun = { ...TABERU, senses: [{ ...TABERU.senses[0]!, pos: ["n"], glosses: ["dog"] }, { ...TABERU.senses[0]!, pos: ["n"], glosses: ["canine", "dog"] }] };
     expect(imageKeywordsFromEntry(noun)).toEqual(["dog", "canine"]);
+  });
+
+  it("prioritizes handwritten pictureQueries in imageQueryFromEntry and imageKeywordsFromEntry", () => {
+    const entryWithPics: DictEntry = {
+      ...TABERU,
+      pictureQueries: ["person eating lunch", "bowl of rice and chopsticks"],
+    };
+    expect(imageQueryFromEntry(entryWithPics)).toBe("person eating lunch");
+    expect(imageQueryFromEntry(TABERU)).toBe("eat");
+
+    expect(imageKeywordsFromEntry(entryWithPics)).toEqual([
+      "person eating lunch",
+      "bowl of rice and chopsticks",
+      "eat",
+      "have a meal",
+      "person eat",
+    ]);
   });
 });
 
@@ -491,6 +508,20 @@ describe("EntryImageButton", () => {
     expect(cards[0]).toMatchObject({ term: "食べる", reading: "たべる", definition: "ăn", definitionLang: "vi", entryId: 1, image: OV("aaa") });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(button("Đã thêm vào bộ “Từ của tôi” kèm ảnh")).toBeTruthy();
+  });
+
+  it("searches with pictureQueries[0] when entry has pictureQueries", async () => {
+    answer();
+    const entryWithPics: DictEntry = {
+      ...TABERU,
+      pictureQueries: ["person eating lunch", "bowl of rice and chopsticks"],
+    };
+    render(wrap(<EntryImageButton entry={entryWithPics} meaning="vi" />));
+    fireEvent.click(button());
+    expect(searchImages).toHaveBeenCalledWith("person eating lunch", expect.anything());
+    const keywords = within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent);
+    expect(keywords[0]).toBe("person eating lunch");
+    expect(keywords[1]).toBe("bowl of rice and chopsticks");
   });
 
   it("gives the picture to the card the word already has instead of adding a second one", async () => {
