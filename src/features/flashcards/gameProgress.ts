@@ -51,6 +51,14 @@ export function loadGame<T>(deckId: string, game: string, accept: (data: unknown
   }
 }
 
+/** Is there a game of this deck left half way (and, when `direction` is given, one asked the same way)? */
+export function hasSavedGame(deckId: string, game: string, direction?: string, now = Date.now()): boolean {
+  const e = read()[keyOf(deckId, game)];
+  if (!e || typeof e.at !== "number" || now - e.at > MAX_AGE_MS || !isRecordLike(e.data)) return false;
+  return direction === undefined || e.data.direction === direction;
+}
+const isRecordLike = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
 export function clearGame(deckId: string, game: string): void {
   const store = read();
   const k = keyOf(deckId, game);

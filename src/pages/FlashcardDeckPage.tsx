@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DirectionPicker, HanVietPicker, HiraganaPicker } from "../features/flashcards/DirectionPicker";
 import { useFt } from "../features/flashcards/flashText";
+import { hasSavedGame } from "../features/flashcards/gameProgress";
+import { resumeLearn } from "../features/flashcards/learnProgress";
 import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
 import { cardsOf, deckStats, deleteDeck, isReviewDue, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
@@ -124,8 +126,15 @@ export function FlashcardDeckPage() {
         <ul className="fc-modes">
           {MODES.map((m) => {
             const ok = cards.length >= m.min;
+            // a round or game left half way: say so on the card
+            const resumable = ok && (m.id === "learn" ? resumeLearn(deck.id, cards) !== null : hasSavedGame(deck.id, m.id, direction));
             const body = (
               <>
+                {resumable && (
+                  <span className="fc-mode__resume" title={ft("mode.resumeHint")}>
+                    <Icon name="play" size={12} /> {ft("mode.resume")}
+                  </span>
+                )}
                 <Icon name={m.icon} size={26} />
                 <span className="fc-mode__title">{ft(`mode.${m.id}`)}</span>
                 <span className="fc-mode__sub">{ok ? ft(`mode.${m.id}.sub`) : fmt(ft("deck.needCards"), { n: m.min })}</span>

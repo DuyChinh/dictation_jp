@@ -5,6 +5,8 @@ import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { FlashcardCreatePage } from "../../pages/FlashcardCreatePage";
 import { FlashcardDeckPage } from "../../pages/FlashcardDeckPage";
 import { addCard, cardsOf, createDeck, liveCards, readState } from "./store";
+import { saveGame } from "./gameProgress";
+import { loadDirection } from "./prefs";
 
 const searchDictionary = vi.fn();
 vi.mock("../../shared/api/dictionary", async (orig) => ({
@@ -53,6 +55,26 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+describe("the deck page's tag for a game left half way", () => {
+  const fill = () => ["犬", "猫", "水", "火", "木", "金"].forEach((t, i) => addCard({ deckId: "deck1", term: t, definition: `nghĩa ${i}`, ...base }));
+
+  it("tags the game that was left half way, and only that one", () => {
+    fill();
+    saveGame("deck1", "blitz", { direction: loadDirection(), state: {}, left: 30000 });
+    open(["/flashcards/deck1"]);
+    const tags = screen.getAllByText("Chơi tiếp");
+    expect(tags).toHaveLength(1);
+    expect(tags[0]!.closest("a")!.textContent).toContain("Đua thời gian");
+  });
+
+  it("shows no tag when nothing is left half way, or the game was asked the other way round", () => {
+    fill();
+    saveGame("deck1", "match", { direction: loadDirection() === "term" ? "definition" : "term", tiles: [] });
+    open(["/flashcards/deck1"]);
+    expect(screen.queryByText("Chơi tiếp")).toBeNull();
+  });
 });
 
 describe("the create page's count of added cards", () => {
