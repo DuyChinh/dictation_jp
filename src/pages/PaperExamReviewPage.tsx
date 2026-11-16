@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PassageStage } from "../features/paper/PassageStage";
+import { underlinesOf } from "../features/paper/underline";
 import { PaperItemCard } from "../features/paper/PaperItemCard";
 import { usePaperPractice } from "../features/paper/usePaperPractice";
 import type { ExamItemResult, PaperItemResult } from "../shared/api/paper";
@@ -179,6 +180,7 @@ export function PaperExamReviewPage() {
                   lessonId={lessonId}
                   passage={passage}
                   evidenceIds={new Set(evidence[item!.id] ?? [])}
+                  underlines={underlinesOf(paper?.items.filter((i) => i.passage_id === passage.id) ?? [])}
                   drillReady
                   statuses={sentences}
                   onSentenceStatus={(id, status) => setSentences(saveSentence(lessonId, id, status).sentences)}

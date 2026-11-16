@@ -13,6 +13,7 @@ import {
 import { saveAnswer } from "../../shared/storage/paperProgressStore";
 import { Icon } from "../../shared/ui/Icon";
 import { PassageView } from "./PassageView";
+import { underlinesOf } from "./underline";
 import { mondaiLabel, mondaiNo, scopeTitle, splitTarget } from "./paperLabels";
 
 type Props = {
@@ -321,6 +322,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
                   onToggleTranslation={() => undefined}
                   onOpenDrill={() => undefined}
                   plain
+                  underlines={underlinesOf(paper.items.filter((i) => i.passage_id === passage.id))}
                 />
               </div>
               <div className="paper-split__side">{card}</div>

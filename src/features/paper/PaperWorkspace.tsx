@@ -10,6 +10,7 @@ import {
 } from "../../shared/storage/paperProgressStore";
 import { setLastMondai } from "../../shared/storage/lastMondaiStore";
 import { PassageStage } from "./PassageStage";
+import { underlinesOf } from "./underline";
 import { PaperItemCard } from "./PaperItemCard";
 import { mondaiLabel, mondaiNo } from "./paperLabels";
 import { useSyncedPaperProgress } from "./useSyncedPaperProgress";
@@ -198,6 +199,7 @@ export function PaperWorkspace({ lessonId, paper, part }: Props) {
           evidenceIds={evidenceIds}
           drillReady={passage.kind !== "cloze" || passageItems.every((i) => progress.answers[i.id])}
           statuses={progress.sentences}
+          underlines={underlinesOf(passageItems)}
           onSentenceStatus={onSentenceStatus}
         >
           {card}

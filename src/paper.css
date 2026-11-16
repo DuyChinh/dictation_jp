@@ -262,6 +262,7 @@
 .paper-text { display: flex; flex-direction: column; gap: 4px; }
 .paper-text p { margin: 0 0 8px; font-size: 16px; line-height: 2.1; text-indent: 1em; text-align: justify; }
 .paper-text__label { font-weight: 700; text-indent: 0 !important; color: var(--primary-color); font-size: 15px !important; }
+.paper-text .paper-underline { text-decoration: none; border-bottom: 2.5px solid var(--primary-color); padding-bottom: 1px; }
 .paper-text .is-evidence, .paper-bilingual .is-evidence > .jp { background: var(--acc-soft); border-radius: 4px; box-shadow: 0 0 0 3px var(--acc-soft); }
 .paper-layout {
   margin: 0; padding: 16px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-2);

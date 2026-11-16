@@ -4,6 +4,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { LookupLayer } from "../dictionary/LookupLayer";
 import { splitLayout } from "./layoutLines";
+import { underlinePieces } from "./underline";
 
 type Props = {
   passage: PaperPassage;
@@ -20,6 +21,8 @@ type Props = {
   onOpenDrill: () => void;
   /** Exam room: just the text, with no translation or drill. */
   plain?: boolean;
+  /** Phrases the questions about this passage ask about; each is underlined where it first occurs, as in the exam booklet. */
+  underlines?: string[];
 };
 
 type Block = { label?: string; paragraphs: PaperPassage["sentences"][] };
@@ -72,12 +75,14 @@ export function PassageView({
   onToggleTranslation,
   onOpenDrill,
   plain = false,
+  underlines = [],
 }: Props) {
   const { t } = useUiLanguage();
   const { blocks, footnotes } = layoutBlocks(passage);
   const viOf = new Map(translation?.sentences.map((s) => [s.id, s.vi]) ?? []);
   const noteViOf = new Map(translation?.sentences.map((s) => [s.id, s.notes_vi]) ?? []);
   const evidence = passage.sentences.filter((s) => evidenceIds.has(s.id));
+  const pendingUnderlines = new Set(underlines);
   return (
     <section className="paper-passage" aria-label={t("paper.passage")}>
       <Sheet plain={plain}>
@@ -134,15 +139,18 @@ export function PassageView({
           blocks.map((b, bi) => (
             <div key={bi} className="paper-text">
               {b.label && <p className="paper-text__label">{b.label}</p>}
-              {b.paragraphs.map((p, pi) => (
-                <p key={pi} className="jp" lang="ja">
-                  {p.map((s) => (
-                    <span key={s.id} className={evidenceIds.has(s.id) ? "is-evidence" : undefined}>
-                      {s.text}
-                    </span>
-                  ))}
-                </p>
-              ))}
+              {b.paragraphs.map((p, pi) => {
+                const pieces = underlinePieces(p, pendingUnderlines);
+                return (
+                  <p key={pi} className="jp" lang="ja">
+                    {p.map((s, si) => (
+                      <span key={s.id} className={evidenceIds.has(s.id) ? "is-evidence" : undefined}>
+                        {pieces[si]!.map((piece, k) => (piece.mark ? <u key={k} className="paper-underline">{piece.text}</u> : piece.text))}
+                      </span>
+                    ))}
+                  </p>
+                );
+              })}
             </div>
           ))
         )}

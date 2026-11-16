@@ -14,13 +14,15 @@ type Props = {
   evidenceIds: Set<string>;
   drillReady: boolean;
   statuses: Record<string, SentenceStatus>;
+  /** Phrases the questions ask about, underlined in the passage. */
+  underlines?: string[];
   onSentenceStatus: (sentenceId: string, status: SentenceStatus) => void;
   /** The question(s) of this passage, shown beside it. */
   children: ReactNode;
 };
 
 /** A passage on the left; its question and the translation drill on the right. */
-export function PassageStage({ lessonId, passage, evidenceIds, drillReady, statuses, onSentenceStatus, children }: Props) {
+export function PassageStage({ lessonId, passage, evidenceIds, drillReady, statuses, underlines, onSentenceStatus, children }: Props) {
   const [translation, setTranslation] = useState<PassageTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [drillOpen, setDrillOpen] = useState(false);
@@ -74,6 +76,7 @@ export function PassageStage({ lessonId, passage, evidenceIds, drillReady, statu
           drilling={drillOpen}
           onToggleTranslation={() => void toggleTranslation()}
           onOpenDrill={() => void openDrill()}
+          underlines={underlines}
         />
       </div>
       <div className="paper-split__side">
