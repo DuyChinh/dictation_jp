@@ -284,17 +284,85 @@ export type DropItem = {
   options: Array<{ cardId: string; side: Side }>;
 };
 
+/** The question for one card: its prompt and four choices, the wrong ones drawn from `pool`. */
+export function dropItemFor(card: Card, pool: Card[], direction: Direction, rng: Rng = Math.random): DropItem {
+  const flip = pickFlip(direction, rng);
+  const { prompt } = sidesOf(card, flip);
+  const others = distractors(card, flip, pool, 3, rng);
+  const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
+  return { cardId: card.id, prompt, options };
+}
+
 /** One falling word and the choices below it; the pool supplies the wrong choices. */
 export function buildDropRound(cards: Card[], count: number, direction: Direction, rng: Rng = Math.random): DropItem[] {
   return shuffle(cards, rng)
     .slice(0, count)
-    .map((card) => {
-      const flip = pickFlip(direction, rng);
-      const { prompt } = sidesOf(card, flip);
-      const others = distractors(card, flip, cards, 3, rng);
-      const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
-      return { cardId: card.id, prompt, options };
-    });
+    .map((card) => dropItemFor(card, cards, direction, rng));
+}
+
+/**
+ * How much a card needs practice: high for a word never seen or one that was often wrong, low for one answered right
+ * many times in a row (its Leitner box).
+ */
+export function weakness(card: Card): number {
+  const byBox = [3, 2.5, 2, 1.4, 1, 0.6][Math.min(5, Math.max(0, card.box))] ?? 1;
+  const unseen = card.right + card.wrong === 0 ? 1.2 : 0;
+  return byBox + Math.min(5, card.wrong) * 0.35 + unseen;
+}
+
+/** Every card once, in a random order that tends to put the ones that need practice first (weighted sampling without replacement). */
+export function weakFirstOrder(cards: readonly Card[], rng: Rng = Math.random): Card[] {
+  return cards
+    .map((card) => ({ card, key: Math.pow(Math.max(rng(), 1e-9), 1 / weakness(card)) }))
+    .sort((a, b) => b.key - a.key)
+    .map((x) => x.card);
+}
+
+/** A word answered wrong comes back after this many other questions, and again until it is answered right. */
+export const RETRY_AFTER = 3;
+
+export type QuestionPicker = {
+  /** The next card to ask about. */
+  next: () => Card;
+  /** Tell the picker how the card just asked about was answered. */
+  answered: (cardId: string, correct: boolean) => void;
+};
+
+/**
+ * Chooses what a game asks next, over a deck of any size: every card comes up once per round before any repeats, the
+ * weak ones early, and a word answered wrong is asked again a few questions later until it is answered right. `current`
+ * gives the deck's cards as they are now (answers update their boxes).
+ */
+export function createPicker(current: () => Card[], rng: Rng = Math.random): QuestionPicker {
+  let queue: string[] = [];
+  let last = "";
+  const retry = new Map<string, number>();
+  return {
+    next() {
+      const cards = current();
+      const byId = new Map(cards.map((c) => [c.id, c]));
+      for (const [id, n] of retry) retry.set(id, n - 1);
+      const due = [...retry].find(([id, n]) => n <= 0 && byId.has(id) && id !== last);
+      let id: string;
+      if (due) {
+        retry.delete(due[0]);
+        id = due[0];
+      } else {
+        queue = queue.filter((q) => byId.has(q) && !retry.has(q));
+        if (queue.length === 0) queue = weakFirstOrder(cards, rng).map((c) => c.id).filter((q) => !retry.has(q) || cards.length === 1);
+        if (queue.length === 0) queue = cards.map((c) => c.id);
+        // never the same card twice running, when there is another to ask
+        const at = queue.findIndex((q) => q !== last);
+        id = queue.splice(at < 0 ? 0 : at, 1)[0]!;
+      }
+      last = id;
+      return byId.get(id)!;
+    },
+    answered(cardId, correct) {
+      if (correct) retry.delete(cardId);
+      else retry.set(cardId, RETRY_AFTER + 1);
+    },
+  };
 }
 
 export const DROP_LIVES = 3;

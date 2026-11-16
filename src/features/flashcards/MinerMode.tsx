@@ -48,7 +48,8 @@ import {
 import { playGameSound } from "./gameSound";
 import { SkinArt } from "./MinerSkins";
 import { getBest, submitBest } from "./prefs";
-import { buildDropRound, type DropItem } from "./quiz";
+import { type DropItem } from "./quiz";
+import { useQuestions } from "./useQuestions";
 import { useFt } from "./flashText";
 import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
@@ -290,7 +291,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   const nuggetsRef = useRef<Nugget[]>([]);
   const minerRef = useRef<MinerState>(miner);
   const itemRef = useRef<DropItem | null>(null);
-  const queueRef = useRef<DropItem[]>([]);
+  const questions = useQuestions(cards, direction);
   const pausedRef = useRef(false);
   const deadline = useRef(0);
   const askedAt = useRef(0);
@@ -328,8 +329,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   }
 
   function ask() {
-    if (queueRef.current.length === 0) queueRef.current = buildDropRound(cards, cards.length, direction);
-    const next = queueRef.current.shift()!;
+    const next = questions.next();
     setItem(next);
     setNuggets(nuggetsFor(next, sceneRef.current));
     setCarried(null);
@@ -367,7 +367,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     sceneRef.current = field;
     setScene(field);
     setHighScore(null);
-    queueRef.current = [];
+    questions.reset();
     if (saved.stage === "playing") return beginLevel(saved.miner, Math.max(1000, saved.left));
     timers.current.forEach(clearTimeout);
     timers.current = [];
@@ -386,7 +386,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     sceneRef.current = field;
     setScene(field);
     setHighScore(null);
-    queueRef.current = [];
+    questions.reset();
     beginLevel(startMiner());
   }
 
@@ -408,6 +408,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     if (!picked || !current) return;
     const state = minerRef.current;
     const correct = picked.cardId === current.cardId;
+    questions.answered(current.cardId, correct);
     pausedRef.current = true;
     setFeedback({ correct });
     playFx(correct ? "correct" : "wrong");

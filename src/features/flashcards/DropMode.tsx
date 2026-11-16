@@ -6,9 +6,10 @@ import { Icon } from "../../shared/ui/Icon";
 import { Burst, Pops, SoundToggle, StartButtons, Stars, playFx, usePops, useShake } from "./GameBits";
 import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { getBest, submitBest } from "./prefs";
-import { DROP_LIVES, buildDropRound, comboMultiplier, dropNext, fallSeconds, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
+import { DROP_LIVES, comboMultiplier, dropItemFor, weakFirstOrder, dropNext, fallSeconds, starsForRatio, startDrop, type DropItem, type DropState } from "./quiz";
 import { useFt } from "./flashText";
 import { useBackTo } from "./StudyContext";
+import { recordAnswer } from "./store";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -63,7 +64,8 @@ export function DropMode({ deckId, cards, direction }: Props) {
   }, []);
 
   function play() {
-    const round = buildDropRound(cards, ROUND, direction);
+    // the words that need practice come first
+    const round = weakFirstOrder(cards).slice(0, ROUND).map((card) => dropItemFor(card, cards, direction));
     setItems(round);
     setGame(startDrop(round.length));
     setFeedback(null);
@@ -74,6 +76,7 @@ export function DropMode({ deckId, cards, direction }: Props) {
   function settle(chosen: string | null) {
     if (!item || !game || feedback) return;
     const correct = chosen === item.cardId;
+    recordAnswer(item.cardId, correct);
     setFeedback({ chosen, correct });
     playFx(correct ? "correct" : "wrong");
     if (correct) {

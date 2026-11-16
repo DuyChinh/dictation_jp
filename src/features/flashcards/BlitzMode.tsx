@@ -10,7 +10,6 @@ import {
   BLITZ_PENALTY,
   BLITZ_SECONDS,
   blitzNext,
-  buildDropRound,
   comboMultiplier,
   startBlitz,
   starsForRatio,
@@ -18,6 +17,7 @@ import {
   type DropItem,
 } from "./quiz";
 import { useFt } from "./flashText";
+import { useQuestions } from "./useQuestions";
 import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
@@ -42,7 +42,7 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
   const [left, setLeft] = useState(BLITZ_SECONDS * 1000);
   const [record, setRecord] = useState<{ best: number | null; improved: boolean } | null>(null);
   const deadline = useRef(0);
-  const queue = useRef<DropItem[]>([]);
+  const questions = useQuestions(cards, direction);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const { pops, pop } = usePops();
   const { shaking, shake } = useShake();
@@ -64,7 +64,7 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
   function resume() {
     if (!saved) return;
     clearTimeout(timer.current);
-    queue.current = [];
+    questions.reset();
     deadline.current = Date.now() + saved.left;
     setState(saved.state);
     setLeft(saved.left);
@@ -75,14 +75,13 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
   }
 
   function nextItem() {
-    if (queue.current.length === 0) queue.current = buildDropRound(cards, cards.length, direction);
-    setItem(queue.current.shift()!);
+    setItem(questions.next());
     setFeedback(null);
   }
 
   function start() {
     clearTimeout(timer.current);
-    queue.current = [];
+    questions.reset();
     deadline.current = Date.now() + BLITZ_SECONDS * 1000;
     setState(startBlitz());
     setLeft(BLITZ_SECONDS * 1000);
@@ -120,6 +119,7 @@ export function BlitzMode({ deckId, cards, direction }: Props) {
   function answer(cardId: string) {
     if (!item || feedback || !running) return;
     const correct = cardId === item.cardId;
+    questions.answered(item.cardId, correct);
     const mult = comboMultiplier(state.streak);
     const { state: next, gained } = blitzNext(state, correct);
     setState(next);

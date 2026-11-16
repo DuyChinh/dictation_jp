@@ -26,7 +26,8 @@ import {
   type Lifeline,
 } from "./millionaire";
 import { getBest, loadQuizTimer, saveQuizTimer, submitBest } from "./prefs";
-import { buildDropRound, type DropItem } from "./quiz";
+import { type DropItem } from "./quiz";
+import { useQuestions } from "./useQuestions";
 import { useFt } from "./flashText";
 import { useBackTo } from "./StudyContext";
 import { SideView } from "./SideView";
@@ -140,8 +141,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   const itemRef = useRef<DropItem | null>(null);
   const indexRef = useRef(0);
   const correctRef = useRef(0);
-  const queueRef = useRef<DropItem[]>([]);
-  const lastCard = useRef("");
+  const questions = useQuestions(cards, direction);
   const deadline = useRef(0);
   const pausedAt = useRef(0);
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
@@ -190,8 +190,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     stopAnswerSound();
     timers.current.forEach(clearTimeout);
     timers.current = [];
-    queueRef.current = [];
-    lastCard.current = saved.item.cardId;
+    questions.reset();
     setIndex(saved.index);
     setCorrectCount(saved.correct);
     setUsed(saved.used);
@@ -222,17 +221,9 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   const options = item?.options ?? [];
   const correctIdx = item ? item.options.findIndex((o) => o.cardId === item.cardId) : -1;
 
-  /** The next question's card: from a shuffled round of the deck, never the same card twice running. */
+  /** The next question: every word of the deck once per round, the weak ones early, never the same word twice running. */
   function pullItem(): DropItem {
-    if (queueRef.current.length === 0) queueRef.current = buildDropRound(cards, cards.length, direction);
-    let next = queueRef.current.shift()!;
-    if (next.cardId === lastCard.current && queueRef.current.length > 0) {
-      const swap = queueRef.current.shift()!;
-      queueRef.current.push(next);
-      next = swap;
-    }
-    lastCard.current = next.cardId;
-    return next;
+    return questions.next();
   }
 
   /** Puts up question `number` (1-15), with optional background music. */
@@ -256,8 +247,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     stopAnswerSound();
     timers.current.forEach(clearTimeout);
     timers.current = [];
-    queueRef.current = [];
-    lastCard.current = "";
+    questions.reset();
     setIndex(0);
     setCorrectCount(0);
     setUsed({});
@@ -283,6 +273,7 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     const current = itemRef.current;
     if (!current) return;
     const right = choice !== null && current.options[choice]?.cardId === current.cardId;
+    questions.answered(current.cardId, right);
     setPhase("revealed");
     stopBed();
     if (right) {

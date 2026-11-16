@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildDropRound,
   buildMatchRound,
+  RETRY_AFTER,
   buildTest,
+  createPicker,
   checkAnswer,
   dropNext,
   fallSeconds,
@@ -11,6 +13,8 @@ import {
   matchGroupSizes,
   sidesOf,
   startDrop,
+  weakFirstOrder,
+  weakness,
   toHiragana,
   type Question,
   type TestOptions,
@@ -290,3 +294,72 @@ describe("Sino-Vietnamese reading", () => {
     expect(sidesOf(card("e", "to eat", "ăn", { termLang: "en", hanViet: "X" })).answer.trail).toBeUndefined();
   });
 });
+
+describe("choosing what a game asks", () => {
+  const deck = (n: number, extra: (i: number) => Partial<Card> = () => ({})) =>
+    Array.from({ length: n }, (_, i) => card(`c${i}`, `語${i}`, `nghĩa ${i}`, extra(i)));
+
+  it("rates a word never seen, or often wrong, as needing more practice than one that is well known", () => {
+    expect(weakness(card("a", "a", "a", { box: 0, wrong: 3, right: 1 }))).toBeGreaterThan(weakness(card("b", "b", "b", { box: 5, right: 9 })));
+    expect(weakness(card("a", "a", "a"))).toBeGreaterThan(weakness(card("b", "b", "b", { box: 3, right: 3 })));
+  });
+
+  it("puts the words that need practice first, and keeps every card", () => {
+    const cards = deck(6, (i) => (i < 3 ? { box: 5, right: 9 } : { box: 0, wrong: 4, right: 1 }));
+    const order = weakFirstOrder(cards, () => 0.5).map((c) => c.id);
+    expect(new Set(order)).toEqual(new Set(cards.map((c) => c.id)));
+    expect(order.slice(0, 3).sort()).toEqual(["c3", "c4", "c5"]);
+  });
+
+  it("asks every word once before any repeats, however big the deck", () => {
+    const cards = deck(30);
+    const picker = createPicker(() => cards);
+    const first = Array.from({ length: 30 }, () => picker.next().id);
+    expect(new Set(first).size).toBe(30);
+    for (const id of first) picker.answered(id, true);
+    const second = Array.from({ length: 30 }, () => picker.next().id);
+    expect(new Set(second).size).toBe(30);
+  });
+
+  it("asks a word answered wrong again a few questions later, until it is answered right", () => {
+    const cards = deck(20);
+    const picker = createPicker(() => cards);
+    const missed = picker.next();
+    picker.answered(missed.id, false);
+    const following = Array.from({ length: RETRY_AFTER }, () => picker.next().id);
+    expect(following).not.toContain(missed.id);
+    const back = picker.next();
+    expect(back.id).toBe(missed.id);
+    picker.answered(back.id, false);
+    const later = Array.from({ length: RETRY_AFTER + 1 }, () => picker.next().id);
+    expect(later[RETRY_AFTER]).toBe(missed.id);
+    picker.answered(missed.id, true);
+    const rest = Array.from({ length: 15 }, () => picker.next().id);
+    expect(rest).not.toContain(missed.id);
+  });
+
+  it("never asks the same word twice running when there is another, and copes with a tiny deck", () => {
+    const cards = deck(3);
+    const picker = createPicker(() => cards);
+    let last = "";
+    for (let i = 0; i < 40; i++) {
+      const c = picker.next();
+      expect(c.id).not.toBe(last);
+      last = c.id;
+      picker.answered(c.id, i % 2 === 0);
+    }
+    const one = createPicker(() => deck(1));
+    expect(one.next().id).toBe("c0");
+    expect(one.next().id).toBe("c0");
+  });
+
+  it("forgets a word that was deleted meanwhile", () => {
+    let cards = deck(10);
+    const picker = createPicker(() => cards);
+    const missed = picker.next();
+    picker.answered(missed.id, false);
+    cards = cards.filter((c) => c.id !== missed.id);
+    for (let i = 0; i < 12; i++) expect(picker.next().id).not.toBe(missed.id);
+  });
+});
+
