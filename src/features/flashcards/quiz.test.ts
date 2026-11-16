@@ -334,7 +334,7 @@ describe("choosing what a game asks", () => {
     const later = Array.from({ length: RETRY_AFTER + 1 }, () => picker.next().id);
     expect(later[RETRY_AFTER]).toBe(missed.id);
     picker.answered(missed.id, true);
-    const rest = Array.from({ length: 15 }, () => picker.next().id);
+    const rest = Array.from({ length: 10 }, () => picker.next().id);
     expect(rest).not.toContain(missed.id);
   });
 

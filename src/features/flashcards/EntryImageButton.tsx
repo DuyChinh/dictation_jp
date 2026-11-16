@@ -15,7 +15,7 @@ import "./sync";
 
 /**
  * Next to the "add to flashcards" button of a dictionary entry: opens a box of pictures for the word (searched
- * by its English meaning). Picking one puts the word into the flashcards with that picture, or gives the card
+ * by the word itself, and by its English meaning when that finds nothing). Picking one puts the word into the flashcards with that picture, or gives the card
  * it already has the picture.
  */
 export function EntryImageButton({ entry, meaning }: { entry: DictEntry; meaning: "both" | "vi" | "en" }) {
@@ -56,7 +56,8 @@ export function EntryImageButton({ entry, meaning }: { entry: DictEntry; meaning
       </button>
       {open && (
         <ImagePicker
-          initialQuery={imageQueryFromEntry(entry)}
+          initialQuery={suggestion.ja || imageQueryFromEntry(entry)}
+          fallbackQuery={imageQueryFromEntry(entry)}
           word={suggestion.ja}
           suggestions={imageKeywordsFromEntry(entry)}
           current={card?.image}

@@ -199,6 +199,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     if (leftLang === "en") return imageQueryFrom(left);
     return "";
   };
+  /** The Japanese word itself is looked for first; its English meaning only when that finds nothing. */
+  const pictureWord = (): string => (leftLang === "ja" ? left.trim() : rightLang === "ja" ? right.trim() : "");
   /** Other things to look for: the chosen suggestion's handwritten picture queries first, then English meanings. */
   const pictureKeywords = (): string[] => {
     const s = picked !== null ? suggestions[picked] : undefined;
@@ -358,7 +360,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       </div>
       {picking && (
         <ImagePicker
-          initialQuery={pictureQuery()}
+          initialQuery={pictureWord() || pictureQuery()}
+          fallbackQuery={pictureQuery()}
           word={left.trim() || undefined}
           suggestions={pictureKeywords()}
           current={image}

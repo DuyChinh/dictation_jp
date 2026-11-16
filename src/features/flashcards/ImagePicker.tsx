@@ -16,6 +16,8 @@ export type ImagePickerAi = {
 type Props = {
   /** What to look for to begin with; searched at once when there is something. */
   initialQuery: string;
+  /** Looked for instead when the first search finds nothing (the word's meaning in English). */
+  fallbackQuery?: string;
   /** The word the picture is for, shown as a reminder. */
   word?: string;
   /** Other things to look for, shown as buttons that search at once. */
@@ -49,7 +51,7 @@ export function resetAiSessionForTests() {
  * Openverse and Wikimedia Commons have, pick one. The first search of a word can take several seconds, because
  * Openverse is slow; the box says so rather than looking stuck.
  */
-export function ImagePicker({ initialQuery, word, suggestions, current, ai, onPick, onRemove, onClose }: Props) {
+export function ImagePicker({ initialQuery, fallbackQuery, word, suggestions, current, ai, onPick, onRemove, onClose }: Props) {
   const it = useImgText();
   const [query, setQuery] = useState(initialQuery);
   const [state, setState] = useState<State>({ status: "idle" });
@@ -64,7 +66,7 @@ export function ImagePicker({ initialQuery, word, suggestions, current, ai, onPi
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  function run(q: string) {
+  function run(q: string, fallback?: string) {
     const text = q.trim();
     controller.current?.abort();
     if (!text) {
@@ -75,7 +77,18 @@ export function ImagePicker({ initialQuery, word, suggestions, current, ai, onPi
     controller.current = c;
     setState({ status: "loading" });
     searchImages(text, c.signal)
-      .then((r) => !c.signal.aborted && setState({ status: "done", results: r.results.filter((h) => isAllowedImage(h)), partial: r.partial }))
+      .then((r) => {
+        if (c.signal.aborted) return;
+        const results = r.results.filter((h) => isAllowedImage(h));
+        // nothing for the word itself: look for its English meaning instead
+        const other = fallback?.trim();
+        if (results.length === 0 && other && other.toLowerCase() !== text.toLowerCase()) {
+          setQuery(other);
+          run(other);
+          return;
+        }
+        setState({ status: "done", results, partial: r.partial });
+      })
       .catch(() => !c.signal.aborted && setState({ status: "error" }));
   }
 
@@ -119,7 +132,7 @@ export function ImagePicker({ initialQuery, word, suggestions, current, ai, onPi
   }
 
   useEffect(() => {
-    run(initialQuery);
+    run(initialQuery, fallbackQuery);
     return () => {
       controller.current?.abort();
       aiController.current?.abort();

@@ -248,6 +248,21 @@ describe("ImagePicker", () => {
     expect(screen.getByText("Từ: 犬")).toBeTruthy();
   });
 
+  it("tries the fallback query once when the first finds nothing, and not when it finds something", async () => {
+    answer([]);
+    open({ initialQuery: "犬", fallbackQuery: "dog" });
+    await waitFor(() => expect(searchImages).toHaveBeenLastCalledWith("dog", expect.anything()));
+    expect(searchImages).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/Không có ảnh phù hợp/)).toBeTruthy();
+    cleanup();
+    searchImages.mockReset();
+    answer();
+    open({ initialQuery: "犬", fallbackQuery: "dog" });
+    await screen.findAllByRole("button", { name: /Dùng ảnh này/ });
+    expect(searchImages).toHaveBeenCalledTimes(1);
+    expect(searchImages).toHaveBeenCalledWith("犬", expect.anything());
+  });
+
   it("offers other things to look for as buttons that search at once, marking the one in use", async () => {
     answer();
     open({ suggestions: ["eat", "have a meal", "person eat"], initialQuery: "eat" });
@@ -492,11 +507,12 @@ describe("ImagePicker", () => {
 describe("EntryImageButton", () => {
   const button = (name = "Tìm ảnh cho thẻ") => screen.getByRole("button", { name });
 
-  it("searches by the entry's English meaning, and picking a picture adds the word to the flashcards with it", async () => {
+  it("searches the word itself, and picking a picture adds the word to the flashcards with it", async () => {
     answer();
     render(wrap(<EntryImageButton entry={TABERU} meaning="vi" />));
     fireEvent.click(button());
-    expect(searchImages).toHaveBeenCalledWith("eat", expect.anything());
+    expect(searchImages).toHaveBeenCalledTimes(1);
+    expect(searchImages).toHaveBeenCalledWith("食べる", expect.anything());
     expect(screen.getByText("Từ: 食べる")).toBeTruthy();
     expect(screen.getByRole("button", { name: "AI gợi ý" })).toBeTruthy();
     // and every meaning of the word is offered as another thing to look for
@@ -510,15 +526,25 @@ describe("EntryImageButton", () => {
     expect(button("Đã thêm vào bộ “Từ của tôi” kèm ảnh")).toBeTruthy();
   });
 
-  it("searches with pictureQueries[0] when entry has pictureQueries", async () => {
-    answer();
+  it("looks for the English meaning only when the word itself finds nothing", async () => {
+    searchImages.mockImplementation(async (q: string) => ({ query: q, results: q === "食べる" ? [] : HITS, partial: false }));
+    render(wrap(<EntryImageButton entry={TABERU} meaning="vi" />));
+    fireEvent.click(button());
+    await waitFor(() => expect(searchImages).toHaveBeenLastCalledWith("eat", expect.anything()));
+    expect(searchImages).toHaveBeenCalledTimes(2);
+    expect((screen.getByLabelText(/Tìm ảnh \(từ khóa/) as HTMLInputElement).value).toBe("eat");
+    expect(await screen.findAllByRole("button", { name: /Dùng ảnh này/ })).toHaveLength(3);
+  });
+
+  it("falls back to pictureQueries[0] when entry has pictureQueries", async () => {
+    searchImages.mockImplementation(async (q: string) => ({ query: q, results: q === "食べる" ? [] : HITS, partial: false }));
     const entryWithPics: DictEntry = {
       ...TABERU,
       pictureQueries: ["person eating lunch", "bowl of rice and chopsticks"],
     };
     render(wrap(<EntryImageButton entry={entryWithPics} meaning="vi" />));
     fireEvent.click(button());
-    expect(searchImages).toHaveBeenCalledWith("person eating lunch", expect.anything());
+    await waitFor(() => expect(searchImages).toHaveBeenLastCalledWith("person eating lunch", expect.anything()));
     const keywords = within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent);
     expect(keywords[0]).toBe("person eating lunch");
     expect(keywords[1]).toBe("bowl of rice and chopsticks");
@@ -558,7 +584,7 @@ describe("CardEditor", () => {
     fireEvent.change(screen.getByLabelText("Từ"), { target: { value: "食べる" } });
     await waitFor(() => expect((screen.getByLabelText("Nghĩa") as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Thêm ảnh" }));
-    expect(searchImages).toHaveBeenCalledWith("eat", expect.anything());
+    expect(searchImages).toHaveBeenCalledWith("食べる", expect.anything());
     expect(within(screen.getByRole("group", { name: "Gợi ý từ khóa" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["eat", "have a meal"]);
     fireEvent.click((await screen.findAllByRole("button", { name: /Dùng ảnh này/ }))[0]!);
     expect(screen.getByAltText("Ảnh của thẻ").getAttribute("src")).toBe(OV("aaa").url);
@@ -572,8 +598,10 @@ describe("CardEditor", () => {
     const onSubmit = vi.fn();
     render(wrap(<CardEditor submitLabel="Lưu" onSubmit={onSubmit} initial={{ term: "犬", termLang: "ja", definition: "chó", definitionLang: "vi", image: OV("old") }} />));
     fireEvent.click(screen.getByRole("button", { name: "Đổi ảnh" }));
-    // no English box and no suggestion, so the search starts empty and the learner types what to look for
-    expect(searchImages).not.toHaveBeenCalled();
+    // the word itself is looked for first
+    expect(searchImages).toHaveBeenCalledWith("犬", expect.anything());
+    await screen.findAllByRole("button", { name: /Dùng ảnh này/ });
+    searchImages.mockClear();
     fireEvent.change(screen.getByLabelText(/Tìm ảnh \(từ khóa/), { target: { value: "dog" } });
     fireEvent.submit(screen.getByRole("search"));
     await screen.findAllByRole("button", { name: /Dùng ảnh này/ });
