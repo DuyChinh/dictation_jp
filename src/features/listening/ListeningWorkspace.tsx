@@ -21,6 +21,7 @@ import { fmt } from "../../shared/i18n/format";
 import { buildAttempt } from "./attempts";
 import { Icon } from "../../shared/ui/Icon";
 import { LookupLayer } from "../dictionary/LookupLayer";
+import { SelectionZone } from "../flashcards/SelectionFlashcard";
 import { ChoiceCards } from "./ChoiceCards";
 import { ImageChoiceGrid } from "./ImageChoiceGrid";
 import { DialoguePanel } from "./ResultPanels";
@@ -487,6 +488,7 @@ export function ListeningWorkspace({
               </Link>
             </div>
             {showDialogue && (
+              <SelectionZone>
               <DialoguePanel
                 audio={audio}
                 audioRange={range}
@@ -503,6 +505,7 @@ export function ListeningWorkspace({
                   return r.choices.find((c) => c.id === r.selected_choice_id)?.evidence_segment_ids ?? [];
                 })}
               />
+              </SelectionZone>
             )}
           </section>
         )}

@@ -25,6 +25,7 @@ import { TokenizedInput } from "./TokenizedInput";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { DialoguePanel } from "../listening/ResultPanels";
+import { SelectionZone } from "../flashcards/SelectionFlashcard";
 import { getSegmentTranslation } from "./getSegmentTranslation";
 import { DictationMascot, type MascotMood } from "./DictationMascot";
 import { triggerConfetti, triggerFireworks } from "../../shared/utils/confetti";
@@ -666,14 +667,16 @@ export function DictationWorkspace({
 
         {activeTab === "transcript" ? (
           <section className="panel" style={{ padding: 24 }}>
-            <DialoguePanel
-              audio={audio}
-              audioRange={questionRange}
-              segments={current.question.segments}
-              speakers={practice.speakers}
-              dialogue={current.question.dialogue_translation}
-              lang="vi"
-            />
+            <SelectionZone>
+              <DialoguePanel
+                audio={audio}
+                audioRange={questionRange}
+                segments={current.question.segments}
+                speakers={practice.speakers}
+                dialogue={current.question.dialogue_translation}
+                lang="vi"
+              />
+            </SelectionZone>
           </section>
         ) : (
           <>

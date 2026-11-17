@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { CardEditModal } from "../features/flashcards/CardEditModal";
 import { CardEditor, type CardValue } from "../features/flashcards/CardEditor";
 import { CardRow } from "../features/flashcards/CardRow";
-import { DeckPicker, resolveDeck } from "../features/flashcards/DeckPicker";
+import { DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "../features/flashcards/DeckPicker";
 import { useFt } from "../features/flashcards/flashText";
 import { lastDeckId, saveLastDeck } from "../features/flashcards/prefs";
 import { DEFAULT_DECK_ID, addCard, cardsOf, isDuplicate, liveCards, liveDecks, readState, useFlashcards } from "../features/flashcards/store";
@@ -25,6 +25,8 @@ export function FlashcardCreatePage() {
   const [params] = useSearchParams();
   const { decks, state } = useFlashcards();
   const [deckId, setDeckId] = useState(() => params.get("deck") ?? lastDeckId() ?? DEFAULT_DECK_ID);
+  // the name typed for a deck that is made when the first card is added
+  const [newName, setNewName] = useState("");
   // cards made on this visit, to point out in the list
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Card | null>(null);
@@ -35,7 +37,7 @@ export function FlashcardCreatePage() {
   }, []);
 
   // A remembered deck may be gone; fall back to the first one that exists.
-  const effective = decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
+  const effective = deckId === NEW_DECK || decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
   const deck = decks.find((d) => d.id === effective);
   // cards made on this visit that are still there (one that was deleted again does not count)
   const addedCount = useMemo(() => state.cards.filter((c) => !c.deleted && added.has(c.id)).length, [state, added]);
@@ -44,7 +46,7 @@ export function FlashcardCreatePage() {
   /** Adds a card to the chosen deck (making the default deck if there is none). A repeat of a card already there is skipped. */
   function put(v: CardValue): Card | null {
     const current = readState();
-    const target = resolveDeck(liveDecks(current), deckRef.current, nameRef.current);
+    const target = resolveDeck(liveDecks(current), deckRef.current, nameRef.current, newNameRef.current);
     if (isDuplicate(liveCards(readState()), target, v.term, v.definition)) return null;
     const card = addCard({ deckId: target, ...v, reading: v.reading || undefined, hanViet: v.hanViet || undefined });
     saveLastDeck(target);
@@ -52,9 +54,11 @@ export function FlashcardCreatePage() {
   }
 
   function save(v: CardValue): string | void {
+    if (needsDeckName(effective, newName)) return ft("create.deckNameNeeded");
     const card = put(v);
     if (!card) return ft("create.duplicate");
     setDeckId(card.deckId);
+    setNewName("");
     setAdded((a) => new Set(a).add(card.id));
   }
 
@@ -63,7 +67,9 @@ export function FlashcardCreatePage() {
   const draft = useRef<CardValue | null>(null);
   const deckRef = useRef(effective);
   const nameRef = useRef(ft("deck.default"));
+  const newNameRef = useRef("");
   deckRef.current = effective;
+  newNameRef.current = newName;
   nameRef.current = ft("deck.default");
   const flush = useCallback(() => {
     const v = draft.current;
@@ -120,9 +126,11 @@ export function FlashcardCreatePage() {
             value={effective}
             onChange={(id) => {
               setDeckId(id);
-              saveLastDeck(id);
+              if (id !== NEW_DECK) saveLastDeck(id);
             }}
             label={ft("create.deck")}
+            newName={newName}
+            onNewName={setNewName}
           />
           <CardEditor
             submitLabel={ft("create.add")}

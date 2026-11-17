@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import type { DictEntry } from "../../shared/api/dictionary";
 import { LookupLayer } from "../dictionary/LookupLayer";
+import { SelectionZone } from "./SelectionFlashcard";
 import { createDeck, readState, writeState } from "./store";
 import { syncFlashcards } from "./sync";
 
@@ -87,6 +88,52 @@ describe("select a word to make a flashcard", () => {
     await waitFor(() => expect((dialog.querySelector('input[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect(readState().cards[0]!.deckId).toBe(deck.id);
+  });
+
+  it("makes a new deck when the card is saved, with no button to make it first", async () => {
+    createDeck("Bài 5");
+    render(
+      <MemoryRouter>
+        <UiLanguageProvider>
+          <LookupLayer>
+            <p data-testid="text">食べる</p>
+          </LookupLayer>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    act(() => select(screen.getByTestId("text")));
+    fireEvent.click(await screen.findByRole("button", { name: /Tạo flashcard/ }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect((dialog.querySelector('input[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
+    fireEvent.change(dialog.querySelector(".fc-deckpick select")!, { target: { value: "__new__" } });
+    expect(screen.queryByRole("button", { name: "Tạo bộ" })).toBeNull();
+
+    // a name is needed first, and nothing is made without it
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    expect(await screen.findByText("Nhập tên cho bộ thẻ mới.")).toBeTruthy();
+    expect(readState().decks.filter((d) => !d.deleted)).toHaveLength(1);
+    expect(readState().cards).toHaveLength(0);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Tên bộ thẻ" }), { target: { value: "Bài nghe" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    expect(await screen.findByText("Đã lưu vào “Bài nghe”")).toBeTruthy();
+    const made = readState().decks.find((d) => d.name === "Bài nghe")!;
+    expect(made).toBeTruthy();
+    expect(readState().cards).toEqual([expect.objectContaining({ term: "食べる", deckId: made.id })]);
+  });
+
+  it("offers the button for text in a zone that does not look words up", async () => {
+    render(
+      <MemoryRouter>
+        <UiLanguageProvider>
+          <SelectionZone>
+            <p data-testid="text">振り返って</p>
+          </SelectionZone>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    act(() => select(screen.getByTestId("text")));
+    expect(await screen.findByRole("button", { name: /Tạo flashcard/ })).toBeTruthy();
   });
 
   it("goes away when the selection is cleared", async () => {

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { CardEditor, type CardValue } from "./CardEditor";
-import { DeckPicker, resolveDeck } from "./DeckPicker";
+import { DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "./DeckPicker";
 import { useFt } from "./flashText";
 import { lastDeckId, loadRightLang, saveLastDeck } from "./prefs";
 import { DEFAULT_DECK_ID, addCard, isDuplicate, useFlashcards } from "./store";
@@ -29,6 +29,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
   const [picked, setPicked] = useState<Picked | null>(null);
   const [open, setOpen] = useState(false);
   const [deckId, setDeckId] = useState(() => lastDeckId() ?? DEFAULT_DECK_ID);
+  const [newName, setNewName] = useState("");
   const [saved, setSaved] = useState<{ deckId: string; deckName: string } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -117,18 +118,20 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
 
   if (!picked) return null;
 
-  const effectiveDeck = decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
+  const effectiveDeck = deckId === NEW_DECK || decks.some((d) => d.id === deckId) ? deckId : (decks[0]?.id ?? DEFAULT_DECK_ID);
   const vw = document.documentElement.clientWidth;
   const left = Math.min(Math.max(8, picked.rect.left), Math.max(8, vw - (open ? PANEL_WIDTH : 190) - 8));
   const top = picked.rect.bottom + 8;
 
   function save(v: CardValue): string | void {
-    const target = resolveDeck(decks, effectiveDeck, ft("deck.default"));
+    if (needsDeckName(effectiveDeck, newName)) return ft("create.deckNameNeeded");
+    const target = resolveDeck(decks, effectiveDeck, ft("deck.default"), newName);
     if (isDuplicate(cards, target, v.term, v.definition)) return ft("create.duplicate");
     addCard({ deckId: target, ...v, reading: v.reading || undefined, hanViet: v.hanViet || undefined });
     saveLastDeck(target);
     setDeckId(target);
-    const name = decks.find((d) => d.id === target)?.name ?? ft("deck.default");
+    setNewName("");
+    const name = effectiveDeck === NEW_DECK ? newName.trim() : (decks.find((d) => d.id === target)?.name ?? ft("deck.default"));
     setSaved({ deckId: target, deckName: name });
   }
 
@@ -158,7 +161,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
         ) : (
           <>
             <h2 className="fc-selpanel__title">{ft("select.title")}</h2>
-            <DeckPicker decks={decks} value={effectiveDeck} onChange={setDeckId} label={ft("select.deck")} />
+            <DeckPicker decks={decks} value={effectiveDeck} onChange={setDeckId} label={ft("select.deck")} newName={newName} onNewName={setNewName} />
             <CardEditor
               compact
               initial={{
@@ -188,5 +191,16 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
       </button>
     ),
     document.body,
+  );
+}
+
+/** A block of text where selecting a word offers "Create flashcard", without looking words up when they are clicked. */
+export function SelectionZone({ children, className }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div className={className} ref={ref}>
+      {children}
+      <SelectionFlashcard containerRef={ref} />
+    </div>
   );
 }
