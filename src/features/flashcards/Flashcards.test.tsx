@@ -129,6 +129,19 @@ describe("CardEditor", () => {
     expect((screen.getByLabelText("Nghĩa") as HTMLInputElement).value).toBe("ăn");
   });
 
+  it("replaces kana typed on the left with the kanji of the chosen suggestion, without searching again", async () => {
+    search([TABERU]);
+    render(wrap(<CardEditor submitLabel="Lưu" onSubmit={() => undefined} />));
+    fireEvent.change(screen.getByLabelText("Từ"), { target: { value: "たべる" } });
+    await waitFor(() => expect(screen.getByText("Gợi ý từ từ điển")).toBeTruthy());
+    const calls = searchDictionary.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: /食べる/ }));
+    expect((screen.getByLabelText("Từ") as HTMLInputElement).value).toBe("食べる");
+    await new Promise((r) => setTimeout(r, 400));
+    expect(searchDictionary.mock.calls.length).toBe(calls);
+    expect(screen.getByRole("button", { name: /食べる/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("looks up Vietnamese text and offers the Japanese word on the right", async () => {
     search([TABERU]);
     render(wrap(<CardEditor submitLabel="Lưu" onSubmit={() => undefined} initial={{ term: "ăn", termLang: "vi", definitionLang: "ja" }} />));

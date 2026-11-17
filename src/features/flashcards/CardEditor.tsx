@@ -69,6 +69,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   // Once the learner writes in the right box, lookups stop overwriting it.
   const rightTouched = useRef(Boolean(initial?.definition));
   const leftRef = useRef<HTMLInputElement>(null);
+  // The left box text a picked suggestion put there itself: no need to look that up again.
+  const skipSearchFor = useRef<string | null>(null);
   const rightLangRef = useRef(rightLang);
   rightLangRef.current = rightLang;
   const hasJapanese = leftLang === "ja" || rightLang === "ja";
@@ -81,9 +83,23 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     setHanViet(s.hanViet);
   }
 
+  /** Choosing a suggestion by hand: fill the right box and swap the typed kana for the dictionary's own spelling. */
+  function choose(s: Suggestion, index: number) {
+    rightTouched.current = false;
+    apply(s, index);
+    if (leftLang === "ja" && s.ja && s.ja !== left.trim()) {
+      skipSearchFor.current = s.ja;
+      setLeft(s.ja);
+    }
+  }
+
   // Look the left box up as the learner types.
   useEffect(() => {
     const q = left.trim();
+    if (q && skipSearchFor.current === q) {
+      skipSearchFor.current = null;
+      return;
+    }
     if (!q) {
       setSuggestions([]);
       setPicked(null);
@@ -261,6 +277,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
             className={`fc-input${leftLang === "ja" ? " jp" : ""}`}
             value={left}
             onChange={(e) => {
+              skipSearchFor.current = null;
               setLeft(e.target.value);
               setEntryId(undefined);
               setMessage("");
@@ -392,13 +409,21 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
             <ul className="fc-suggest__list">
               {suggestions.map((s, i) => (
                 <li key={s.entryId}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className={`fc-suggest__item${picked === i ? " is-on" : ""}`}
                     aria-pressed={picked === i}
-                    onClick={() => {
-                      rightTouched.current = false;
-                      apply(s, i);
+                    onClick={(e) => {
+                      // dragging over the text to copy it is not a pick
+                      const sel = window.getSelection();
+                      if (sel && !sel.isCollapsed && e.currentTarget.contains(sel.anchorNode)) return;
+                      choose(s, i);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                      e.preventDefault();
+                      choose(s, i);
                     }}
                   >
                     <span className={`fc-suggest__main${leftLang === "ja" ? " jp" : ""}`} lang={leftLang === "ja" ? "ja" : undefined}>
@@ -411,7 +436,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
                       {isFallback(s, rightLang) && <em title={ft("editor.noVi")}> EN</em>}
                     </span>
                     {s.jlpt && <span className="fc-suggest__jlpt">N{s.jlpt}</span>}
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>
