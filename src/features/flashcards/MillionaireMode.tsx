@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { awardMillionairePoints } from "../../shared/api/leaderboard";
 import { Icon } from "../../shared/ui/Icon";
 import { triggerConfetti } from "../../shared/utils/confetti";
 import { MusicToggle, SoundToggle, StartButtons, Stars, useShake } from "./GameBits";
 import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { playGameSound, prepareAnswerSounds, startBed, startResultMusic, stopAnswerSound, stopBed, stopResultMusic, tightenBed } from "./gameSound";
+import { MillionaireReward } from "./MillionaireReward";
 import { useMillText } from "./millionaireText";
 import {
   LIFELINES,
@@ -137,6 +139,9 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
   const [end, setEnd] = useState<End | null>(null);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [record, setRecord] = useState<{ best: number | null; improved: boolean } | null>(null);
+  // ranking points this game earned for a signed-in learner; the ticket drops an answer that comes after a new game began
+  const [reward, setReward] = useState(0);
+  const awardTicket = useRef(0);
 
   const itemRef = useRef<DropItem | null>(null);
   const indexRef = useRef(0);
@@ -253,6 +258,8 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     setUsed({});
     setEnd(null);
     setRecord(null);
+    setReward(0);
+    awardTicket.current++;
     setMilestone(null);
     setStage("playing");
     loadQuestion(1);
@@ -266,6 +273,13 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
     stopBed();
     startResultMusic();
     if (prize > 0) triggerConfetti({ particleCount: reason === "win" ? 200 : 70 });
+    // a signed-in learner earns ranking points: a million of the prize is a point
+    if (prize > 0 && localStorage.getItem("token")) {
+      const ticket = ++awardTicket.current;
+      awardMillionairePoints(prize)
+        .then((gained) => ticket === awardTicket.current && setReward(gained))
+        .catch(() => undefined);
+    }
   }
 
   /** Shows whether the answer was right, then climbs or ends. */
@@ -447,11 +461,12 @@ export function MillionaireMode({ deckId, cards, direction }: Props) {
           <span><Icon name="sparkles" size={16} /> {ft("mill.title")}</span>
           <div className="fc-mil-result__sound"><span>{mt("result.music")}</span><SoundToggle /></div>
         </div>
-        <div className="fc-mil-result__trophy" aria-hidden="true"><Icon name={end.reason === "win" ? "crown" : "trophy"} size={64} /></div>
+        <div className="fc-mil-result__trophy" aria-hidden="true"><Icon name="millionaire" size={104} /></div>
         <Stars count={millionaireStars(end.correct)} />
         <h2>{title}</h2>
         <p className="fc-mil-result__label">{mt("result.prize")}</p>
         <p className="fc-result__big tabular">{money(end.prize)}</p>
+        {reward > 0 && <MillionaireReward points={reward} />}
         <p className="fc-result__score">{fmt(ft("mill.takeHome"), { prize: money(end.prize) })}</p>
         <div className="fc-mil-result__progress" aria-hidden="true">
           {PRIZES.map((_, i) => <span key={i} className={i < end.correct ? "is-done" : ""} />)}

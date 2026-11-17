@@ -61,3 +61,18 @@ export async function fetchMyScore(): Promise<MyScore> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as MyScore;
 }
+
+/**
+ * Points for a finished game of "Who wants to be a millionaire" (a million of the prize is a point). Resolves to
+ * what was really added, which can be less than the game is worth once the day's limit is reached.
+ */
+export async function awardMillionairePoints(prize: number): Promise<number> {
+  const res = await fetch(apiUrl("/api/leaderboard/game"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ game: "millionaire", prize }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const body = (await res.json()) as { gained?: unknown };
+  return typeof body.gained === "number" && body.gained > 0 ? body.gained : 0;
+}

@@ -288,10 +288,20 @@ describe("Sino-Vietnamese reading", () => {
     expect(sidesOf(buy).prompt.trail).toBeUndefined();
     expect(sidesOf(buy, true).prompt.trail).toBeUndefined();
   });
-  it("is left out of choices, and of cards with no Japanese in them", async () => {
-    const { choiceSide } = await import("./quiz");
-    expect(choiceSide(sidesOf(buy).answer).trail).toBeUndefined();
+  it("is left out of cards with no Japanese in them", () => {
     expect(sidesOf(card("e", "to eat", "ăn", { termLang: "en", hanViet: "X" })).answer.trail).toBeUndefined();
+  });
+
+  it("stays with the Japanese word in the games, as the question or as a choice", async () => {
+    const { choiceSide, gameSides } = await import("./quiz");
+    // asked by the word: it is under the question, and the Vietnamese choices carry none
+    expect(gameSides(buy).prompt).toMatchObject({ text: "購入", trail: "CẤU NHẬP" });
+    expect(gameSides(buy).answer.trail).toBeUndefined();
+    // asked by the meaning: each Japanese choice shows its own
+    expect(gameSides(buy, true).prompt.trail).toBeUndefined();
+    expect(choiceSide(gameSides(buy, true).answer)).toMatchObject({ text: "購入", trail: "CẤU NHẬP", showReading: false });
+    const q = buildTest([buy, card("d", "犬", "chó", { hanViet: "KHUYỂN" })], { count: 2, direction: "definition", kinds: { mc: true, tf: false, write: false, match: false } }, seeded());
+    for (const x of q) if (x.kind === "mc") for (const o of x.options) expect(o.side.trail).toBe(o.cardId === "b" ? "CẤU NHẬP" : "KHUYỂN");
   });
 });
 

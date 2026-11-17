@@ -81,9 +81,38 @@
 .fc-mil-result__top { display: flex; align-items: center; justify-content: space-between; align-self: stretch; gap: 12px; color: #c2b9d4; font-size: 12px; }
 .fc-mil-result__top > span, .fc-mil-result__sound { display: inline-flex; align-items: center; gap: 8px; }
 .fc-mil-result__sound .fc-sound { margin: 0; color: #e0d5f5; }
-.fc-mil-result__trophy { display: grid; place-items: center; width: clamp(56px, 9dvh, 84px); height: clamp(56px, 9dvh, 84px); margin-top: 2px; color: #ffdc8a; border: 1px solid #ffd48360; border-radius: 50%;
-  background: radial-gradient(circle at 35% 20%, #ffe5a32e, #e0ae4c08); box-shadow: 0 0 0 8px #e5b75606, 0 0 60px #e0ae4c1a; }
-.fc-mil-result__trophy svg { width: 55%; height: 55%; }
+.fc-mil-result__trophy { position: relative; display: grid; place-items: center; width: clamp(64px, 12dvh, 108px); height: clamp(64px, 12dvh, 108px); margin-top: 2px; }
+.fc-mil-result__trophy::before { content: ""; position: absolute; inset: -55%; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, #ffdc8a2e 0deg 9deg, transparent 10deg 30deg); mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 68%); animation: fc-mil-spin 24s linear infinite; }
+.fc-mil-result__trophy::after { content: ""; position: absolute; inset: -6%; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #ffd88a66, #e0ae4c14 55%, transparent 72%); animation: fc-mil-glow 2.6s ease-in-out infinite; }
+.fc-mil-result__trophy .icon-logo { width: 100%; height: 100%; filter: drop-shadow(0 6px 22px #ffd48355); animation: fc-mil-emblem 0.9s cubic-bezier(.2,1.4,.4,1) both, fc-mil-float 3.2s ease-in-out 0.9s infinite; }
+.fc-mil-result.is-winner .fc-mil-result__trophy .icon-logo { filter: drop-shadow(0 6px 28px #ffd483aa); }
+/* the stars, prize and reward arrive one after another */
+.fc-mil-result .fc-stars svg { animation: fc-mil-pop 0.5s cubic-bezier(.2,1.5,.4,1) both; }
+.fc-mil-result .fc-stars svg:nth-child(2) { animation-delay: 0.18s; }
+.fc-mil-result .fc-stars svg:nth-child(3) { animation-delay: 0.36s; }
+.fc-mil-result h2 { animation: fc-mil-rise 0.6s ease 0.25s both; }
+.fc-mil-result .fc-result__big { background: linear-gradient(100deg, #ffd27a 20%, #fff4cf 45%, #ffd27a 70%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  animation: fc-mil-rise 0.7s ease 0.4s both, fc-mil-shine 3.4s ease-in-out 1.2s infinite; }
+.fc-mil-reward { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; padding: 5px 16px 5px 12px; color: #2c1c08; font-size: 13px; font-weight: 700;
+  background: linear-gradient(120deg, #ffe9b3, #f0bd62); border-radius: 99px; box-shadow: 0 4px 22px #f0bd6244, inset 0 1px #fff8; animation: fc-mil-reward-in 0.6s cubic-bezier(.2,1.4,.4,1) 0.9s both; }
+.fc-mil-reward strong { min-width: 3ch; text-align: right; font-size: 20px; line-height: 1; letter-spacing: -0.02em; }
+.fc-mil-reward.is-landed { opacity: 0.7; transform: scale(0.96); transition: opacity 0.4s, transform 0.4s; }
+.fc-mil-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 4px 12px; color: #2c1c08; font-size: 22px; font-weight: 800; line-height: 1.1; background: linear-gradient(120deg, #ffe9b3, #f0bd62); border-radius: 99px; box-shadow: 0 6px 30px #f0bd6288; }
+@keyframes fc-mil-spin { to { transform: rotate(360deg); } }
+@keyframes fc-mil-glow { 0%, 100% { opacity: 0.65; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes fc-mil-emblem { from { opacity: 0; transform: scale(0.3) rotate(-14deg); } to { opacity: 1; transform: none; } }
+@keyframes fc-mil-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes fc-mil-pop { from { opacity: 0; transform: scale(0) rotate(-40deg); } to { opacity: 1; transform: none; } }
+@keyframes fc-mil-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fc-mil-shine { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+@keyframes fc-mil-reward-in { from { opacity: 0; transform: translateY(8px) scale(0.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fc-mil-result__trophy::before, .fc-mil-result__trophy::after, .fc-mil-result__trophy .icon-logo, .fc-mil-result .fc-stars svg, .fc-mil-result h2,
+  .fc-mil-result .fc-result__big, .fc-mil-reward { animation: none; }
+}
 .fc-mil-result .fc-stars svg { width: 26px; height: 26px; }
 .fc-mil-result h2 { margin: 0; max-width: 32ch; color: #faf6ff; font-size: clamp(20px, 3.4dvh, 30px); letter-spacing: -0.03em; line-height: 1.25; }
 .fc-mil-result__label { margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #c4b9d4; }

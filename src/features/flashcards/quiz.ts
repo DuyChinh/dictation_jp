@@ -39,8 +39,19 @@ function plainSides(card: Card, flip: boolean): { prompt: Side; answer: Side } {
   return { prompt, answer };
 }
 
-/** Keep the reading before meanings; the display preference controls its visibility. */
-export const choiceSide = (side: Side): Side => ({ ...side, showReading: false, trail: undefined });
+/**
+ * The sides as the games show them. The Sino-Vietnamese reading belongs to the Japanese word, so it is drawn with that
+ * word whichever side it is on, and a game has no flipping to wait for: the learner asked to see it, so it is there.
+ */
+export function gameSides(card: Card, flip = false): { prompt: Side; answer: Side } {
+  const sides = sidesOf(card, flip);
+  const hanViet = card.hanViet?.trim();
+  if (!hanViet || sides.prompt.lang !== "ja") return sides;
+  return { prompt: { ...sides.prompt, trail: hanViet }, answer: { ...sides.answer, trail: undefined } };
+}
+
+/** Keep the reading before meanings; the display preference controls its visibility. A Hán Việt reading stays with its word. */
+export const choiceSide = (side: Side): Side => ({ ...side, showReading: false });
 
 export const pickFlip = (direction: Direction, rng: Rng = Math.random): boolean =>
   direction === "definition" ? true : direction === "term" ? false : rng() < 0.5;
@@ -176,7 +187,7 @@ export function buildTest(allCards: Card[], opts: TestOptions, rng: Rng = Math.r
     at += size;
     const pairs = group.map((c) => {
       const flip = pickFlip(opts.direction, rng);
-      return { cardId: c.id, ...sidesOf(c, flip) };
+      return { cardId: c.id, ...gameSides(c, flip) };
     });
     questions.push({
       kind: "match",
@@ -190,13 +201,13 @@ export function buildTest(allCards: Card[], opts: TestOptions, rng: Rng = Math.r
   const turns: QuestionKind[] = withoutMatch.length ? withoutMatch : ["write"];
   rest.forEach((card, i) => {
     const flip = pickFlip(opts.direction, rng);
-    const { prompt, answer } = sidesOf(card, flip);
+    const { prompt, answer } = gameSides(card, flip);
     let kind = turns[i % turns.length]!;
     if (kind === "mc") {
       const others = distractors(card, flip, allCards, MAX_MC_OPTIONS - 1, rng);
       if (others.length === 0) kind = "write";
       else {
-        const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
+        const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(gameSides(c, flip).answer) }));
         questions.push({ kind: "mc", id: nextId(), cardId: card.id, prompt, answer, options });
         return;
       }
@@ -206,7 +217,7 @@ export function buildTest(allCards: Card[], opts: TestOptions, rng: Rng = Math.r
       if (others.length === 0) kind = "write";
       else {
         const isTrue = rng() < 0.5;
-        const shown = choiceSide(isTrue ? answer : sidesOf(others[0]!, flip).answer);
+        const shown = choiceSide(isTrue ? answer : gameSides(others[0]!, flip).answer);
         questions.push({ kind: "tf", id: nextId(), cardId: card.id, prompt, answer, shown, isTrue });
         return;
       }
@@ -271,7 +282,7 @@ export function buildMatchRound(cards: Card[], size: number, direction: Directio
   const picked = shuffle(cards, rng).slice(0, Math.max(2, size));
   const tiles: MatchTile[] = [];
   for (const c of picked) {
-    const { prompt, answer } = sidesOf(c, pickFlip(direction, rng));
+    const { prompt, answer } = gameSides(c, pickFlip(direction, rng));
     tiles.push({ tileId: `${c.id}:p`, cardId: c.id, side: choiceSide(prompt), kind: "prompt" });
     tiles.push({ tileId: `${c.id}:a`, cardId: c.id, side: choiceSide(answer), kind: "answer" });
   }
@@ -287,9 +298,9 @@ export type DropItem = {
 /** The question for one card: its prompt and four choices, the wrong ones drawn from `pool`. */
 export function dropItemFor(card: Card, pool: Card[], direction: Direction, rng: Rng = Math.random): DropItem {
   const flip = pickFlip(direction, rng);
-  const { prompt } = sidesOf(card, flip);
+  const { prompt } = gameSides(card, flip);
   const others = distractors(card, flip, pool, 3, rng);
-  const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(sidesOf(c, flip).answer) }));
+  const options = shuffle([card, ...others], rng).map((c) => ({ cardId: c.id, side: choiceSide(gameSides(c, flip).answer) }));
   return { cardId: card.id, prompt, options };
 }
 
