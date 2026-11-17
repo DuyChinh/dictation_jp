@@ -13,6 +13,8 @@ import "./flashimages.css";
 import "./millionaire.css";
 import "./coming-soon.css";
 import "./select.css";
+import "./offline.css";
+import { registerServiceWorker } from "./shared/pwa/registerServiceWorker";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("root missing");
@@ -22,3 +24,5 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+
+registerServiceWorker();

@@ -12,6 +12,7 @@ import { loadCollapsed, saveCollapsed } from "../storage/sidebarPref";
 import { useReviewDue } from "../../features/flashcards/store";
 import { useFt } from "../../features/flashcards/flashText";
 import { fmt } from "../i18n/format";
+import { OfflineNotice } from "../pwa/OfflineNotice";
 
 export type Crumb = { label: string; to?: string };
 
@@ -258,6 +259,7 @@ export function AppShell({
           </div>
         </header>
 
+        <OfflineNotice />
         <main className="shell-content">{children}</main>
       </div>
     </div>

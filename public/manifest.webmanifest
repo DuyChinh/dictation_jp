@@ -1,0 +1,15 @@
+{
+  "name": "Motto — luyện thi JLPT",
+  "short_name": "Motto",
+  "description": "Luyện thi JLPT bằng đề thật, từ điển và flashcard.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101329",
+  "theme_color": "#f5f3ee",
+  "lang": "vi",
+  "icons": [
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
