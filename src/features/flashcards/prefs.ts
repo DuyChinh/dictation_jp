@@ -207,11 +207,11 @@ export function useShowImages(): [boolean, (on: boolean) => void] {
 const IMAGE_SIDE_KEY = "jd.flash_imageside.v1";
 const imageSideListeners = new Set<() => void>();
 
-/** Which side of a card its picture is drawn with: the term (the Japanese word) or the meaning. */
-export type ImageSide = "term" | "definition";
+/** Which face of a card its picture is drawn on: the front (the question) or the back (the answer). */
+export type ImageSide = "front" | "back";
 
-/** With the meaning unless the learner chose the term. */
-export const imageSide = (): ImageSide => (get(IMAGE_SIDE_KEY) === "term" ? "term" : "definition");
+/** On the back unless the learner chose the front. */
+export const imageSide = (): ImageSide => (get(IMAGE_SIDE_KEY) === "front" ? "front" : "back");
 
 export function saveImageSide(side: ImageSide): void {
   set(IMAGE_SIDE_KEY, side);
@@ -229,7 +229,7 @@ function subscribeImageSide(l: () => void): () => void {
 }
 
 export function useImageSide(): [ImageSide, (side: ImageSide) => void] {
-  return [useSyncExternalStore(subscribeImageSide, imageSide, () => "definition"), saveImageSide];
+  return [useSyncExternalStore(subscribeImageSide, imageSide, () => "back"), saveImageSide];
 }
 
 const AUTO_KEY = "jd.flash_autoflip.v1";

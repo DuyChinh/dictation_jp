@@ -13,8 +13,8 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
 }
 
 /**
- * The two sides of a card; `flip` asks for the definition and answers with the term. `pictureOn` is the side the card's
- * picture is drawn with.
+ * The two sides of a card; `flip` asks for the definition and answers with the term. `pictureOn` is the face the card's
+ * picture is drawn on.
  *
  * A Japanese word's reading is not drawn above it when the word is the question (that would give the
  * reading away). It is shown with the answer instead: in front of the meaning ("こうにゅう: mua"), or above
@@ -23,9 +23,8 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
 export function sidesOf(card: Card, flip = false, pictureOn: ImageSide = imageSide()): { prompt: Side; answer: Side } {
   const sides = plainSides(card, flip);
   if (!card.image) return sides;
-  // the picture goes with the side the learner chose (the meaning unless set otherwise), whether that is asked or answered
-  const onPrompt = pictureOn === "term" ? !flip : flip;
-  return onPrompt ? { ...sides, prompt: { ...sides.prompt, image: card.image } } : { ...sides, answer: { ...sides.answer, image: card.image } };
+  // the picture goes on the face the learner chose, the back (the answer) unless set otherwise, whichever side of the card that is
+  return pictureOn === "front" ? { ...sides, prompt: { ...sides.prompt, image: card.image } } : { ...sides, answer: { ...sides.answer, image: card.image } };
 }
 
 function plainSides(card: Card, flip: boolean): { prompt: Side; answer: Side } {
