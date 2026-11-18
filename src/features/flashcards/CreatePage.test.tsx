@@ -165,6 +165,13 @@ describe("the create page's Back and Save", () => {
     expect(terms()).toEqual(["山", "川"]);
   });
 
+  it("opened without a deck, it asks for the name of a new deck instead of picking the latest one", () => {
+    open(["/before", "/flashcards/create"]);
+    expect((screen.getByLabelText("Lưu vào bộ") as HTMLSelectElement).value).toBe("__new__");
+    expect(screen.getByLabelText("Tên bộ thẻ")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Thêm thẻ" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("puts a card typed after Add into the same deck", () => {
     open(["/before", CREATE]);
     type("犬", "chó");

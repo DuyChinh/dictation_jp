@@ -5,7 +5,7 @@ import { CardEditor, type CardValue } from "../features/flashcards/CardEditor";
 import { CardRow } from "../features/flashcards/CardRow";
 import { DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "../features/flashcards/DeckPicker";
 import { useFt } from "../features/flashcards/flashText";
-import { lastDeckId, saveLastDeck } from "../features/flashcards/prefs";
+import { saveLastDeck } from "../features/flashcards/prefs";
 import { DEFAULT_DECK_ID, addCard, cardsOf, isDuplicate, liveCards, liveDecks, readState, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useUndoDelete } from "../features/flashcards/UndoDelete";
@@ -24,7 +24,9 @@ export function FlashcardCreatePage() {
   const location = useLocation();
   const [params] = useSearchParams();
   const { decks, state } = useFlashcards();
-  const [deckId, setDeckId] = useState(() => params.get("deck") ?? lastDeckId() ?? DEFAULT_DECK_ID);
+  // Opened from a deck (?deck=) it adds there; opened from "Create flashcard" it asks for a new deck's name first.
+  // The remembered deck is only what the picker offers again after a card was added.
+  const [deckId, setDeckId] = useState(() => params.get("deck") ?? (decks.length ? NEW_DECK : DEFAULT_DECK_ID));
   // the name typed for a deck that is made when the first card is added
   const [newName, setNewName] = useState("");
   // cards made on this visit, to point out in the list

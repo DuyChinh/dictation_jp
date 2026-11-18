@@ -59,12 +59,12 @@ describe("select a word to make a flashcard", () => {
     fireEvent.click(button);
 
     const dialog = await screen.findByRole("dialog", { name: "Tạo flashcard" });
-    expect((dialog.querySelector('input[aria-label="Từ"]') as HTMLInputElement).value).toBe("朝ごはんに食べる");
+    expect((dialog.querySelector('textarea[aria-label="Từ"]') as HTMLInputElement).value).toBe("朝ごはんに食べる");
     // the default deck is offered before any exists
     expect(screen.getByRole("option", { name: "Từ của tôi" })).toBeTruthy();
 
-    fireEvent.change(dialog.querySelector('input[aria-label="Từ"]')!, { target: { value: "食べる" } });
-    await waitFor(() => expect((dialog.querySelector('input[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
+    fireEvent.change(dialog.querySelector('textarea[aria-label="Từ"]')!, { target: { value: "食べる" } });
+    await waitFor(() => expect((dialog.querySelector('textarea[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
 
     expect(await screen.findByText("Đã lưu vào “Từ của tôi”")).toBeTruthy();
@@ -85,7 +85,7 @@ describe("select a word to make a flashcard", () => {
     act(() => select(screen.getByTestId("text")));
     fireEvent.click(await screen.findByRole("button", { name: /Tạo flashcard/ }));
     const dialog = await screen.findByRole("dialog");
-    await waitFor(() => expect((dialog.querySelector('input[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
+    await waitFor(() => expect((dialog.querySelector('textarea[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect(readState().cards[0]!.deckId).toBe(deck.id);
   });
@@ -104,7 +104,7 @@ describe("select a word to make a flashcard", () => {
     act(() => select(screen.getByTestId("text")));
     fireEvent.click(await screen.findByRole("button", { name: /Tạo flashcard/ }));
     const dialog = await screen.findByRole("dialog");
-    await waitFor(() => expect((dialog.querySelector('input[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
+    await waitFor(() => expect((dialog.querySelector('textarea[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
     fireEvent.change(dialog.querySelector(".fc-deckpick select")!, { target: { value: "__new__" } });
     expect(screen.queryByRole("button", { name: "Tạo bộ" })).toBeNull();
 

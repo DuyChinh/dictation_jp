@@ -142,6 +142,19 @@ describe("CardEditor", () => {
     expect(screen.getByRole("button", { name: /食べる/ }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("Enter saves the card, Shift+Enter is left alone to start a new line", () => {
+    const onSubmit = vi.fn();
+    render(wrap(<CardEditor submitLabel="Lưu" onSubmit={onSubmit} initial={{ term: "犬", termLang: "ja", definition: "chó\nnhà", definitionLang: "vi" }} />));
+    const box = screen.getByLabelText("Nghĩa") as HTMLTextAreaElement;
+    expect(box.tagName).toBe("TEXTAREA");
+    expect(box.value).toBe("chó\nnhà");
+    expect(fireEvent.keyDown(box, { key: "Enter", shiftKey: true })).toBe(true);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fireEvent.keyDown(box, { key: "Enter" })).toBe(false);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0].definition).toBe("chó\nnhà");
+  });
+
   it("looks up Vietnamese text and offers the Japanese word on the right", async () => {
     search([TABERU]);
     render(wrap(<CardEditor submitLabel="Lưu" onSubmit={() => undefined} initial={{ term: "ăn", termLang: "vi", definitionLang: "ja" }} />));

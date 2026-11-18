@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "../../shared/api/dictionary";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
@@ -41,6 +41,39 @@ type Props = {
 
 const SEARCH_DELAY = 300;
 
+/**
+ * A box that starts one line high and grows with what is typed. Enter saves the card as it did in a one-line box
+ * (not while a Japanese word is still being converted), Shift+Enter starts a new line.
+ */
+const GrowBox = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function GrowBox({ className, value, onKeyDown, ...rest }, ref) {
+  const inner = useRef<HTMLTextAreaElement | null>(null);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value]);
+  return (
+    <textarea
+      {...rest}
+      ref={(el) => {
+        inner.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
+      className={`fc-input fc-input--area${className ? ` ${className}` : ""}`}
+      value={value}
+      rows={1}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        if (e.defaultPrevented || e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+        e.preventDefault();
+        e.currentTarget.form?.requestSubmit();
+      }}
+    />
+  );
+});
+
 const meaningHint = (leftLang: CardLang, rightLang: CardLang): MeaningPair =>
   leftLang === "vi" ? "vi" : leftLang === "en" ? "en" : rightLang === "vi" ? "vi" : "en";
 
@@ -68,7 +101,7 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   const [message, setMessage] = useState("");
   // Once the learner writes in the right box, lookups stop overwriting it.
   const rightTouched = useRef(Boolean(initial?.definition));
-  const leftRef = useRef<HTMLInputElement>(null);
+  const leftRef = useRef<HTMLTextAreaElement>(null);
   // The left box text a picked suggestion put there itself: no need to look that up again.
   const skipSearchFor = useRef<string | null>(null);
   const rightLangRef = useRef(rightLang);
@@ -272,9 +305,9 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
               ))}
             </select>
           </label>
-          <input
+          <GrowBox
             ref={leftRef}
-            className={`fc-input${leftLang === "ja" ? " jp" : ""}`}
+            className={leftLang === "ja" ? "jp" : ""}
             value={left}
             onChange={(e) => {
               skipSearchFor.current = null;
@@ -306,8 +339,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
               ))}
             </select>
           </label>
-          <input
-            className={`fc-input${rightLang === "ja" ? " jp" : ""}`}
+          <GrowBox
+            className={rightLang === "ja" ? "jp" : ""}
             value={right}
             onChange={(e) => {
               rightTouched.current = true;

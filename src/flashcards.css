@@ -30,6 +30,7 @@
   width: 100%; box-sizing: border-box; min-height: var(--touch-min); padding: 0 14px; font: inherit; font-size: 16px;
   color: var(--input-text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px;
 }
+.fc-input--area { display: block; padding: 10px 14px; line-height: 1.45; resize: none; overflow: hidden; }
 .fc-input:focus { outline: none; border-color: var(--input-focus); box-shadow: 0 0 0 3px var(--ring); }
 .fc-input:disabled { opacity: 0.7; }
 .fc-newdeck, .fc-rename { display: flex; gap: 10px; max-width: 520px; }
@@ -87,6 +88,7 @@
 .fc-deckpick__new { display: flex; gap: 8px; }
 
 /* ----- one side of a card ----- */
+.fc-side__text { white-space: pre-line; }
 .fc-side { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; overflow-wrap: anywhere; }
 .fc-side__reading { flex-basis: 100%; font-size: 0.72em; color: var(--text-muted); line-height: 1.2; }
 .fc-side--big { font-size: 30px; font-weight: 700; justify-content: center; text-align: center; line-height: 1.35; }
