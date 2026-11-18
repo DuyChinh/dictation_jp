@@ -204,6 +204,34 @@ export function useShowImages(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribeImages, showImages, () => true), saveShowImages];
 }
 
+const IMAGE_SIDE_KEY = "jd.flash_imageside.v1";
+const imageSideListeners = new Set<() => void>();
+
+/** Which side of a card its picture is drawn with: the term (the Japanese word) or the meaning. */
+export type ImageSide = "term" | "definition";
+
+/** With the meaning unless the learner chose the term. */
+export const imageSide = (): ImageSide => (get(IMAGE_SIDE_KEY) === "term" ? "term" : "definition");
+
+export function saveImageSide(side: ImageSide): void {
+  set(IMAGE_SIDE_KEY, side);
+  imageSideListeners.forEach((l) => l());
+}
+
+function subscribeImageSide(l: () => void): () => void {
+  imageSideListeners.add(l);
+  const onStorage = (e: StorageEvent) => e.key === IMAGE_SIDE_KEY && l();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    imageSideListeners.delete(l);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useImageSide(): [ImageSide, (side: ImageSide) => void] {
+  return [useSyncExternalStore(subscribeImageSide, imageSide, () => "definition"), saveImageSide];
+}
+
 const AUTO_KEY = "jd.flash_autoflip.v1";
 /** Seconds to look at a question before the card turns over by itself: long enough to recall a word and its reading. */
 export const AUTO_FLIP_DEFAULT = 5;

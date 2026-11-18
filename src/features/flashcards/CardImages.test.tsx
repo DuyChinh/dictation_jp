@@ -12,7 +12,7 @@ import { ImagesPicker } from "./ImagesPicker";
 import { SideView } from "./SideView";
 import { StudyModes } from "./StudyModes";
 import { creditText, imageKeywordsFrom, imageKeywordsFromEntry, imageQueryFrom, imageQueryFromEntry, isAllowedImage, toCardImage } from "./cardImage";
-import { showImages } from "./prefs";
+import { imageSide, saveImageSide, showImages } from "./prefs";
 import { sidesOf } from "./quiz";
 import { addCard, createDeck, importSharedDeck, readState, updateCard } from "./store";
 import type { Card, CardImage } from "./types";
@@ -138,18 +138,41 @@ describe("picture references on the page", () => {
   });
 });
 
-describe("a picture goes with the question", () => {
-  it("is on the asked side, whichever side that is, and never on the answer", () => {
+describe("a picture goes with the side the learner chose", () => {
+  it("is with the meaning by default, whichever way round the card is asked", () => {
     const c = card({ image: OV("aaa") });
-    expect(sidesOf(c).prompt.image).toEqual(OV("aaa"));
-    expect(sidesOf(c).answer.image).toBeUndefined();
+    expect(sidesOf(c).answer).toMatchObject({ text: "chó", image: OV("aaa") });
+    expect(sidesOf(c).prompt.image).toBeUndefined();
     expect(sidesOf(c, true).prompt).toMatchObject({ text: "chó", image: OV("aaa") });
     expect(sidesOf(c, true).answer.image).toBeUndefined();
     expect(sidesOf(card()).prompt.image).toBeUndefined();
   });
 
+  it("is with the term when that is chosen", () => {
+    const c = card({ image: OV("aaa") });
+    expect(imageSide()).toBe("definition");
+    saveImageSide("term");
+    expect(imageSide()).toBe("term");
+    expect(sidesOf(c).prompt.image).toEqual(OV("aaa"));
+    expect(sidesOf(c).answer.image).toBeUndefined();
+    expect(sidesOf(c, true).answer).toMatchObject({ image: OV("aaa") });
+    expect(sidesOf(c, true).prompt.image).toBeUndefined();
+    expect(sidesOf(c, false, "definition").answer.image).toEqual(OV("aaa"));
+  });
+
+  it("offers the choice of side only while pictures are shown, and says what was chosen", () => {
+    const onSide = vi.fn();
+    const { rerender } = render(wrap(<ImagesPicker value onChange={() => undefined} side="definition" onSide={onSide} />));
+    const group = screen.getByRole("radiogroup", { name: "Ảnh hiện ở" });
+    expect(within(group).getByRole("radio", { name: "Nghĩa" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(within(group).getByRole("radio", { name: "Từ" }));
+    expect(onSide).toHaveBeenCalledWith("term");
+    rerender(wrap(<ImagesPicker value={false} onChange={() => undefined} side="definition" onSide={onSide} />));
+    expect(screen.queryByRole("radiogroup", { name: "Ảnh hiện ở" })).toBeNull();
+  });
+
   it("is drawn with a question and left out of choices, lists and when it is switched off", () => {
-    const side = sidesOf(card({ image: OV("aaa") })).prompt;
+    const side = sidesOf(card({ image: OV("aaa") }), false, "term").prompt;
     const { container, rerender } = render(wrap(<SideView side={side} big />));
     expect(container.querySelector(".fc-side__pic img")!.getAttribute("src")).toBe(OV("aaa").url);
     expect(container.querySelector(".fc-side__credit")!.textContent).toBe("Mathias Appel · CC0");
@@ -178,7 +201,7 @@ describe("a picture goes with the question", () => {
     const evil = render(wrap(<SideView side={{ text: "犬", lang: "ja", image: { url: "https://evil.example/p.gif" } }} big />));
     expect(evil.container.querySelector("img")).toBeNull();
     cleanup();
-    const { container } = render(wrap(<SideView side={sidesOf(card({ image: OV("aaa") })).prompt} big />));
+    const { container } = render(wrap(<SideView side={sidesOf(card({ image: OV("aaa") }), false, "term").prompt} big />));
     fireEvent.error(container.querySelector(".fc-side__pic img")!);
     expect(container.querySelector(".fc-side__pic")).toBeNull();
   });
@@ -631,11 +654,20 @@ describe("pictures while studying", () => {
     return readState().cards;
   };
 
-  it("show with the question of a study round, and a setting above the round hides them and is kept", () => {
+  it("show with the meaning of a study round, and a setting above the round moves them to the word or hides them, and is kept", () => {
     render(wrap(<StudyModes deckId="deck1" cards={deck()} mode="learn" />));
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     expect(screen.getByText("犬")).toBeTruthy();
+    // the word is asked on its own; the picture is with the meaning, which turns up when the card is turned over
+    expect(document.querySelector(".fc-flash__side--front .fc-side__pic")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
+    expect(document.querySelector(".fc-flash__side--back .fc-side__pic img")!.getAttribute("src")).toBe(OV("aaa").url);
+
+    const side = screen.getByRole("radiogroup", { name: "Ảnh hiện ở" });
+    fireEvent.click(within(side).getByRole("radio", { name: "Từ" }));
+    expect(localStorage.getItem("jd.flash_imageside.v1")).toBe("term");
     expect(document.querySelector(".fc-flash__side--front .fc-side__pic img")!.getAttribute("src")).toBe(OV("aaa").url);
+    expect(document.querySelector(".fc-flash__side--back .fc-side__pic")).toBeNull();
 
     const group = screen.getByRole("radiogroup", { name: "Hình ảnh" });
     expect(within(group).getByRole("radio", { name: "Hiện" }).getAttribute("aria-checked")).toBe("true");

@@ -1,3 +1,4 @@
+import { imageSide, type ImageSide } from "./prefs";
 import type { Card, Direction, Side } from "./types";
 
 export type Rng = () => number;
@@ -12,16 +13,19 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
 }
 
 /**
- * The two sides of a card; `flip` asks for the definition and answers with the term.
+ * The two sides of a card; `flip` asks for the definition and answers with the term. `pictureOn` is the side the card's
+ * picture is drawn with.
  *
  * A Japanese word's reading is not drawn above it when the word is the question (that would give the
  * reading away). It is shown with the answer instead: in front of the meaning ("こうにゅう: mua"), or above
  * the Japanese answer when the meaning was the question.
  */
-export function sidesOf(card: Card, flip = false): { prompt: Side; answer: Side } {
+export function sidesOf(card: Card, flip = false, pictureOn: ImageSide = imageSide()): { prompt: Side; answer: Side } {
   const sides = plainSides(card, flip);
-  // the picture goes with the question, whichever side that is: it shows what the word means, so it is no part of an answer
-  return card.image ? { ...sides, prompt: { ...sides.prompt, image: card.image } } : sides;
+  if (!card.image) return sides;
+  // the picture goes with the side the learner chose (the meaning unless set otherwise), whether that is asked or answered
+  const onPrompt = pictureOn === "term" ? !flip : flip;
+  return onPrompt ? { ...sides, prompt: { ...sides.prompt, image: card.image } } : { ...sides, answer: { ...sides.answer, image: card.image } };
 }
 
 function plainSides(card: Card, flip: boolean): { prompt: Side; answer: Side } {
