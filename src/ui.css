@@ -2410,12 +2410,31 @@
 .dialogue__full p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
 
 @media (max-width: 640px) {
+  /* who and the buttons share the first row; the sentence and its translation get the whole width under them */
   .dialogue__line { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 14px 14px; border-radius: 16px; }
-  .dialogue__who { grid-column: 1 / -1; flex-direction: row; justify-content: flex-start; gap: 10px; }
+  .dialogue__who { grid-column: 1; grid-row: 1; flex-direction: row; justify-content: flex-start; align-self: center; gap: 10px; }
+  .dialogue__who-label { text-align: left; }
   .dialogue__avatar { width: 32px; height: 32px; font-size: 16px; }
-  .dialogue__text { padding-top: 0; }
+  .dialogue__actions { grid-column: 2; grid-row: 1; align-self: center; gap: 6px; }
+  .dialogue__text { grid-column: 1 / -1; grid-row: 2; padding-top: 0; }
   .dialogue__text .jp { font-size: 17px; }
   .dialogue__tr-btn { padding: 0 12px 0 8px; }
+  .dialogue__tr-box { flex-wrap: wrap; gap: 8px; padding: 10px 8px 10px 12px; }
+  .dialogue__tr-text { flex: 1 1 100%; order: 3; font-size: 15px; }
+  .dialogue__tr-box-close { margin-left: auto; }
+  /* the card around the transcript and its explanations: less padding, so the lines inside have room */
+  .listen-why { padding: 14px; }
+  .listen-q { padding: 16px; }
+  .dialogue__full-details { padding: 10px 12px; }
+}
+
+/* a phone: the sticky player takes two short rows instead of three tall ones */
+@media (max-width: 640px) {
+  .player, .player--sticky { padding: 10px 12px; gap: 8px; }
+  .player__play { width: 44px; height: 44px; }
+  .player .icon-btn--round { width: 36px; height: 36px; }
+  .player__speed button { padding: 0 8px; font-size: 13px; }
+  .player__track { gap: 4px; }
 }
 
 /* ---------- Donate ---------- */
