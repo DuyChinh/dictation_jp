@@ -760,6 +760,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           aria-hidden="true"
         >
           <img src="/miner/miner-cut.webp" alt="" draggable={false} />
+          <span className="fc-miner__reel" />
         </div>
         <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H), height: pct(clawRef.current.len, scene.H) }} aria-hidden="true">
           <span className="fc-miner__claw" />

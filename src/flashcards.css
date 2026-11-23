@@ -1069,9 +1069,21 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-miner__man[data-phase="back"] img { animation: fc-man-crank 0.22s ease-in-out infinite; }
 .fc-miner__man[data-phase="haul"] img { animation: fc-man-haul 0.55s ease-in-out infinite; }
 @keyframes fc-man-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.01, 1.025); } }
-@keyframes fc-man-crank { 0%, 100% { transform: rotate(-2.2deg) translateY(0); } 50% { transform: rotate(1.6deg) translateY(-1.6%); } }
-@keyframes fc-man-haul { 0%, 100% { transform: rotate(-4.5deg) translate(-1%, 0.5%); } 50% { transform: rotate(2.5deg) translate(1%, -1.2%); } }
-@media (prefers-reduced-motion: reduce) { .fc-miner__man img { animation: none !important; } }
+@keyframes fc-man-crank { 0%, 100% { transform: rotate(-5deg) scale(1.02, 0.96); } 50% { transform: rotate(4deg) translateY(-5%) scale(0.99, 1.04); } }
+@keyframes fc-man-haul { 0%, 100% { transform: rotate(-8deg) translate(-4%, 2%) scale(1.03, 0.95); } 50% { transform: rotate(5deg) translate(3%, -4%) scale(0.98, 1.05); } }
+/* the rope turning on the drum: bright stripes sliding across it */
+.fc-miner__reel { position: absolute; left: 17%; top: 53%; width: 19%; height: 20%; border-radius: 40% / 50%; pointer-events: none; opacity: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 2px, rgba(255, 255, 255, 0) 2px 7px); mix-blend-mode: overlay; }
+.fc-miner__man:not([data-phase="wait"]) .fc-miner__reel { opacity: 1; animation: fc-reel 0.25s linear infinite; }
+.fc-miner__man[data-phase="haul"] .fc-miner__reel { animation-duration: 0.5s; animation-direction: reverse; }
+@keyframes fc-reel { to { background-position: 7px 0; } }
+/* with reduced motion he still works the winch, only gently */
+@media (prefers-reduced-motion: reduce) {
+  .fc-miner__man[data-phase="out"] img, .fc-miner__man[data-phase="back"] img { animation-name: fc-man-crank-soft; }
+  .fc-miner__man[data-phase="haul"] img { animation-name: fc-man-crank-soft; animation-duration: 0.8s; }
+  .fc-miner__man[data-phase="wait"] img, .fc-miner__reel { animation: none; }
+}
+@keyframes fc-man-crank-soft { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
 .fc-shop__keeper img { width: 170px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)); }
 @media (max-width: 760px) { .fc-shop__keeper img { width: 96px; } }
 
