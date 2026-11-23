@@ -8,6 +8,8 @@ import { MemoryMode } from "./MemoryMode";
 import { MinerMode } from "./MinerMode";
 import { MillionaireMode } from "./MillionaireMode";
 import { TestMode } from "./TestMode";
+import { SettingsPopup } from "./SettingsPopup";
+import { useFt } from "./flashText";
 import { BackToContext } from "./StudyContext";
 import type { ModeId } from "./modes";
 import { useDirection, useImageSide, useShowHanViet, useShowHiragana, useShowImages } from "./prefs";
@@ -18,6 +20,7 @@ import type { Card } from "./types";
  * `deckId` keys the saved place and best scores; `backTo` is where "back to the deck" goes.
  */
 export function StudyModes({ deckId, cards, mode, backTo }: { deckId: string; cards: Card[]; mode: ModeId; backTo?: string }) {
+  const ft = useFt();
   const [direction, setDirection] = useDirection();
   const [hanViet, setHanViet] = useShowHanViet();
   const [hiragana, setHiragana] = useShowHiragana();
@@ -28,11 +31,16 @@ export function StudyModes({ deckId, cards, mode, backTo }: { deckId: string; ca
   const props = { key, deckId, cards, direction };
   return (
     <BackToContext.Provider value={backTo ?? null}>
-      <div className="fc-pickers">
-        <DirectionPicker value={direction} onChange={setDirection} />
-        <HanVietPicker value={hanViet} onChange={setHanViet} />
-        <HiraganaPicker value={hiragana} onChange={setHiragana} />
-        <ImagesPicker value={images} onChange={setImages} side={pictureSide} onSide={setPictureSide} />
+      <div className="fc-toolbar">
+        <span className="fc-toolbar__sum">{ft("deck.direction")}: {ft(`dir.${direction}`)}</span>
+        <SettingsPopup>
+          <div className="fc-pickers">
+            <DirectionPicker value={direction} onChange={setDirection} />
+            <HanVietPicker value={hanViet} onChange={setHanViet} />
+            <HiraganaPicker value={hiragana} onChange={setHiragana} />
+            <ImagesPicker value={images} onChange={setImages} side={pictureSide} onSide={setPictureSide} />
+          </div>
+        </SettingsPopup>
       </div>
       {mode === "learn" && <LearnMode {...props} />}
       {mode === "test" && <TestMode {...props} />}

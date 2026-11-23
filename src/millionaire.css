@@ -190,3 +190,11 @@
 @supports not (height: 100dvh) {
   .fc-mil { --mil-room: max(0px, calc(100vh - 404px)); }
 }
+/* =====================================================================
+   Quiz show result: the prize is wide, so the card gives it room on a phone
+   ===================================================================== */
+@media (max-width: 640px) {
+  .fc-mil-result { padding-inline: 12px; border-radius: 20px; }
+  .fc-mil-result .fc-result__big { max-width: 100%; font-size: clamp(26px, min(8dvh, 10.5vw), 68px); white-space: nowrap; letter-spacing: -0.045em; }
+  .fc-mil-result h2 { max-width: 100%; }
+}

@@ -5,7 +5,7 @@ import { useFt } from "../features/flashcards/flashText";
 import { hasSavedGame } from "../features/flashcards/gameProgress";
 import { resumeLearn } from "../features/flashcards/learnProgress";
 import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
-import { cardsOf, deckStats, deleteDeck, isReviewDue, renameDeck, useFlashcards } from "../features/flashcards/store";
+import { cardsOf, deckNameTaken, deckStats, deleteDeck, isReviewDue, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
 import { acceptedAnswers } from "../features/flashcards/quiz";
@@ -18,6 +18,8 @@ import { MODES } from "../features/flashcards/modes";
 import { CardEditModal } from "../features/flashcards/CardEditModal";
 import { CardRow } from "../features/flashcards/CardRow";
 import { useUndoDelete } from "../features/flashcards/UndoDelete";
+import { SettingsPopup } from "../features/flashcards/SettingsPopup";
+import { ConfirmDialog } from "../shared/ui/ConfirmDialog";
 import { DeckShare } from "../features/flashcards/DeckShare";
 
 export function FlashcardDeckPage() {
@@ -36,6 +38,8 @@ export function FlashcardDeckPage() {
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Card | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [renameError, setRenameError] = useState(false);
   const { remove: removeCard, bar } = useUndoDelete();
 
   useEffect(() => {
@@ -66,14 +70,15 @@ export function FlashcardDeckPage() {
 
   function rename(e: FormEvent) {
     e.preventDefault();
-    if (name.trim()) renameDeck(deckId, name);
+    if (!name.trim() || name.trim() === deck!.name) return setRenaming(false);
+    if (deckNameTaken(decks, name, deckId)) return setRenameError(true);
+    renameDeck(deckId, name);
     setRenaming(false);
   }
   function remove() {
-    if (window.confirm(fmt(ft("deck.deleteConfirm"), { name: deck!.name, n: cards.length }))) {
-      deleteDeck(deckId);
-      navigate("/flashcards", { replace: true });
-    }
+    setConfirmDelete(false);
+    deleteDeck(deckId);
+    navigate("/flashcards", { replace: true });
   }
 
   return (
@@ -82,9 +87,10 @@ export function FlashcardDeckPage() {
         <header className="fc-page__head">
           {renaming ? (
             <form className="fc-rename" onSubmit={rename}>
-              <input className="fc-input" value={name} onChange={(e) => setName(e.target.value)} aria-label={ft("page.deckName")} maxLength={80} autoFocus />
+              <input className="fc-input" value={name} onChange={(e) => { setName(e.target.value); setRenameError(false); }} aria-label={ft("page.deckName")} aria-invalid={renameError} maxLength={80} autoFocus />
               <button type="submit" className="btn btn--primary btn--sm">{ft("deck.save")}</button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setRenaming(false)}>{ft("common.cancel")}</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setRenaming(false); setRenameError(false); }}>{ft("common.cancel")}</button>
+              {renameError && <p className="fc-fielderr" role="alert">{fmt(ft("page.deckExists"), { name: name.trim() })}</p>}
             </form>
           ) : (
             <div>
@@ -101,7 +107,7 @@ export function FlashcardDeckPage() {
             <div className="fc-page__actions">
               <Link to={`/flashcards/create?deck=${deck.id}`} className="btn btn--primary btn--sm"><Icon name="plus" size={16} /> {ft("page.addCards")}</Link>
               <button type="button" className="btn btn--outline btn--sm" onClick={() => { setName(deck.name); setRenaming(true); }}>{ft("deck.rename")}</button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={remove}><Icon name="trash" size={16} /> {ft("deck.delete")}</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmDelete(true)}><Icon name="trash" size={16} /> {ft("deck.delete")}</button>
             </div>
           )}
         </header>
@@ -119,10 +125,16 @@ export function FlashcardDeckPage() {
 
         <DeckShare deck={deck} />
 
-        <h2 className="fc-section">{ft("deck.modes")}</h2>
-        <DirectionPicker value={direction} onChange={setDirection} />
-        <HanVietPicker value={hanViet} onChange={setHanViet} />
-        <HiraganaPicker value={hiragana} onChange={setHiragana} />
+        <div className="fc-sectionbar">
+          <h2 className="fc-section">{ft("deck.modes")}</h2>
+          <SettingsPopup>
+            <div className="fc-pickers">
+              <DirectionPicker value={direction} onChange={setDirection} />
+              <HanVietPicker value={hanViet} onChange={setHanViet} />
+              <HiraganaPicker value={hiragana} onChange={setHiragana} />
+            </div>
+          </SettingsPopup>
+        </div>
         <ul className="fc-modes">
           {MODES.map((m) => {
             const ok = cards.length >= m.min;
@@ -180,6 +192,16 @@ export function FlashcardDeckPage() {
       </section>
 
       {bar}
+      <ConfirmDialog
+        open={confirmDelete}
+        danger
+        title={ft("dlg.deleteDeck.title")}
+        message={fmt(ft("dlg.deleteDeck.body"), { name: deck.name, n: cards.length })}
+        confirmLabel={ft("dlg.deleteDeck.confirm")}
+        cancelLabel={ft("common.cancel")}
+        onConfirm={remove}
+        onCancel={() => setConfirmDelete(false)}
+      />
       {editing && <CardEditModal card={editing} onClose={() => setEditing(null)} />}
     </AppShell>
   );

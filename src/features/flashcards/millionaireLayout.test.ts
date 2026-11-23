@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 
 // run from the frontend folder or from the repository root
 const file = ["src/flashcards.css", "frontend/src/flashcards.css"].map((f) => resolve(process.cwd(), f)).find(existsSync)!;
-const css = readFileSync(file, "utf8");
+// the stylesheet may have Windows line endings
+const css = readFileSync(file, "utf8").split("\r\n").join("\n");
 
 // There is no browser in these tests, so the rules that make the game fit every screen are checked in the CSS itself.
 const block = (query: string) => {

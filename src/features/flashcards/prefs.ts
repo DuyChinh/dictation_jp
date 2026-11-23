@@ -249,6 +249,41 @@ export function loadAutoFlip(): AutoFlip {
 }
 export const saveAutoFlip = (a: AutoFlip) => set(AUTO_KEY, JSON.stringify(a));
 
+const TEST_KEY = "jd.flash_test.v1";
+type TestKind = "mc" | "tf" | "write" | "match";
+const TEST_KINDS: TestKind[] = ["mc", "tf", "write", "match"];
+
+/** The test set-up the learner used last: question count, question types, one page or one by one, and when answers are graded. */
+export type TestPrefs = {
+  count: number | null;
+  kinds: Record<TestKind, boolean>;
+  view: "single" | "all";
+  /** "end": every answer is graded when the test is submitted (the default); "instant": each question is graded as soon as it is answered. */
+  grading: "end" | "instant";
+};
+
+export const DEFAULT_TEST_PREFS: TestPrefs = { count: null, kinds: { mc: true, tf: true, write: true, match: true }, view: "single", grading: "end" };
+
+export function loadTestPrefs(): TestPrefs {
+  try {
+    const v = JSON.parse(get(TEST_KEY) ?? "{}") as Partial<TestPrefs> | null;
+    if (!v || typeof v !== "object") return DEFAULT_TEST_PREFS;
+    const kinds = { ...DEFAULT_TEST_PREFS.kinds };
+    for (const k of TEST_KINDS) if (typeof v.kinds?.[k] === "boolean") kinds[k] = v.kinds[k];
+    // a test with no question type could not start, so that choice is not kept
+    if (!TEST_KINDS.some((k) => kinds[k])) Object.assign(kinds, DEFAULT_TEST_PREFS.kinds);
+    return {
+      count: typeof v.count === "number" && v.count >= 1 ? Math.floor(v.count) : null,
+      kinds,
+      view: v.view === "all" ? "all" : "single",
+      grading: v.grading === "instant" ? "instant" : "end",
+    };
+  } catch {
+    return DEFAULT_TEST_PREFS;
+  }
+}
+export const saveTestPrefs = (p: TestPrefs) => set(TEST_KEY, JSON.stringify(p));
+
 const MIL_TIMER_KEY = "jd.flash_mil_timer.v1";
 /** Whether each question in the quiz show has a clock; on unless turned off. */
 export const loadQuizTimer = (): boolean => get(MIL_TIMER_KEY) !== "off";

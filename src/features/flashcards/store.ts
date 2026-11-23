@@ -151,6 +151,15 @@ export function migrateLegacyDefault(): void {
   writeState({ decks, cards });
 }
 
+/** Deck names compare without case or extra spaces. */
+const nameKey = (s: string) => clean(s).replace(/\s+/g, " ").toLocaleLowerCase();
+
+/** Whether another live deck already has this name (exceptId is the deck being renamed). */
+export function deckNameTaken(decks: Deck[], name: string, exceptId?: string): boolean {
+  const key = nameKey(name);
+  return key !== "" && decks.some((d) => !d.deleted && d.id !== exceptId && nameKey(d.name) === key);
+}
+
 export function renameDeck(id: string, name: string): void {
   const s = readState();
   const now = Date.now();

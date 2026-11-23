@@ -136,6 +136,8 @@ export function AppShell({
   }, [uiLang]);
 
   const closeMenu = () => setMenuOpen(false);
+  /** The nearest earlier crumb that links somewhere: where the phone's back arrow goes. */
+  const parent = breadcrumbs && breadcrumbs.length > 1 ? [...breadcrumbs.slice(0, -1)].reverse().find((c) => c.to) : undefined;
 
   const toggleMenu = () => {
     if (isDrawer) {
@@ -249,6 +251,11 @@ export function AppShell({
           >
             <Icon name="menu" size={22} />
           </button>
+          {parent?.to && (
+            <Link to={parent.to} className="icon-btn icon-btn--ghost shell-header__back" aria-label={`${ft("nav.back")}: ${parent.label}`} title={`${ft("nav.back")}: ${parent.label}`}>
+              <Icon name="chevronLeft" size={22} strokeWidth={2} />
+            </Link>
+          )}
           {breadcrumbs && breadcrumbs.length > 0 ? (
             <Breadcrumbs items={breadcrumbs} />
           ) : title ? (

@@ -1535,6 +1535,7 @@ describe("hiragana display preference for tests and games", () => {
       fireEvent.click(screen.getByRole("button", { name: "Bắt đầu kiểm tra" }));
     };
     const { unmount } = render(wrap(<StudyModes deckId="deck1" cards={cards} mode="test" />));
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chọn hiển thị" }));
     expect(screen.getByRole("radio", { name: "Có Hiragana" }).getAttribute("aria-checked")).toBe("true");
     begin();
     const meaningTexts = () => kind === "match"
@@ -1547,6 +1548,7 @@ describe("hiragana display preference for tests and games", () => {
     unmount();
 
     render(wrap(<StudyModes deckId="deck1" cards={cards} mode="test" />));
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chọn hiển thị" }));
     expect(screen.getByRole("radio", { name: "Không Hiragana" }).getAttribute("aria-checked")).toBe("true");
     begin();
     expect(meaningTexts()).not.toMatch(/こうにゅう|いぬ|ねこ|みず/);
@@ -1563,6 +1565,7 @@ describe("hiragana display preference for tests and games", () => {
     localStorage.removeItem("jd.flash_game.v1"); // the game left half way would otherwise offer to continue
 
     render(wrap(<StudyModes deckId="deck1" cards={cards} mode={mode} />));
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chọn hiển thị" }));
     fireEvent.click(screen.getByRole("radio", { name: "Không Hiragana" }));
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     expect(document.querySelector(".fc-side__lead")).toBeNull();
@@ -1592,6 +1595,7 @@ describe("Sino-Vietnamese reading on cards", () => {
   it("shows it at the end of the meaning, and the two options switch it off and on", async () => {
     withHv();
     render(await deckPage());
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chọn hiển thị" }));
     expect(document.querySelector(".fc-row .fc-side__trail")?.textContent).toBe("CẤU NHẬP");
     expect(screen.getByRole("radio", { name: "Có Hán Việt" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(screen.getByRole("radio", { name: "Không Hán Việt" }));
