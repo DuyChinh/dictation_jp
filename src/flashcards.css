@@ -1100,3 +1100,12 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 
 .fc-miner-start .fc-skinlegend li { color: #f5f6fa; background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); }
 .fc-miner-start .fc-skinlegend li strong { color: #ffd45a; }
+
+/* the points and combo that float up in the mine sit on a dark pill, so they read on any earth or nugget */
+.fc-miner__scene .fc-pop {
+  padding: 2px 12px; line-height: 1.35; white-space: nowrap; border-radius: 999px; text-shadow: none;
+  background: rgba(24, 14, 4, 0.88); border: 1.5px solid rgba(255, 255, 255, 0.35); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+.fc-miner__scene .fc-pop--good { color: #86f0b8; border-color: rgba(134, 240, 184, 0.6); }
+.fc-miner__scene .fc-pop--bad { color: #ff9a9a; border-color: rgba(255, 154, 154, 0.6); }
+.fc-miner__scene .fc-pop--info { color: #ffd45a; border-color: rgba(255, 212, 90, 0.65); font-size: 17px; }
