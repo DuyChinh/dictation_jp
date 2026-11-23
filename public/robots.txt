@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /history
+Disallow: /exams/history
+Disallow: /api/
+
+Sitemap: https://motto.io.vn/sitemap.xml
