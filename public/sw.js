@@ -80,11 +80,12 @@ async function trim(cache, max) {
   for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
 }
 
-async function store(name, req, res, max) {
+/** `copy` must be a clone taken before the response was handed to the page: a body can only be read once. */
+async function store(name, req, copy, max) {
   // a picture from another site arrives "opaque" (status 0), which can still be kept and shown
-  if (!res || !(res.ok || res.type === "opaque")) return;
+  if (!copy || !(copy.ok || copy.type === "opaque")) return;
   const cache = await caches.open(name);
-  await cache.put(req, res.clone());
+  await cache.put(req, copy);
   await trim(cache, max);
 }
 
@@ -130,7 +131,7 @@ async function built(req) {
   if (saved) return range ? slice(saved, range) : saved;
   try {
     const res = await fetch(req);
-    if (!range) await store(ASSETS, req.url, res, ASSETS_MAX);
+    if (!range) await store(ASSETS, req.url, res.clone(), ASSETS_MAX);
     return res;
   } catch {
     return Response.error();
@@ -143,7 +144,8 @@ async function freshen(req, name, max) {
   const saved = await cache.match(req);
   const network = fetch(req).then(
     (res) => {
-      void store(name, req, res, max);
+      // cloned now, before the page starts reading the body, and stored in the background
+      void store(name, req, res.clone(), max).catch(() => undefined);
       return res;
     },
     () => null,
@@ -158,7 +160,7 @@ async function keepFirst(req, name, max) {
   if (saved) return saved;
   try {
     const res = await fetch(req);
-    void store(name, req, res, max);
+    void store(name, req, res.clone(), max).catch(() => undefined);
     return res;
   } catch {
     return Response.error();
