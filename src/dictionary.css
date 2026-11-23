@@ -94,10 +94,11 @@
 /* Entry */
 .dict-entry { padding: 16px 18px; margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; box-shadow: var(--card-shadow); }
 .dict-entry--compact { padding: 0; margin: 0 0 10px; background: transparent; border: 0; box-shadow: none; }
-.dict-entry__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.dict-entry__word { display: flex; flex-direction: column; min-width: 0; }
+.dict-entry__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
+/* the word keeps its full width on one line; the badges drop below it when there is no room beside it */
+.dict-entry__word { display: flex; flex-direction: column; flex: 1 1 auto; min-width: min(100%, 7em); }
 .dict-entry__reading { font-size: 13px; color: var(--text-muted); line-height: 1.3; }
-.dict-entry__line { display: flex; align-items: center; gap: 10px; }
+.dict-entry__line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .dict-examples__ja { display: flex; align-items: center; gap: 8px; }
 .speak-btn {
   flex: none; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
@@ -107,13 +108,13 @@
 .speak-btn:hover { background: var(--primary-light); border-color: var(--primary-color); }
 .speak-btn.is-speaking { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
 .dict-entry--compact .speak-btn { width: 28px; height: 28px; }
-.dict-entry__headword { font-size: 28px; line-height: 1.3; font-weight: 600; color: var(--text-main); text-decoration: none; overflow-wrap: anywhere; }
+.dict-entry__headword { font-size: 28px; line-height: 1.3; font-weight: 600; color: var(--text-main); text-decoration: none; overflow-wrap: break-word; word-break: keep-all; }
 a.dict-entry__headword:hover { color: var(--primary-color); }
 .dict-entry--compact .dict-entry__headword { font-size: 22px; }
 .dict-entry__hv { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: var(--primary-hover); }
 .dict-entry--compact .dict-entry__hv { font-size: 13px; }
-.dict-entry__badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-.dict-badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); white-space: nowrap; }
+.dict-entry__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; }
+.dict-badge { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 26px; line-height: 1; text-align: center; font-size: 12px; font-weight: 600; padding: 0 10px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); white-space: nowrap; }
 .dict-badge--common { background: var(--primary-light); color: var(--primary-hover); }
 .dict-badge--n5, .dict-badge--n4 { background: #e3f6ea; color: #1a6b3b; }
 .dict-badge--n3 { background: #fff2d6; color: #8a5a00; }
