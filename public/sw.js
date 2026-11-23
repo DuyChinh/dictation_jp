@@ -21,7 +21,7 @@ const ASSETS_MAX = 400;
 const STATIC_MAX = 120;
 const PICS_MAX = 80;
 const SLOW_MS = 4000;
-const WARM = ["/favicon.png", "/logo.png", "/apple-touch-icon.png", "/millionaire/logo.webp", "/miner/old-miner.webp"];
+const WARM = ["/favicon.png", "/logo.png", "/apple-touch-icon.png", "/millionaire/logo.webp", "/miner/miner-cut.webp"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

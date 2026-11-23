@@ -1184,7 +1184,7 @@ describe("MinerMode", () => {
     expect(screen.getByLabelText("Còn 50 giây")).toBeTruthy();
     expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Thuốc nổ, còn 3" })).toBeTruthy();
-    expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/miner-winch.webp");
+    expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/miner-cut.webp");
     expect(document.querySelector(".fc-miner__man")).toBeTruthy();
     // four nuggets, each its own kind of treasure with its worth on it
     expect(nuggetButtons()).toHaveLength(4);

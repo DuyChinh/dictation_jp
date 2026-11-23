@@ -61,10 +61,10 @@ type SideOf = DropItem["options"][number]["side"];
 const MIN_LABEL_PX = 7;
 
 /**
- * The miner at his winch: the picture is cropped so that the drum of the winch lands exactly on the point the rope
- * comes off (PIVOT), with the old man cranking it beside the drum. Sizes are in field units (W = 100).
+ * The miner at his winch, cut out of his picture: the drum of the winch lands exactly on the point the rope comes off
+ * (PIVOT) and he cranks it while the rope goes out and comes back. Sizes are in field units (W = 100).
  */
-const MAN = { width: 24, left: PIVOT.x - 0.15 * 24, top: PIVOT.y - 0.7 * ((24 * 620) / 720) };
+const MAN = { width: 16, left: PIVOT.x - 0.263 * 16, top: PIVOT.y - 0.593 * ((16 * 486) / 498) };
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
 type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
@@ -295,6 +295,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
 
   const clawRef = useRef<Claw>(newClaw());
   const ropeRef = useRef<HTMLDivElement>(null);
+  const manRef = useRef<HTMLDivElement>(null);
   const carryRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene>(scene);
   const nuggetsRef = useRef<Nugget[]>([]);
@@ -328,6 +329,9 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       rope.style.height = pct(c.len, sceneRef.current.H);
       rope.style.transform = `rotate(${-c.angle}deg)`;
     }
+    // what the old man is doing: waiting, letting the rope out, or winding it in (slowly when it is loaded)
+    const man = manRef.current;
+    if (man) man.dataset.phase = c.phase === "extend" || c.phase === "aim" ? "out" : c.phase === "retract" ? (c.caught !== null ? "haul" : "back") : "wait";
     const carry = carryRef.current;
     if (carry) carry.style.transform = `translate(-50%, 0) rotate(${c.angle}deg)`;
   }, []);
@@ -665,7 +669,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           </ul>
           <aside className="fc-shop__keeper">
             <p className="fc-shop__bubble">{fmt(ft("miner.shop.sub"), { n: miner.level })}</p>
-            <img src="/miner/miner-winch.webp" alt="" draggable={false} />
+            <img src="/miner/miner-cut.webp" alt="" draggable={false} />
           </aside>
         </div>
         <footer className="fc-shop__foot">
@@ -749,11 +753,13 @@ export function MinerMode({ deckId, cards, direction }: Props) {
       >
         <span className="fc-miner__soil" aria-hidden="true" />
         <div
+          ref={manRef}
+          data-phase="wait"
           className={`fc-miner__man is-${mood}`}
           style={{ left: pct(MAN.left, W), top: pct(MAN.top, scene.H), width: pct(MAN.width, W) }}
           aria-hidden="true"
         >
-          <img src="/miner/miner-winch.webp" alt="" draggable={false} />
+          <img src="/miner/miner-cut.webp" alt="" draggable={false} />
         </div>
         <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H), height: pct(clawRef.current.len, scene.H) }} aria-hidden="true">
           <span className="fc-miner__claw" />
