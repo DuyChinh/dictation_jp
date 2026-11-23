@@ -9,6 +9,7 @@ import {
   MIN_MINUTES,
   parseMinutes,
   PRESET_MINUTES,
+  SCOPE_MINUTES,
   startExam,
 } from "../../shared/storage/paperExamStore";
 import { PARTS, PART_KANJI, scopeTitle } from "./paperLabels";
@@ -67,6 +68,13 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
   const examHref = `/lessons/${encodeURIComponent(lessonId)}/paper/exam`;
   const canStart = minutes !== null && count > 0;
 
+  function pickScope(id: ExamScope) {
+    setScope(id);
+    const m = SCOPE_MINUTES[id];
+    setPreset(isPreset(m) ? m : null);
+    setCustom(isPreset(m) ? "" : String(m));
+  }
+
   function start() {
     if (minutes === null || count === 0) return;
     startExam(lessonId, scope, minutes, Date.now(), { allowReplay });
@@ -116,7 +124,7 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
                   role="radio"
                   aria-checked={scope === s.id}
                   className={`exam-scope${scope === s.id ? " is-on" : ""}`}
-                  onClick={() => setScope(s.id)}
+                  onClick={() => pickScope(s.id)}
                 >
                   <span className="exam-scope__kanji" data-tone={s.id === "all" ? undefined : s.id} aria-hidden="true">
                     {s.kanji}

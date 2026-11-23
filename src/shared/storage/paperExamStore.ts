@@ -18,6 +18,14 @@ export const PRESET_MINUTES = [20, 25, 35, 40, 60] as const;
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 180;
 export const DEFAULT_MINUTES = 40;
+/** Minutes suggested when a part is picked on the setup screen (JLPT N2 timing). */
+export const SCOPE_MINUTES: Record<ExamScope, number> = {
+  all: 105,
+  vocab: 40,
+  grammar: 40,
+  reading: 65,
+  listening: 40,
+};
 
 export type ExamSession = {
   lessonId: string;

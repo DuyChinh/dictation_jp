@@ -122,6 +122,21 @@ describe("ExamSetup", () => {
     fireEvent.click(screen.getByRole("button", { name: /Bắt đầu thi/ }));
     expect(getExam("l")?.scope).toBe("vocab");
   });
+
+  it("suggests the usual time for each part when it is picked", () => {
+    renderCard();
+    const start = () => fireEvent.click(screen.getByRole("button", { name: /Bắt đầu thi/ }));
+    const pick = (name: RegExp) => fireEvent.click(screen.getByRole("radio", { name }));
+
+    pick(/^Đọc hiểu/);
+    expect((screen.getByPlaceholderText("Số phút") as HTMLInputElement).value).toBe("65");
+    pick(/^Từ vựng - Ngữ pháp/);
+    expect((screen.getByPlaceholderText("Số phút") as HTMLInputElement).value).toBe("105");
+    pick(/^Từ vựng(?! -)/);
+    expect(screen.getByRole("radio", { name: /^40/ }).getAttribute("aria-checked")).toBe("true");
+    start();
+    expect(getExam("l")).toMatchObject({ scope: "vocab", minutes: 40 });
+  });
 });
 
 describe("ExamRunner", () => {
