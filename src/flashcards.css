@@ -976,7 +976,7 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-toolbar, .fc-sectionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .fc-toolbar { justify-content: flex-end; }
 .fc-toolbar__sum { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; color: var(--text-muted); }
-.fc-sectionbar { margin-top: 8px; }
+.fc-sectionbar { margin-top: 8px; justify-content: flex-start; } /* gear sits right beside the heading so it reads as "its" settings */
 .fc-sectionbar .fc-section { margin: 0; }
 
 .fc-sheet {
