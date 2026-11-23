@@ -322,7 +322,7 @@ const vi = {
   "mill.friend.sure": "Mình chắc chắn là {letter}! Khoảng {pct}% luôn.",
   "mill.friend.maybe": "Ừm… mình nghĩ là {letter}, khoảng {pct}% thôi.",
   "mill.friend.unsure": "Khó quá, mình không chắc lắm… nhưng nghiêng về {letter}.",
-  "mill.won": "Chúc mừng! Bạn là triệu phú!",
+  "mill.won": "Chúc mừng! Bạn là triệu phú!",
   "mill.lost": "Rất tiếc, bạn đã trả lời sai",
   "mill.timeUp": "Hết giờ!",
   "mill.walked": "Bạn đã dừng cuộc chơi",
