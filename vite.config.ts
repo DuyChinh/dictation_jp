@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
+import { staticPages } from "./tools/staticPages";
 
 /**
  * For working offline: lists the built files the service worker should save when it installs, and stamps a build
@@ -43,7 +44,15 @@ export default defineConfig(({ mode }) => {
     env.VITE_API_PROXY_TARGET || "http://localhost:3001";
 
   return {
-    plugins: [react(), offlineFiles()],
+    plugins: [
+      react(),
+      offlineFiles(),
+      // Exams for the sitemap and the per-page HTML: SEO_LESSONS (a URL or a JSON file) or the API itself.
+      staticPages({
+        lessonsSource:
+          env.SEO_LESSONS ?? (env.VITE_API_BASE_URL ? `${env.VITE_API_BASE_URL.replace(/\/$/, "")}/api/content/lessons` : ""),
+      }),
+    ],
     // Only lazy pages import these, so pre-bundle them at startup instead of mid-session.
     optimizeDeps: {
       include: ["qrcode"],

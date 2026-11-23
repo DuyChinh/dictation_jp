@@ -17,6 +17,23 @@ describe("seo", () => {
     }
   });
 
+  it("titles each exam's page from its id and lets search engines index it", () => {
+    const official = metaFor("/lessons/jlpt-n2-2025-12");
+    expect(official.title).toBe("Đề thi JLPT N2 tháng 12/2025: phần Nghe hiểu có đáp án | Kaitiq");
+    expect(official.noindex).toBeFalsy();
+    const paper = metaFor("/lessons/jlpt-n2-2025-12/paper");
+    expect(paper.title).toContain("phần Từ vựng, Ngữ pháp, Đọc hiểu");
+    expect(paper.title).not.toBe(official.title);
+    expect(metaFor("/lessons/jlpt-n3-practice-02").title).toBe("Đề dự đoán JLPT N3 số 2: phần Nghe hiểu có đáp án | Kaitiq");
+    expect(metaFor("/lessons/some-other-id").title).toContain("Làm bài luyện thi JLPT");
+  });
+
+  it("keeps one learner's session pages (dictation, listening, exam room, results) out of search results", () => {
+    for (const sub of ["dictation", "listening", "listening/result", "paper/exam", "paper/exam/result", "paper/exam/review", "paper/vocab"]) {
+      expect(metaFor(`/lessons/jlpt-n2-2025-12/${sub}`).noindex).toBe(true);
+    }
+  });
+
   it("builds the canonical address without a trailing slash", () => {
     expect(canonicalFor("/")).toBe("https://kaitiq.vn/");
     expect(canonicalFor("/lessons/")).toBe("https://kaitiq.vn/lessons");

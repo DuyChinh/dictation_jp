@@ -1,5 +1,7 @@
 export const SITE_ORIGIN = "https://kaitiq.vn";
-const SITE_NAME = "Kaitiq";
+export const SITE_NAME = "Kaitiq";
+/** The picture shown when a link to the site is shared. */
+export const SHARE_IMAGE = { path: "/og-image.png", width: 1200, height: 630 };
 
 export interface PageMeta {
   title: string;
@@ -14,7 +16,7 @@ const HOME: PageMeta = {
     "Luyện thi JLPT N5 đến N1 bằng đề thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu. Giải thích cả 4 đáp án, có bản dịch tiếng Việt từng câu, kèm từ điển và flashcard.",
 };
 
-const PAGES: Record<string, PageMeta> = {
+export const PAGES: Record<string, PageMeta> = {
   "/": HOME,
   "/lessons": {
     title: "Thư viện đề thi JLPT có đáp án và giải thích | Kaitiq",
@@ -63,13 +65,58 @@ export function metaFor(pathname: string): PageMeta {
   if (PRIVATE_PREFIXES.some((p) => path === p || path.startsWith(p.endsWith("/") ? p : `${p}/`))) {
     return { ...HOME, noindex: true };
   }
+  const lesson = /^\/lessons\/([^/]+)(\/paper)?$/.exec(path);
+  if (lesson) return lessonMeta(decodeURIComponent(lesson[1]), Boolean(lesson[2]));
   if (path.startsWith("/lessons/")) {
-    return {
-      title: "Làm bài luyện thi JLPT | Kaitiq",
-      description: "Luyện đề JLPT thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu, có đáp án và giải thích.",
-    };
+    // Dictation, listening runs, exam rooms, results and reviews belong to one learner's session.
+    return { ...GENERIC_LESSON, noindex: true };
   }
   return { ...HOME, noindex: true };
+}
+
+const GENERIC_LESSON: PageMeta = {
+  title: "Làm bài luyện thi JLPT | Kaitiq",
+  description: "Luyện đề JLPT thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu, có đáp án và giải thích.",
+};
+
+const OFFICIAL_ID = /^jlpt-(n[1-5])-(\d{4})-(\d{2})$/;
+const PRACTICE_ID = /^jlpt-(n[1-5])-practice-(\d+)$/;
+
+/**
+ * Title and description of one exam's page, worked out from its id so that the build (which writes them into
+ * the static HTML) and the browser (which keeps them in step with the route) always say the same thing.
+ * `paper` is the written part of the exam (vocabulary, grammar, reading) rather than the listening part.
+ */
+export function lessonMeta(lessonId: string, paper = false): PageMeta {
+  const official = OFFICIAL_ID.exec(lessonId);
+  const practice = PRACTICE_ID.exec(lessonId);
+  const part = paper ? "phần Từ vựng, Ngữ pháp, Đọc hiểu" : "phần Nghe hiểu";
+  if (official) {
+    const level = official[1].toUpperCase();
+    const when = `tháng ${Number(official[3])}/${official[2]}`;
+    return {
+      title: `Đề thi JLPT ${level} ${when}: ${part} có đáp án | ${SITE_NAME}`,
+      description: `Làm lại đề thi JLPT ${level} ${when}, ${part}. Có đáp án, giải thích từng đáp án và bản dịch tiếng Việt${paper ? "" : ", chép chính tả từng câu để luyện nghe"}.`,
+    };
+  }
+  if (practice) {
+    const level = practice[1].toUpperCase();
+    const n = Number(practice[2]);
+    return {
+      title: `Đề dự đoán JLPT ${level} số ${n}: ${part} có đáp án | ${SITE_NAME}`,
+      description: `Đề dự đoán JLPT ${level} số ${n}, ${part}, có đáp án và giải thích. Luyện trước kỳ thi với đề sát cấu trúc đề thật.`,
+    };
+  }
+  return GENERIC_LESSON;
+}
+
+/** Name used in the breadcrumb for a lesson id. */
+export function lessonLabel(lessonId: string): string {
+  const official = OFFICIAL_ID.exec(lessonId);
+  if (official) return `JLPT ${official[1].toUpperCase()} ${Number(official[3])}/${official[2]}`;
+  const practice = PRACTICE_ID.exec(lessonId);
+  if (practice) return `Đề dự đoán JLPT ${practice[1].toUpperCase()} số ${Number(practice[2])}`;
+  return lessonId;
 }
 
 export function canonicalFor(pathname: string): string {
