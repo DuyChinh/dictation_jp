@@ -284,6 +284,13 @@ const paths = {
     </>
   ),
   arrowUp: <path d="M12 19V5M5 12l7-7 7 7" />,
+  // a ticket with a notch on each side and a tear line; reads as a voucher at small sizes
+  ticket: (
+    <>
+      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5V10a2 2 0 0 0 0 4v1.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5V14a2 2 0 0 0 0-4z" />
+      <path d="M14 7.5v2M14 11v2M14 14.5v2" />
+    </>
+  ),
   key: (
     <>
       <circle cx="8" cy="15" r="4.5" />

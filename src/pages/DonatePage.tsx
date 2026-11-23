@@ -8,6 +8,7 @@ import type { TranslationKey } from "../shared/i18n/translations";
 import { useAuth } from "../features/auth/AuthContext";
 import { DONATE, SUPPORT_VIDEO } from "../config/donate";
 import { buildVietQr } from "../features/donate/vietQr";
+import { claimSupportVoucher, fetchMyVouchers, supportVoucher, type Voucher } from "../shared/api/vouchers";
 
 const AMOUNT_LABELS: TranslationKey[] = ["donate.tier1", "donate.tier2", "donate.tier3", "donate.tier4"];
 
@@ -71,6 +72,95 @@ function CopyButton({ text, label, disabled }: { text: string; label: string; di
       <Icon name={copied ? "check" : "copy"} size={16} strokeWidth={2} />
       <span>{copied ? t("donate.copied") : t("donate.copy")}</span>
     </button>
+  );
+}
+
+const CHIP_ICONS: IconName[] = ["message", "heart", "users"];
+
+/** Plain text where each **marked** part becomes a badge, so every language can put the badges where its grammar wants them. */
+function ChipText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("**").map((part, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="donate-chip">
+            <Icon name={CHIP_ICONS[Math.floor(i / 2)] ?? "heart"} size={14} strokeWidth={2.2} />
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+/** The thank-you voucher: a signed-in supporter saves it on their account, then sees its code. */
+function VoucherPerk() {
+  const { t } = useUiLanguage();
+  const { user } = useAuth();
+  const userId = user?._id;
+  const [voucher, setVoucher] = useState<Voucher | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  // a returning supporter already has one: show it instead of the button
+  useEffect(() => {
+    setVoucher(null);
+    setFailed(false);
+    if (!userId) return;
+    const ctl = new AbortController();
+    fetchMyVouchers(ctl.signal)
+      .then((list) => setVoucher(supportVoucher(list) ?? null))
+      .catch(() => {});
+    return () => ctl.abort();
+  }, [userId]);
+
+  const claim = async () => {
+    setSaving(true);
+    setFailed(false);
+    try {
+      setVoucher(await claimSupportVoucher());
+    } catch {
+      setFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={`donate-voucher${voucher ? " is-claimed" : ""}`}>
+      <span className="donate-voucher__icon" aria-hidden="true">
+        <Icon name="ticket" size={26} strokeWidth={1.9} />
+        <em>-10%</em>
+      </span>
+      <div className="donate-voucher__body">
+        <strong>{t("donate.voucherTitle")}</strong>
+        <span>{t("donate.voucherBody")}</span>
+        {voucher ? (
+          <div className="donate-voucher__got">
+            <span className="donate-voucher__label">{t("donate.voucherCode")}</span>
+            <div className="donate-voucher__row">
+              <code>{voucher.code}</code>
+              <CopyButton text={voucher.code} label={t("donate.voucherCopy")} />
+            </div>
+            <span className="donate-voucher__hint">{voucher.used ? t("donate.voucherUsed") : t("donate.voucherSaved")}</span>
+          </div>
+        ) : user ? (
+          <div className="donate-voucher__act">
+            <button type="button" className="btn btn--outline btn--sm" onClick={claim} disabled={saving}>
+              <Icon name="ticket" size={16} />
+              {saving ? t("donate.voucherClaiming") : t("donate.voucherClaim")}
+            </button>
+            {failed && <span className="donate-voucher__err" role="alert">{t("donate.voucherError")}</span>}
+          </div>
+        ) : (
+          <span className="donate-voucher__hint">
+            <Link to="/auth">{t("auth.login")}</Link> {t("donate.voucherLoginHint")}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -146,7 +236,9 @@ export function DonatePage() {
               {t("donate.freeEyebrow")}
             </span>
             <h2 id="donate-free-title">{t("donate.freeTitle")}</h2>
-            <p>{t("donate.freeSub")}</p>
+            <p>
+              <ChipText text={t("donate.freeSub")} />
+            </p>
             <ul className="donate-free__steps">
               {FREE_STEPS.map((s) => (
                 <li key={s.title}>
@@ -160,6 +252,7 @@ export function DonatePage() {
                 </li>
               ))}
             </ul>
+            <VoucherPerk />
             <div className="donate-free__cta">
               <a className="btn btn--primary donate-free__btn" href={SUPPORT_VIDEO.url} target="_blank" rel="noopener noreferrer">
                 <Icon name="play" size={18} />

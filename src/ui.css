@@ -4012,6 +4012,42 @@
 .donate-free__btn { background: #d81b3c; border-color: #d81b3c; color: #fff; }
 .donate-free__btn:hover:not(:disabled) { background: #bd1233; border-color: #bd1233; }
 .donate-free__note { font-size: 13px; color: var(--text-muted); }
+
+/* the actions named in the sentence, as badges that catch the eye */
+.donate-chip {
+  display: inline-flex; align-items: center; gap: 5px; margin: 0 1px; padding: 1px 10px 1px 8px; vertical-align: baseline;
+  font-size: 0.92em; font-weight: 700; line-height: 1.55; color: var(--heart); background: var(--heart-soft);
+  border: 1px solid color-mix(in srgb, var(--heart) 35%, transparent); border-radius: 999px; white-space: nowrap;
+}
+.donate-chip svg { flex: none; }
+
+/* the thank-you voucher: a gold ticket */
+.donate-voucher {
+  display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--acc) 55%, transparent);
+  background: linear-gradient(135deg, var(--acc-soft), transparent 80%), var(--card-bg);
+}
+.donate-voucher__icon {
+  position: relative; flex: none; display: grid; place-items: center; align-content: center; gap: 1px; width: 64px; height: 64px;
+  border-radius: 14px; color: #fff; background: linear-gradient(145deg, #f2b01e, #d97706); box-shadow: 0 6px 16px rgba(217, 119, 6, 0.32);
+  transform: rotate(-4deg);
+}
+.donate-voucher__icon em { font-style: normal; font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+.donate-voucher__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.donate-voucher__body > strong { font-size: 15.5px; color: var(--acc); }
+.donate-voucher__body > span { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.donate-voucher__act { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 4px; }
+.donate-voucher__err { font-size: 13px; color: var(--bad); }
+.donate-voucher__hint { font-size: 13px; color: var(--text-muted); }
+.donate-voucher__hint a { font-weight: 700; color: var(--primary-color); }
+.donate-voucher__got { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.donate-voucher__label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.donate-voucher__row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.donate-voucher__row code { padding: 6px 12px; font-size: 16px; font-weight: 800; letter-spacing: 0.06em; border-radius: 10px; color: var(--acc); background: var(--acc-soft); }
+@media (max-width: 640px) {
+  .donate-voucher { padding: 12px; gap: 12px; }
+  .donate-voucher__icon { width: 54px; height: 54px; }
+}
 @media (max-width: 720px) {
   .donate-free { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 16px; border-radius: 20px; }
   .donate-free__video { aspect-ratio: 16 / 9; max-height: none; }
