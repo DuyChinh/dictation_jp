@@ -6,7 +6,7 @@ import { Icon, type IconName } from "../shared/ui/Icon";
 import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import type { TranslationKey } from "../shared/i18n/translations";
 import { useAuth } from "../features/auth/AuthContext";
-import { DONATE } from "../config/donate";
+import { DONATE, SUPPORT_VIDEO } from "../config/donate";
 import { buildVietQr } from "../features/donate/vietQr";
 
 const AMOUNT_LABELS: TranslationKey[] = ["donate.tier1", "donate.tier2", "donate.tier3", "donate.tier4"];
@@ -15,6 +15,14 @@ const STEPS: Array<{ icon: IconName; title: TranslationKey; body: TranslationKey
   { icon: "camera", title: "donate.step1", body: "donate.step1Body" },
   { icon: "copy", title: "donate.step2", body: "donate.step2Body" },
   { icon: "heart", title: "donate.step3", body: "donate.step3Body" },
+];
+
+/** The four free ways to help; each opens the video (or the channel) in a new tab. */
+const FREE_STEPS: Array<{ icon: IconName; title: TranslationKey; body: TranslationKey; channel?: boolean }> = [
+  { icon: "play", title: "donate.freeWatch", body: "donate.freeWatchBody" },
+  { icon: "message", title: "donate.freeComment", body: "donate.freeCommentBody" },
+  { icon: "heart", title: "donate.freeLike", body: "donate.freeLikeBody" },
+  { icon: "users", title: "donate.freeSubscribe", body: "donate.freeSubscribeBody", channel: true },
 ];
 
 /** Petals drifting behind the hero; positions are fixed so the layout never jumps. */
@@ -123,6 +131,43 @@ export function DonatePage() {
           </span>
           <h1>{t("donate.title")}</h1>
           <p>{t("donate.sub")}</p>
+        </section>
+
+        <section className="donate-free" aria-labelledby="donate-free-title">
+          <a className="donate-free__video" href={SUPPORT_VIDEO.url} target="_blank" rel="noopener noreferrer" aria-label={t("donate.freeCta")}>
+            <span className="donate-free__badge">{t("donate.freeBadge")}</span>
+            <span className="donate-free__play" aria-hidden="true">
+              <Icon name="play" size={34} />
+            </span>
+          </a>
+          <div className="donate-free__body">
+            <span className="donate-free__eyebrow">
+              <Icon name="heart" size={14} strokeWidth={2.4} />
+              {t("donate.freeEyebrow")}
+            </span>
+            <h2 id="donate-free-title">{t("donate.freeTitle")}</h2>
+            <p>{t("donate.freeSub")}</p>
+            <ul className="donate-free__steps">
+              {FREE_STEPS.map((s) => (
+                <li key={s.title}>
+                  <a href={s.channel && SUPPORT_VIDEO.channelUrl ? SUPPORT_VIDEO.channelUrl : SUPPORT_VIDEO.url} target="_blank" rel="noopener noreferrer">
+                    <span className="donate-free__icon" aria-hidden="true">
+                      <Icon name={s.icon} size={18} />
+                    </span>
+                    <strong>{t(s.title)}</strong>
+                    <span>{t(s.body)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div className="donate-free__cta">
+              <a className="btn btn--primary donate-free__btn" href={SUPPORT_VIDEO.url} target="_blank" rel="noopener noreferrer">
+                <Icon name="play" size={18} />
+                {t("donate.freeCta")}
+              </a>
+              <span className="donate-free__note">{t("donate.freeNote")}</span>
+            </div>
+          </div>
         </section>
 
         <div className="donate__grid">
