@@ -18,14 +18,14 @@ describe("seo", () => {
   });
 
   it("builds the canonical address without a trailing slash", () => {
-    expect(canonicalFor("/")).toBe("https://motto.io.vn/");
-    expect(canonicalFor("/lessons/")).toBe("https://motto.io.vn/lessons");
+    expect(canonicalFor("/")).toBe("https://kaitiq.vn/");
+    expect(canonicalFor("/lessons/")).toBe("https://kaitiq.vn/lessons");
   });
 
   it("writes the tags into the document head", () => {
     applyMeta("/dictionary");
     expect(document.title).toContain("Từ điển");
-    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe("https://motto.io.vn/dictionary");
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe("https://kaitiq.vn/dictionary");
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe("index, follow");
     applyMeta("/profile");
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe("noindex, nofollow");

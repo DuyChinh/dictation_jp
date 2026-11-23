@@ -100,7 +100,7 @@ export function AdminLayout() {
         <div className="adm-brand">
           <img className="adm-brand__logo" src="/logo.png" alt="" />
           <span className="adm-brand__text">
-            <span className="adm-brand__name">Motto</span>
+            <span className="adm-brand__name">Kaitiq</span>
             <span className="adm-brand__tag">Bảng quản trị</span>
           </span>
         </div>

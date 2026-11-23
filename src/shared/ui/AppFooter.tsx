@@ -39,7 +39,7 @@ export function AppFooter() {
           <Link to="/" className="app-footer__brand">
             <img src="/logo.png" alt="" width={38} height={38} />
             <span>
-              <strong>Motto</strong>
+              <strong>Kaitiq</strong>
               <span lang="ja">{t("brand.tagline")}</span>
             </span>
           </Link>

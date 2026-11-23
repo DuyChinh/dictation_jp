@@ -1,5 +1,5 @@
-export const SITE_ORIGIN = "https://motto.io.vn";
-const SITE_NAME = "Motto";
+export const SITE_ORIGIN = "https://kaitiq.vn";
+const SITE_NAME = "Kaitiq";
 
 export interface PageMeta {
   title: string;
@@ -9,7 +9,7 @@ export interface PageMeta {
 }
 
 const HOME: PageMeta = {
-  title: "Motto: luyện thi JLPT bằng đề thật, từ điển và flashcard",
+  title: "Kaitiq: luyện thi JLPT bằng đề thật, từ điển và flashcard",
   description:
     "Luyện thi JLPT N5 đến N1 bằng đề thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu. Giải thích cả 4 đáp án, có bản dịch tiếng Việt từng câu, kèm từ điển và flashcard.",
 };
@@ -17,39 +17,39 @@ const HOME: PageMeta = {
 const PAGES: Record<string, PageMeta> = {
   "/": HOME,
   "/lessons": {
-    title: "Thư viện đề thi JLPT có đáp án và giải thích | Motto",
+    title: "Thư viện đề thi JLPT có đáp án và giải thích | Kaitiq",
     description:
       "Đề thi JLPT các cấp N5, N4, N3, N2, N1 theo từng kỳ thi: phần nghe, từ vựng, ngữ pháp, đọc hiểu. Có đáp án, giải thích từng đáp án và bản dịch tiếng Việt.",
   },
   "/exams": {
-    title: "Phòng thi thử JLPT: làm bài tính giờ, chấm điểm ngay | Motto",
+    title: "Phòng thi thử JLPT: làm bài tính giờ, chấm điểm ngay | Kaitiq",
     description: "Thi thử JLPT như thi thật: bấm giờ theo từng phần, chấm điểm và xem lại câu sai ngay sau khi nộp bài.",
   },
   "/dictionary": {
-    title: "Từ điển Nhật - Việt: tra từ, Kanji, cấp độ JLPT | Motto",
+    title: "Từ điển Nhật - Việt: tra từ, Kanji, cấp độ JLPT | Kaitiq",
     description:
       "Tra từ tiếng Nhật ra nghĩa tiếng Việt, kèm cách đọc, Kanji, cấp độ JLPT và ví dụ. Lưu từ vào flashcard chỉ với một lần bấm.",
   },
   "/flashcards": {
-    title: "Flashcard học từ vựng tiếng Nhật: ôn tập, trò chơi | Motto",
+    title: "Flashcard học từ vựng tiếng Nhật: ôn tập, trò chơi | Kaitiq",
     description:
       "Tạo bộ flashcard từ vựng tiếng Nhật, ôn bằng thẻ lật, trắc nghiệm, bài kiểm tra và các trò chơi như đào vàng, ai là triệu phú.",
   },
   "/leaderboard": {
-    title: "Bảng xếp hạng người học | Motto",
-    description: "Bảng xếp hạng những người học chăm chỉ nhất trên Motto.",
+    title: "Bảng xếp hạng người học | Kaitiq",
+    description: "Bảng xếp hạng những người học chăm chỉ nhất trên Kaitiq.",
   },
   "/pricing": {
-    title: "Bảng giá và gói Pro | Motto",
-    description: "Các gói sử dụng Motto và quyền lợi của từng gói.",
+    title: "Bảng giá và gói Pro | Kaitiq",
+    description: "Các gói sử dụng Kaitiq và quyền lợi của từng gói.",
   },
   "/feedback": {
-    title: "Góp ý cho Motto",
-    description: "Gửi góp ý, báo lỗi hoặc đề xuất tính năng để Motto tốt hơn.",
+    title: "Góp ý cho Kaitiq",
+    description: "Gửi góp ý, báo lỗi hoặc đề xuất tính năng để Kaitiq tốt hơn.",
   },
   "/donate": {
-    title: "Ủng hộ Motto",
-    description: "Cách ủng hộ Motto: xem video, bình luận, thả tim, đăng ký kênh hoặc đóng góp trực tiếp.",
+    title: "Ủng hộ Kaitiq",
+    description: "Cách ủng hộ Kaitiq: xem video, bình luận, thả tim, đăng ký kênh hoặc đóng góp trực tiếp.",
   },
 };
 
@@ -65,7 +65,7 @@ export function metaFor(pathname: string): PageMeta {
   }
   if (path.startsWith("/lessons/")) {
     return {
-      title: "Làm bài luyện thi JLPT | Motto",
+      title: "Làm bài luyện thi JLPT | Kaitiq",
       description: "Luyện đề JLPT thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu, có đáp án và giải thích.",
     };
   }

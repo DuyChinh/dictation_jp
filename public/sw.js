@@ -10,11 +10,11 @@
  * To take this off every device, publish a sw.js that calls `self.registration.unregister()` and clears the caches.
  */
 const BUILD = "__BUILD__";
-const SHELL = "motto-shell-v1";
-const ASSETS = "motto-assets-v1";
-const STATIC = "motto-static-v1";
-const FONTS = "motto-fonts-v1";
-const PICS = "motto-pics-v1";
+const SHELL = "kaitiq-shell-v1";
+const ASSETS = "kaitiq-assets-v1";
+const STATIC = "kaitiq-static-v1";
+const FONTS = "kaitiq-fonts-v1";
+const PICS = "kaitiq-pics-v1";
 const CURRENT = [SHELL, ASSETS, STATIC, FONTS, PICS];
 
 const ASSETS_MAX = 400;
@@ -47,7 +47,10 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      for (const name of await caches.keys()) if (name.startsWith("motto-") && !CURRENT.includes(name)) await caches.delete(name);
+      // "motto-" caches belong to the app's former name; no release uses them any more.
+      for (const name of await caches.keys()) {
+        if ((name.startsWith("kaitiq-") && !CURRENT.includes(name)) || name.startsWith("motto-")) await caches.delete(name);
+      }
       await self.clients.claim();
     })(),
   );

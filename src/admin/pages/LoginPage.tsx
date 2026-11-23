@@ -37,14 +37,14 @@ export function LoginPage() {
         <div className="adm-brand">
           <img className="adm-brand__logo" src="/logo.png" alt="" />
           <span className="adm-brand__text">
-            <span className="adm-brand__name">Motto</span>
+            <span className="adm-brand__name">Kaitiq</span>
             <span className="adm-brand__tag">Bảng quản trị</span>
           </span>
         </div>
         <p className="adm-login__motto" lang="ja">
           続ければ、
           <br />
-          もっとできる。
+          必ず解ける。
         </p>
         <p className="adm-login__sub">Quản lý người học, doanh thu và đề nghe.</p>
         <p className="adm-login__note">Chỉ dành cho quản trị viên. Mọi lần đăng nhập đều được ghi vào nhật ký.</p>

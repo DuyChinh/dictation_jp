@@ -70,7 +70,7 @@ export function GoogleCallbackPage() {
           )}
         </div>
 
-        <p className="cb__brand">Motto</p>
+        <p className="cb__brand">Kaitiq</p>
         <h1 className="cb__title" role="status" aria-live="polite">
           {stage === "error" ? t("auth.cb.error") : stage === "ready" ? t("auth.cb.ready") : t("auth.cb.title")}
           {stage !== "error" && stage !== "ready" && (

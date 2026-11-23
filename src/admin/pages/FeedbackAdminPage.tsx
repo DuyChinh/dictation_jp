@@ -415,7 +415,7 @@ function FeedbackDialog({
           </span>
         </div>
       </div>
-      <Field label="Phản hồi từ Motto" htmlFor="fb-reply" hint="Hiện ngay dưới góp ý. Để trống nếu chưa phản hồi.">
+      <Field label="Phản hồi từ Kaitiq" htmlFor="fb-reply" hint="Hiện ngay dưới góp ý. Để trống nếu chưa phản hồi.">
         <textarea
           id="fb-reply"
           rows={4}
@@ -539,7 +539,7 @@ export function FeedbackAdminPage() {
               <img src="/logo.png" alt="" />
             </span>
             <span className="adm-user__text">
-              <strong>Đội ngũ Motto</strong>
+              <strong>Đội ngũ Kaitiq</strong>
               <span>bởi {f.authorName}</span>
             </span>
           </span>

@@ -18,7 +18,7 @@ export type FeedbackAuthor = { kind: "user" | "team"; name: string; avatar: stri
 
 export type FeedbackItem = {
   id: string;
-  /** "team" posts come from the Motto team via the admin area. */
+  /** "team" posts come from the Kaitiq team via the admin area. */
   author: FeedbackAuthor;
   category: FeedbackCategory;
   body: string;

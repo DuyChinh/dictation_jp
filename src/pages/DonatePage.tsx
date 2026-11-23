@@ -331,7 +331,7 @@ export function DonatePage() {
                 <a
                   className="btn btn--outline btn--block"
                   href={qrPng}
-                  download={`motto-donate${amount ? `-${amount}` : ""}.png`}
+                  download={`kaitiq-donate${amount ? `-${amount}` : ""}.png`}
                 >
                   <Icon name="download" size={18} />
                   {t("donate.saveQr")}

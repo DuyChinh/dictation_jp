@@ -46,7 +46,7 @@ describe("the offline notice", () => {
 /** Runs the real sw.js against a small fake of the browser's caches and network. */
 function loadWorker(net: { online: boolean; files: Record<string, string> }) {
   const stores = new Map<string, Map<string, Response>>();
-  const key = (r: Request | string) => new URL(typeof r === "string" ? r : r.url, "https://motto.test").href;
+  const key = (r: Request | string) => new URL(typeof r === "string" ? r : r.url, "https://kaitiq.test").href;
   const cacheOf = (name: string) => {
     if (!stores.has(name)) stores.set(name, new Map());
     const m = stores.get(name)!;
@@ -64,7 +64,7 @@ function loadWorker(net: { online: boolean; files: Record<string, string> }) {
     return body === undefined ? new Response("", { status: 404 }) : new Response(body, { headers: { "content-type": key(r).endsWith("/") ? "text/html" : "application/javascript" } });
   };
   const listeners: Record<string, (e: any) => void> = {};
-  const self = { location: new URL("https://motto.test/"), addEventListener: (t: string, f: (e: any) => void) => (listeners[t] = f), skipWaiting: () => undefined, clients: { claim: async () => undefined } };
+  const self = { location: new URL("https://kaitiq.test/"), addEventListener: (t: string, f: (e: any) => void) => (listeners[t] = f), skipWaiting: () => undefined, clients: { claim: async () => undefined } };
   const context = vm.createContext({ self, caches: { open: async (n: string) => cacheOf(n), keys: async () => [...stores.keys()], delete: async (n: string) => stores.delete(n), match: async () => undefined }, fetch: fakeFetch, Response, Request, URL, setTimeout, Promise, Number, Math, String, Error });
   vm.runInContext(readFileSync(resolve(__dirname, "../../../public/sw.js"), "utf8"), context);
   const install = async () => {
@@ -74,7 +74,7 @@ function loadWorker(net: { online: boolean; files: Record<string, string> }) {
   };
   const ask = async (path: string, init: { mode?: string; destination?: string; range?: string; method?: string } = {}) => {
     let answered: Promise<Response> | undefined;
-    const request = { url: `https://motto.test${path}`, method: init.method ?? "GET", mode: init.mode ?? "cors", destination: init.destination ?? "", headers: { get: (h: string) => (h.toLowerCase() === "range" ? (init.range ?? null) : null) } };
+    const request = { url: `https://kaitiq.test${path}`, method: init.method ?? "GET", mode: init.mode ?? "cors", destination: init.destination ?? "", headers: { get: (h: string) => (h.toLowerCase() === "range" ? (init.range ?? null) : null) } };
     listeners.fetch!({ request, respondWith: (p: Promise<Response>) => (answered = p) });
     return answered ? await answered : undefined;
   };
@@ -92,8 +92,8 @@ describe("the service worker", () => {
   it("saves the page and every built file when it installs", async () => {
     const w = loadWorker({ online: true, files });
     await w.install();
-    expect([...w.stores.get("motto-assets-v1")!.keys()].map((k) => new URL(k).pathname)).toEqual(["/assets/app-1.js", "/assets/sound-1.mp3"]);
-    expect(await (await w.stores.get("motto-shell-v1")!.get("https://motto.test/")!.clone().text())).toBe("<html>page</html>");
+    expect([...w.stores.get("kaitiq-assets-v1")!.keys()].map((k) => new URL(k).pathname)).toEqual(["/assets/app-1.js", "/assets/sound-1.mp3"]);
+    expect(await (await w.stores.get("kaitiq-shell-v1")!.get("https://kaitiq.test/")!.clone().text())).toBe("<html>page</html>");
   });
 
   it("opens the page, a built file and a sound from what is saved when there is no network", async () => {
@@ -118,12 +118,14 @@ describe("the service worker", () => {
 
   it("clears out caches of an older version when it takes over", async () => {
     const w = loadWorker({ online: true, files });
-    w.stores.set("motto-assets-v0", new Map());
+    w.stores.set("kaitiq-assets-v0", new Map());
+    w.stores.set("motto-assets-v1", new Map()); // left by the app's former name
     w.stores.set("other-site", new Map());
     await w.install();
     await w.activate();
-    expect([...w.stores.keys()]).not.toContain("motto-assets-v0");
+    expect([...w.stores.keys()]).not.toContain("kaitiq-assets-v0");
+    expect([...w.stores.keys()]).not.toContain("motto-assets-v1");
     expect([...w.stores.keys()]).toContain("other-site");
-    expect([...w.stores.keys()]).toContain("motto-assets-v1");
+    expect([...w.stores.keys()]).toContain("kaitiq-assets-v1");
   });
 });

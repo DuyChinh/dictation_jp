@@ -64,7 +64,7 @@ export function Brand({ onClick }: { onClick?: () => void }) {
     <Link to="/" className="shell-brand" onClick={onClick}>
       <img className="shell-brand__logo" src="/logo.png" alt="" aria-hidden="true" />
       <span className="shell-brand__text">
-        <span className="shell-brand__name">Motto</span>
+        <span className="shell-brand__name">Kaitiq</span>
         <span className="shell-brand__tag">{t("brand.tagline")}</span>
       </span>
     </Link>

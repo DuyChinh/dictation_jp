@@ -7,4 +7,4 @@ Disallow: /history
 Disallow: /exams/history
 Disallow: /api/
 
-Sitemap: https://motto.io.vn/sitemap.xml
+Sitemap: https://kaitiq.vn/sitemap.xml
