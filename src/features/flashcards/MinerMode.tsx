@@ -573,7 +573,8 @@ export function MinerMode({ deckId, cards, direction }: Props) {
     const best = getBest(deckId, "miner");
     return (
       <section className="fc-panel fc-start fc-miner-start">
-        <h2>{ft("miner.title")}</h2>
+        <div className="fc-miner-start__poster" aria-hidden="true" />
+        <h2 className="visually-hidden">{ft("miner.title")}</h2>
         <p>{ft("miner.intro")}</p>
         <ul className="fc-miner-rules">
           {(["miner.rule1", "miner.rule2", "miner.rule3", "miner.rule4", "miner.rule5"] as const).map((k) => (
@@ -658,7 +659,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           </ul>
           <aside className="fc-shop__keeper">
             <p className="fc-shop__bubble">{fmt(ft("miner.shop.sub"), { n: miner.level })}</p>
-            <img src="/miner/old-miner.webp" alt="" draggable={false} />
+            <img src="/miner/miner-winch.webp" alt="" draggable={false} />
           </aside>
         </div>
         <footer className="fc-shop__foot">
@@ -676,8 +677,6 @@ export function MinerMode({ deckId, cards, direction }: Props) {
   const target = levelTarget(miner.level);
   const seconds = Math.ceil(left / 1000);
   const hold = carried !== null ? nuggets[carried] : null;
-  const manH = scene.H > 80 ? 14 : 11;
-  const manW = manH * 0.66;
   const potential = (n: Nugget) => skinPoints(n.skin);
 
   return (
@@ -745,10 +744,10 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         <span className="fc-miner__soil" aria-hidden="true" />
         <div
           className={`fc-miner__man is-${mood}`}
-          style={{ left: pct(PIVOT.x - 22 - manW / 2, W), top: pct(11 - manH, scene.H), height: pct(manH, scene.H) }}
+          style={{ width: scene.H > 80 ? "22%" : "17%" }}
           aria-hidden="true"
         >
-          <img src="/miner/old-miner.webp" alt="" draggable={false} />
+          <img src="/miner/miner-winch.webp" alt="" draggable={false} />
         </div>
         <div ref={ropeRef} className="fc-miner__rope" style={{ left: pct(PIVOT.x, W), top: pct(PIVOT.y, scene.H), height: pct(clawRef.current.len, scene.H) }} aria-hidden="true">
           <span className="fc-miner__claw" />

@@ -8,6 +8,8 @@ import { PAPER_PROGRESS_KEY, PAPER_PROGRESS_SYNC_KEY, preparePaperProgressSync, 
 import { LAST_MONDAI_KEY } from "./lastMondaiStore";
 import { FLASHCARD_KEY } from "../../features/flashcards/store";
 import { LEARN_KEY } from "../../features/flashcards/learnProgress";
+import { GAME_KEY } from "../../features/flashcards/gameProgress";
+import { PROGRESS_SYNC_KEY } from "../../features/flashcards/progressSync";
 import { syncFlashcards } from "../../features/flashcards/sync";
 import { LISTENING_ATTEMPTS_KEY, getAllListeningAttempts, uploadListeningAttempt } from "./listeningAttemptStore";
 import {
@@ -39,6 +41,8 @@ const PRACTICE_KEYS = [
   PAPER_EXAM_HISTORY_KEY,
   FLASHCARD_KEY,
   LEARN_KEY,
+  GAME_KEY,
+  PROGRESS_SYNC_KEY,
   PAPER_PROGRESS_KEY,
   PAPER_PROGRESS_SYNC_KEY,
   LAST_MONDAI_KEY,

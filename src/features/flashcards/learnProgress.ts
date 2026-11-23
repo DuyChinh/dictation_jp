@@ -1,8 +1,10 @@
 import type { Card } from "./types";
+import { notifyProgressChange } from "./gameProgress";
 
 /**
  * Where a learner got to in a study round, so coming back to a deck carries on from the same card.
- * Kept on this device, one round per deck.
+ * Kept on this device (and copied to the account by progressSync.ts), one round per deck. A finished or restarted
+ * round stays as an empty one, dated, so a device that was offline does not bring the old round back.
  */
 export const LEARN_KEY = "jd.flash_learn.v1";
 /** A round left alone this long is not worth carrying on with. */
@@ -39,13 +41,62 @@ function write(store: Store): void {
 
 export function saveLearn(deckId: string, saved: SavedLearn): void {
   write({ ...read(), [deckId]: saved });
+  notifyProgressChange();
 }
 
-export function clearLearn(deckId: string): void {
+const isOver = (s: SavedLearn | undefined): boolean => !s || !Array.isArray(s.order) || s.order.length === 0;
+
+/** Forgets the round, leaving a dated empty one (see above). */
+export function clearLearn(deckId: string, now = Date.now()): void {
   const store = read();
-  if (!(deckId in store)) return;
-  delete store[deckId];
+  if (isOver(store[deckId])) return; // nothing saved, or already over
+  store[deckId] = { order: [], flips: [], index: 0, unknown: [], at: now };
   write(store);
+  notifyProgressChange();
+}
+
+/** Every study round on this device (finished ones as empty rounds), by deck id. */
+export function exportLearn(): Store {
+  const out: Store = {};
+  for (const [id, s] of Object.entries(read())) {
+    if (s && typeof s.at === "number" && Array.isArray(s.order) && Array.isArray(s.flips)) out[id] = s;
+  }
+  return out;
+}
+
+const strings = (v: unknown): string[] | null => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : null);
+
+/** A round as the account holds it (`data` null = over) turned back into a saved one; null when it is malformed. */
+export function learnFromWire(at: number, data: unknown): SavedLearn | null {
+  if (!Number.isFinite(at)) return null;
+  if (data === null) return { order: [], flips: [], index: 0, unknown: [], at };
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const d = data as Record<string, unknown>;
+  const order = strings(d.order);
+  const unknown = strings(d.unknown ?? []);
+  if (!order || !unknown || !Array.isArray(d.flips) || !d.flips.every((x) => typeof x === "boolean")) return null;
+  if (typeof d.index !== "number" || !Number.isInteger(d.index) || d.index < 0) return null;
+  return { order, flips: d.flips as boolean[], index: d.index, unknown, at };
+}
+
+/** What goes to the account for a round: its content, or null once it is over. */
+export function learnToWire(s: SavedLearn): { order: string[]; flips: boolean[]; index: number; unknown: string[] } | null {
+  return isOver(s) ? null : { order: s.order, flips: s.flips, index: s.index, unknown: s.unknown ?? [] };
+}
+
+/** Takes in the account's rounds: for each deck, the newer of the two is kept. Returns whether anything changed. */
+export function importLearn(remote: Record<string, SavedLearn>, now = Date.now()): boolean {
+  const store = read();
+  let changed = false;
+  for (const [id, s] of Object.entries(remote)) {
+    if (now - s.at > MAX_AGE_MS) continue;
+    const have = store[id];
+    if (have && typeof have.at === "number" && have.at >= s.at) continue;
+    store[id] = s;
+    changed = true;
+  }
+  if (changed) write(store);
+  return changed;
 }
 
 export type Resumed = { items: Array<{ card: Card; flip: boolean }>; index: number; unknown: string[] };

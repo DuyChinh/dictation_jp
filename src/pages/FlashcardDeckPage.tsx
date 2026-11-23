@@ -7,6 +7,7 @@ import { resumeLearn } from "../features/flashcards/learnProgress";
 import { useDirection, useShowHanViet, useShowHiragana } from "../features/flashcards/prefs";
 import { cardsOf, deckNameTaken, deckStats, deleteDeck, isReviewDue, renameDeck, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
+import { useProgressVersion } from "../features/flashcards/progressSync";
 import { useHanVietBackfill } from "../features/flashcards/useHanVietBackfill";
 import { acceptedAnswers } from "../features/flashcards/quiz";
 import type { Card } from "../features/flashcards/types";
@@ -28,6 +29,7 @@ export function FlashcardDeckPage() {
   const navigate = useNavigate();
   const { deckId = "" } = useParams();
   const { decks, state } = useFlashcards();
+  useProgressVersion(); // the "Continue" badges read saved games, which can arrive from the account after this renders
   const deck = decks.find((d) => d.id === deckId);
   const cards = useMemo(() => cardsOf(state, deckId), [state, deckId]);
   const [direction, setDirection] = useDirection();
