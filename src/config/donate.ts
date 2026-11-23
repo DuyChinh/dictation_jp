@@ -11,7 +11,7 @@ export const DONATE = {
 
 /** The free way to help: watch the video, comment, like and subscribe. */
 export const SUPPORT_VIDEO = {
-  url: "https://www.youtube.com/shorts/MsQc0Fd2nqE",
+  url: "https://www.youtube.com/shorts/1UHepAe_ISI",
   /** The channel's page; when set, "Subscribe" opens it, otherwise it opens the video (which has the subscribe button). */
   channelUrl: "",
 };
