@@ -5,7 +5,7 @@ import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 /** Words for the quiz show's milestone card and its sound controls; Vietnamese is the reference. */
 const vi = {
   "ms.eyebrow": "Mốc an toàn",
-  "ms.title": "Chúc mừng! Bạn đã vượt qua câu {n}",
+  "ms.title": "Chúc mừng! Bạn đã vượt qua câu {n}",
   "ms.amount": "Bạn đã chắc chắn có",
   "ms.safe": "Dù trả lời sai ở các câu sau, bạn vẫn giữ được mức này.",
   "ms.next": "Mốc tiếp theo: {prize}",
@@ -51,7 +51,7 @@ const ja: Record<Key, string> = {
 
 const en: Record<Key, string> = {
   "ms.eyebrow": "Safe level",
-  "ms.title": "Well done! You passed question {n}",
+  "ms.title": "Well done! You passed question {n}",
   "ms.amount": "You are now certain of",
   "ms.safe": "Even if you answer wrongly from here, you keep this amount.",
   "ms.next": "Next safe level: {prize}",
