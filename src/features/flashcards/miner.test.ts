@@ -101,7 +101,7 @@ describe("claw geometry", () => {
 });
 
 describe("a dropped claw", () => {
-  const box: Box = { x: 40, y: 30, w: 20, h: 10 };
+  const box: Box = { x: 40, y: 38, w: 20, h: 10 };
 
   it("keeps swinging until launched, then holds its angle while it goes out", () => {
     const swung = run(newClaw(), [box], 50).claw;
@@ -150,9 +150,9 @@ describe("a dropped claw", () => {
 
 describe("a claw aimed at one nugget", () => {
   const boxes: Box[] = [
-    { x: 40, y: 28, w: 20, h: 10 }, // straight below the winch
-    { x: 70, y: 40, w: 20, h: 10 },
-    { x: 5, y: 40, w: 20, h: 10 },
+    { x: 40, y: 36, w: 20, h: 10 }, // straight below the winch
+    { x: 70, y: 48, w: 20, h: 10 },
+    { x: 5, y: 48, w: 20, h: 10 },
   ];
 
   it("turns to the nugget, goes straight to it and brings it back, whichever one is tapped", () => {
@@ -239,9 +239,9 @@ describe("layoutNuggets", () => {
   });
 
   it("knows what blocking is", () => {
-    const a: Box = { x: 40, y: 20, w: 20, h: 8 };
-    const b: Box = { x: 40, y: 45, w: 20, h: 8 };
-    const c: Box = { x: 2, y: 26, w: 18, h: 8 };
+    const a: Box = { x: 40, y: 28, w: 20, h: 8 };
+    const b: Box = { x: 40, y: 53, w: 20, h: 8 };
+    const c: Box = { x: 2, y: 34, w: 18, h: 8 };
     expect(isBlocked([a, b], 1)).toBe(true);
     expect(isBlocked([a, b], 0)).toBe(false);
     expect(isBlocked([a, c], 1)).toBe(false);

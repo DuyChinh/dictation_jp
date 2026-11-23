@@ -1185,7 +1185,7 @@ describe("MinerMode", () => {
     expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Thuốc nổ, còn 3" })).toBeTruthy();
     expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/miner-winch.webp");
-    expect(document.querySelector(".fc-miner__winch")).toBeTruthy();
+    expect(document.querySelector(".fc-miner__man")).toBeTruthy();
     // four nuggets, each its own kind of treasure with its worth on it
     expect(nuggetButtons()).toHaveLength(4);
     for (const b of nuggetButtons()) expect([10, 12, 16, 20, 25, 30]).toContain(valueOf(b));
@@ -1198,12 +1198,12 @@ describe("MinerMode", () => {
     const widths = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
     const inner = window.innerHeight;
     try {
-      // 700 high: 700 - header (72 + 8) - the 280 around the field - 16 = 324 for the field, which is 522 wide at 100:62
+      // 700 high: 700 - header (72 + 8) - the 280 around the field - 16 = 324 for the field, which is 462 wide at 100:70
       Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
       render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
       play();
       const field = document.querySelector<HTMLElement>(".fc-miner__scene")!;
-      expect(field.style.maxWidth).toBe("522px");
+      expect(field.style.maxWidth).toBe("462px");
       expect(field.style.marginInline).toBe("auto");
       cleanup();
       localStorage.removeItem("jd.flash_game.v1");

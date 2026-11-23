@@ -64,7 +64,7 @@ const MIN_LABEL_PX = 7;
  * The miner at his winch: the picture is cropped so that the drum of the winch lands exactly on the point the rope
  * comes off (PIVOT), with the old man cranking it beside the drum. Sizes are in field units (W = 100).
  */
-const MAN = { width: 24, left: PIVOT.x - 0.25 * 24, top: PIVOT.y - 0.7 * ((24 * 620) / 720) };
+const MAN = { width: 24, left: PIVOT.x - 0.15 * 24, top: PIVOT.y - 0.7 * ((24 * 620) / 720) };
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
 type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
