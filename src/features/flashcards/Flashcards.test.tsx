@@ -445,7 +445,8 @@ describe("LearnMode keeps your place", () => {
     fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
     fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
     expect(screen.getByText("Hoàn thành!")).toBeTruthy();
-    expect(localStorage.getItem("jd.flash_learn.v1")).toBeNull();
+    // kept only as an empty, dated round, so the account's copy is dropped on other devices too
+    expect(JSON.parse(localStorage.getItem("jd.flash_learn.v1") ?? "{}").deck1?.order ?? []).toEqual([]);
     first.unmount();
     open(readState().cards);
     expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
@@ -457,7 +458,7 @@ describe("LearnMode keeps your place", () => {
     expect(localStorage.getItem("jd.flash_learn.v1")).toContain("deck1");
     fireEvent.click(screen.getByRole("button", { name: /Bắt đầu lại/ }));
     expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
-    expect(localStorage.getItem("jd.flash_learn.v1")).toBeNull();
+    expect(JSON.parse(localStorage.getItem("jd.flash_learn.v1") ?? "{}").deck1?.order ?? []).toEqual([]);
   });
 
   it("skips cards that were deleted meanwhile and keeps the position", () => {

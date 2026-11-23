@@ -59,6 +59,12 @@ type Props = { deckId: string; cards: Card[]; direction: Direction };
 
 type SideOf = DropItem["options"][number]["side"];
 const MIN_LABEL_PX = 7;
+
+/**
+ * The miner at his winch: the picture is cropped so that the drum of the winch lands exactly on the point the rope
+ * comes off (PIVOT), with the old man cranking it beside the drum. Sizes are in field units (W = 100).
+ */
+const MAN = { width: 24, left: PIVOT.x - 0.25 * 24, top: PIVOT.y - 0.7 * ((24 * 620) / 720) };
 type Nugget = { cardId: string; side: DropItem["options"][number]["side"]; box: Box; skin: SkinId };
 type Stage = "idle" | "playing" | "cleared" | "shop" | "over";
 type Mood = "idle" | "cheer" | "oops";
@@ -734,7 +740,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
           marginInline: maxWidth ? "auto" : undefined,
           ["--nw" as string]: `${scene.nugget.w}cqw`,
           ["--nh" as string]: `${scene.nugget.h}cqw`,
-          ["--ground" as string]: pct(8, scene.H),
+          ["--ground" as string]: pct(16, scene.H),
           ["--grass" as string]: pct(3, scene.H),
         }}
         role="application"
@@ -744,7 +750,7 @@ export function MinerMode({ deckId, cards, direction }: Props) {
         <span className="fc-miner__soil" aria-hidden="true" />
         <div
           className={`fc-miner__man is-${mood}`}
-          style={{ width: scene.H > 80 ? "22%" : "17%" }}
+          style={{ left: pct(MAN.left, W), top: pct(MAN.top, scene.H), width: pct(MAN.width, W) }}
           aria-hidden="true"
         >
           <img src="/miner/miner-winch.webp" alt="" draggable={false} />
@@ -759,9 +765,6 @@ export function MinerMode({ deckId, cards, direction }: Props) {
             </div>
           )}
         </div>
-        <span className="fc-miner__winch" style={{ left: pct(PIVOT.x - 6, W), top: pct(PIVOT.y - 4.8, scene.H), width: pct(12, W), height: pct(6.4, scene.H) }} aria-hidden="true">
-          <i className="fc-miner__drum" />
-        </span>
         {nuggets.map((n, i) => (
           <button
             key={`${miner.right + miner.wrong}-${miner.level}-${n.cardId}`}

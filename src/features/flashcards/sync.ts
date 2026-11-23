@@ -21,7 +21,12 @@ const token = () => {
  * two copies). Does nothing when signed out. Returns whether the account copy is now up to date.
  */
 export function syncFlashcards(): Promise<boolean> {
+  const decks = syncDecks();
   void syncProgress(); // games and rounds left half way go with it, whichever page asked for the sync
+  return decks;
+}
+
+function syncDecks(): Promise<boolean> {
   if (running) return running;
   const t = token();
   if (!t) return Promise.resolve(false);

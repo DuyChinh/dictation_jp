@@ -7,8 +7,8 @@ import type { Rng } from "./quiz";
  */
 export const W = 100;
 /** The wide field (tablet and desktop); a phone held upright gets the taller one, `SCENES.tall`. */
-export const H = 62;
-export const PIVOT = { x: 50, y: 7 };
+export const H = 70;
+export const PIVOT = { x: 50, y: 15 };
 export const MIN_LEN = 6;
 export const MAX_ANGLE = 66;
 export const SWING_PERIOD_MS = 2800;
@@ -30,8 +30,8 @@ export type Scene = {
 };
 
 export const SCENES = {
-  wide: { H: 62, zone: { x0: 3, x1: 97, y0: 23, y1: 58 }, nugget: { w: 25, h: 11 } },
-  tall: { H: 100, zone: { x0: 3, x1: 97, y0: 26, y1: 96 }, nugget: { w: 30, h: 16 } },
+  wide: { H: 70, zone: { x0: 3, x1: 97, y0: 31, y1: 66 }, nugget: { w: 25, h: 11 } },
+  tall: { H: 108, zone: { x0: 3, x1: 97, y0: 34, y1: 104 }, nugget: { w: 30, h: 16 } },
 } as const satisfies Record<string, Scene>;
 
 export type Box = { x: number; y: number; w: number; h: number };

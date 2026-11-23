@@ -227,7 +227,8 @@ describe("syncFlashcards", () => {
     await pending;
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ decks: [], cards: [] }) });
     await vi.advanceTimersByTimeAsync(2100);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // two uploads of decks and cards (games and rounds left half way go in their own requests)
+    expect(fetchMock.mock.calls.filter(([url]) => !String(url).endsWith("/progress"))).toHaveLength(2);
     expect(readState().decks.map((x) => x.id)).toContain("d3");
   });
 });
