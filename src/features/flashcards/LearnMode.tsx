@@ -295,8 +295,8 @@ export function LearnMode({ deckId, cards, direction }: Props) {
         >
           <Icon name="shuffle" size={16} /> {mix ? ft("learn.shuffleOn") : ft("learn.shuffleOff")}
         </button>
-        <button type="button" className="fc-autochip" onClick={restart}>
-          <Icon name="refresh" size={16} /> {ft("learn.restart")}
+        <button type="button" className="fc-autochip" onClick={restart} aria-label={ft("learn.restart")} title={ft("learn.restart")}>
+          <Icon name="refresh" size={16} /> <span className="fc-autochip__text">{ft("learn.restart")}</span>
         </button>
       </div>
       {showResumed && <p className="fc-note fc-learn__resumed" role="status">{fmt(ft("learn.resumed"), { n: index + 1, total: session.length })}</p>}

@@ -179,7 +179,8 @@ export function shortenMeaning(text: string, max = 44): string {
 /** The words on a nugget, shrunk until they sit inside it. */
 function NuggetLabel({ side }: { side: SideOf }) {
   const box = useRef<HTMLSpanElement>(null);
-  const shown = side.lang === "ja" ? side : { ...side, text: shortenMeaning(side.text) };
+  // the reading goes in front of the meaning, so the meaning is cut shorter to stay inside the nugget
+  const shown = side.lang === "ja" ? side : { ...side, text: shortenMeaning(side.text, side.lead ? 26 : 36) };
   useLayoutEffect(() => {
     const el = box.current;
     const inner = el?.firstElementChild as HTMLElement | null;

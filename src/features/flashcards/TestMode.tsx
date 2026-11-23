@@ -6,24 +6,31 @@ import { useBackTo } from "./StudyContext";
 import {
   QUESTION_KINDS,
   buildTest,
+  gradeQuestion,
   gradeTest,
   isAnswered,
   type Answer,
   type Question,
-  type QuestionKind,
   type QuestionResult,
 } from "./quiz";
 import { clearGame, isRecord, loadGame, saveGame, useSaveOnLeave } from "./gameProgress";
 import { recordAnswers } from "./store";
-import { useShowHiragana } from "./prefs";
+import { loadTestPrefs, saveTestPrefs, useShowHiragana } from "./prefs";
 import { SideView } from "./SideView";
 import type { Card, Direction, Side } from "./types";
 
 type Props = { deckId: string; cards: Card[]; direction: Direction };
 
-const DEFAULT_KINDS: Record<QuestionKind, boolean> = { mc: true, tf: true, write: true, match: true };
-
-type Saved = { direction: Direction; questions: Question[]; answers: Record<string, Answer>; view: "single" | "all"; current: number };
+type Saved = {
+  direction: Direction;
+  questions: Question[];
+  answers: Record<string, Answer>;
+  view: "single" | "all";
+  current: number;
+  /** Instant grading: the questions already graded. */
+  checked?: Record<string, true>;
+  instant?: boolean;
+};
 const isSaved = (d: unknown): d is Saved =>
   isRecord(d) &&
   Array.isArray(d.questions) &&
@@ -37,13 +44,23 @@ const isSaved = (d: unknown): d is Saved =>
 export function TestMode({ deckId, cards, direction }: Props) {
   const ft = useFt();
   const backTo = useBackTo(deckId);
-  const [count, setCount] = useState(Math.min(20, cards.length));
-  const [kinds, setKinds] = useState(DEFAULT_KINDS);
+  // the choices of last time are filled in, so they are not ticked all over again each visit
+  const [prefs] = useState(loadTestPrefs);
+  const [count, setCount] = useState(Math.max(1, Math.min(cards.length, prefs.count ?? 20)));
+  const [kinds, setKinds] = useState(prefs.kinds);
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [graded, setGraded] = useState<ReturnType<typeof gradeTest> | null>(null);
-  const [view, setView] = useState<"single" | "all">("single");
+  const [viewChoice, setView] = useState<"single" | "all">(prefs.view);
+  const [instant, setInstant] = useState(prefs.grading === "instant");
+  const [checked, setChecked] = useState<Record<string, true>>({});
   const [current, setCurrent] = useState(0);
+  // grading each question at once only makes sense one question at a time
+  const view = instant ? "single" : viewChoice;
+
+  useEffect(() => {
+    saveTestPrefs({ count, kinds, view: viewChoice, grading: instant ? "instant" : "end" });
+  }, [count, kinds, viewChoice, instant]);
 
   const anyKind = QUESTION_KINDS.some((k) => kinds[k]);
 
@@ -53,9 +70,9 @@ export function TestMode({ deckId, cards, direction }: Props) {
     return s && s.direction === direction ? s : null;
   });
   const keep = () => {
-    if (questions && !graded) saveGame(deckId, "test", { direction, questions, answers, view, current } satisfies Saved);
+    if (questions && !graded) saveGame(deckId, "test", { direction, questions, answers, view, current, checked, instant } satisfies Saved);
   };
-  useEffect(keep, [questions, answers, view, current, graded]);
+  useEffect(keep, [questions, answers, view, current, graded, checked, instant]);
   useSaveOnLeave(keep);
 
   function resume() {
@@ -63,6 +80,8 @@ export function TestMode({ deckId, cards, direction }: Props) {
     setQuestions(saved.questions);
     setAnswers(saved.answers);
     setView(saved.view);
+    setInstant(saved.instant === true);
+    setChecked(saved.checked ?? {});
     setCurrent(Math.min(saved.current, saved.questions.length - 1));
     setGraded(null);
     window.scrollTo?.({ top: 0 });
@@ -76,10 +95,18 @@ export function TestMode({ deckId, cards, direction }: Props) {
   function begin(pool: Card[], n: number) {
     setQuestions(buildTest(pool, { count: n, direction, kinds }));
     setAnswers({});
+    setChecked({});
     setGraded(null);
     setCurrent(0);
     window.scrollTo?.({ top: 0 });
   }
+
+  /** Stores an answer; in instant grading a choice is graded at once, a typed or matched answer waits for "Check". */
+  function answer(q: Question, a: Answer) {
+    setAnswers((prev) => ({ ...prev, [q.id]: a }));
+    if (instant && (q.kind === "mc" || q.kind === "tf")) setChecked((prev) => ({ ...prev, [q.id]: true }));
+  }
+  const check = (id: string) => setChecked((prev) => ({ ...prev, [id]: true }));
 
   function submit() {
     if (!questions) return;
@@ -119,10 +146,20 @@ export function TestMode({ deckId, cards, direction }: Props) {
           <legend>{ft("test.view")}</legend>
           {(["single", "all"] as const).map((v) => (
             <label key={v} className="fc-check">
-              <input type="radio" name="test-view" checked={view === v} onChange={() => setView(v)} />
+              <input type="radio" name="test-view" checked={view === v} disabled={instant && v === "all"} onChange={() => setView(v)} />
               {ft(`test.view.${v}`)}
             </label>
           ))}
+        </fieldset>
+        <fieldset className="fc-kinds">
+          <legend>{ft("test.grading")}</legend>
+          {([false, true] as const).map((on) => (
+            <label key={String(on)} className="fc-check">
+              <input type="radio" name="test-grading" checked={instant === on} onChange={() => setInstant(on)} />
+              {ft(on ? "test.grading.instant" : "test.grading.end")}
+            </label>
+          ))}
+          {instant && <p className="fc-kinds__hint">{ft("test.grading.instantHint")}</p>}
         </fieldset>
         <div className="fc-actions fc-actions--center">
           {saved && (
@@ -202,6 +239,9 @@ export function TestMode({ deckId, cards, direction }: Props) {
   const idx = Math.min(current, questions.length - 1);
   const q = questions[idx]!;
   const last = idx === questions.length - 1;
+  const qDone = instant && !!checked[q.id];
+  const qResult = qDone ? gradeQuestion(q, answers[q.id]) : undefined;
+  const needsCheck = instant && !qDone && (q.kind === "write" || q.kind === "match");
   return (
     <div className="fc-test fc-test--single">
       <div className="fc-progress" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={answered}>
@@ -216,7 +256,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
           <button
             key={x.id}
             type="button"
-            className={`fc-dots__item${i === idx ? " is-current" : ""}${isAnswered(x, answers[x.id]) ? " is-done" : ""}`}
+            className={`fc-dots__item${i === idx ? " is-current" : ""}${isAnswered(x, answers[x.id]) ? " is-done" : ""}${instant && checked[x.id] ? (() => { const r = gradeQuestion(x, answers[x.id]); return r.right === r.total ? " is-ok" : " is-no"; })() : ""}`}
             aria-current={i === idx ? "step" : undefined}
             aria-label={fmt(ft("test.goTo"), { n: i + 1 })}
             onClick={() => setCurrent(i)}
@@ -229,14 +269,21 @@ export function TestMode({ deckId, cards, direction }: Props) {
         key={q.id}
         className="fc-test__stage"
         onKeyDown={(e) => {
-          // Enter in a text box moves on, as it would on a form
+          // Enter in a text box grades the question (instant grading) or moves on, as it would on a form
           if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
             e.preventDefault();
-            if (!last) setCurrent(idx + 1);
+            if (needsCheck) {
+              if (isAnswered(q, answers[q.id])) check(q.id);
+            } else if (!last) setCurrent(idx + 1);
           }
         }}
       >
-        <QuestionView n={idx + 1} q={q} answer={answers[q.id]} onChange={(a) => setAnswers((prev) => ({ ...prev, [q.id]: a }))} ft={ft} />
+        <QuestionView n={idx + 1} q={q} answer={answers[q.id]} onChange={(a) => answer(q, a)} result={qResult} ft={ft} />
+        {needsCheck && (
+          <button type="button" className="btn btn--soft fc-q__check" disabled={!isAnswered(q, answers[q.id])} onClick={() => check(q.id)}>
+            {ft("test.check")}
+          </button>
+        )}
       </div>
       <div className="fc-test__nav">
         <button type="button" className="btn btn--outline" onClick={() => setCurrent(idx - 1)} disabled={idx === 0}>
@@ -244,7 +291,7 @@ export function TestMode({ deckId, cards, direction }: Props) {
         </button>
         {last ? (
           <button type="button" className="btn btn--primary btn--lg" onClick={submit}>
-            {ft("test.submit")}
+            {ft(instant ? "test.finish" : "test.submit")}
           </button>
         ) : (
           <button type="button" className="btn btn--primary" onClick={() => setCurrent(idx + 1)}>

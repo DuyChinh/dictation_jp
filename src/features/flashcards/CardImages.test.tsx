@@ -662,6 +662,7 @@ describe("pictures while studying", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lật thẻ" }));
     expect(document.querySelector(".fc-flash__side--back .fc-side__pic img")!.getAttribute("src")).toBe(OV("aaa").url);
 
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chọn hiển thị" }));
     const group = screen.getByRole("radiogroup", { name: "Hình ảnh" });
     fireEvent.click(within(group).getByRole("radio", { name: "Mặt trước" }));
     expect(localStorage.getItem("jd.flash_imageside.v1")).toBe("front");

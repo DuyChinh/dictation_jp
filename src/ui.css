@@ -3942,3 +3942,33 @@
     position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; padding: 0; font-size: 0; margin: 0; border: 2px solid var(--sidebar-bg); box-sizing: content-box;
   }
 }
+
+/* ---------- Confirm dialog (shared): asks before something is lost ---------- */
+.cdlg {
+  box-sizing: border-box; width: min(400px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--card-border); border-radius: 20px;
+  color: var(--text-main); background: var(--card-bg); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+.cdlg::backdrop { background: rgba(10, 12, 18, 0.55); backdrop-filter: blur(2px); }
+.cdlg[open] { animation: cdlg-in 0.18s ease-out; }
+.cdlg__inner { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 24px 20px; text-align: center; }
+.cdlg__icon { display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 4px; border-radius: 50%; color: var(--primary-color); background: var(--primary-light); }
+.cdlg--danger .cdlg__icon { color: var(--bad); background: var(--bad-soft); }
+.cdlg__title { margin: 0; font-size: 18px; line-height: 1.3; }
+.cdlg__body { margin: 0; font-size: 14.5px; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
+.cdlg__actions { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+.cdlg__actions .btn { flex: 1 1 0; min-width: 0; }
+@keyframes cdlg-in { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+@media (max-width: 420px) {
+  .cdlg__inner { padding: 24px 18px 16px; }
+  .cdlg__actions { flex-direction: column-reverse; }
+  .cdlg__actions .btn { flex: none; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .cdlg[open] { animation: none; } }
+
+/* ---------- Back arrow in the top bar: on a phone the trail is cut to the page name, so this goes one level up ---------- */
+.shell-header .shell-header__back { display: none; margin-left: -4px; }
+@media (max-width: 640px) {
+  .shell-header .shell-header__back { display: inline-flex; }
+  .shell-header .shell-header__menu + .shell-header__back { margin-left: -4px; }
+  .breadcrumb [aria-current="page"] { min-width: 0; }
+}
