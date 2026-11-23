@@ -13,6 +13,7 @@ import { useReviewDue } from "../../features/flashcards/store";
 import { useFt } from "../../features/flashcards/flashText";
 import { fmt } from "../i18n/format";
 import { OfflineNotice } from "../pwa/OfflineNotice";
+import { AppFooter } from "./AppFooter";
 
 export type Crumb = { label: string; to?: string };
 
@@ -268,6 +269,7 @@ export function AppShell({
 
         <OfflineNotice />
         <main className="shell-content">{children}</main>
+        <AppFooter />
       </div>
     </div>
   );

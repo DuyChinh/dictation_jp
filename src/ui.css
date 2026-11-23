@@ -4068,3 +4068,33 @@
 @media (max-width: 380px) {
   .donate-voucher { flex-direction: column; }
 }
+
+/* ---------- Footer: tip, the way around, copyright ---------- */
+.app-footer { margin-top: auto; background: var(--card-bg); border-top: 1px solid var(--card-border); }
+.app-footer__inner { width: 100%; max-width: 1320px; box-sizing: border-box; padding: 32px 40px 24px; display: flex; flex-direction: column; gap: 24px; }
+.app-footer__tip {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 32px; padding: 20px 24px;
+  border-radius: 16px; background: var(--primary-light); border: 1px solid var(--card-border);
+}
+.app-footer__tiptext { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.app-footer__tiptext strong { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary-color); }
+.app-footer__tiptext p { margin: 0; max-width: 62ch; font-size: 15px; line-height: 1.6; font-weight: 500; color: var(--text-main); }
+.app-footer__demo { flex: 0 1 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.app-footer__demo p { margin: 0; font-family: var(--font-jp); font-size: 20px; font-weight: 500; line-height: 1.4; color: var(--text-main); }
+.app-footer__demo mark { padding: 1px 2px; border-radius: 4px; color: inherit; background: color-mix(in srgb, var(--primary-color) 28%, transparent); }
+.app-footer__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.app-footer__chip { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 14px; font-size: 12.5px; font-weight: 600; color: var(--primary-color); border: 1px solid var(--primary-color); }
+.app-footer__chip--fill { color: #fff; background: var(--primary-fill, #1a73e8); border-color: var(--primary-fill, #1a73e8); }
+.app-footer__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 32px; }
+.app-footer__brand { display: flex; align-items: center; gap: 12px; color: var(--text-main); text-decoration: none; }
+.app-footer__brand img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; }
+.app-footer__brand > span { display: flex; flex-direction: column; line-height: 1.25; }
+.app-footer__brand strong { font-size: 17px; font-weight: 700; }
+.app-footer__brand > span > span { font-size: 12px; color: var(--text-muted); font-family: var(--font-jp); }
+.app-footer__nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px; font-size: 14px; font-weight: 500; }
+.app-footer__nav a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--text-main); text-decoration: none; }
+.app-footer__nav a:hover { text-decoration: underline; }
+.app-footer__nav a.is-heart { color: var(--heart); font-weight: 600; }
+.app-footer__copy { margin: 0; padding-top: 16px; border-top: 1px solid var(--card-border); font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+@media (max-width: 1023px) { .app-footer__inner { padding: 24px 16px 20px; } }
+@media (max-width: 480px) { .app-footer__tip { padding: 16px; } .app-footer__nav { gap: 6px 20px; } }
