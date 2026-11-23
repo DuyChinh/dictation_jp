@@ -119,7 +119,9 @@ function useFitField(active: boolean, ratio: number, scrollKey: string) {
       const room = window.innerHeight - chrome - tallestOther.current - 16;
       const width = Math.floor(room * ratio);
       const available = r.clientWidth;
-      const next = width >= available ? null : Math.max(MIN_FIELD_PX, width);
+      // on a phone held upright the field takes the full width (the page may scroll a little) instead of shrinking to fit the screen height
+      const portraitPhone = window.matchMedia?.("(max-width: 640px) and (orientation: portrait)").matches ?? false;
+      const next = portraitPhone || width >= available ? null : Math.max(MIN_FIELD_PX, width);
       setMaxWidth((old) => (old === next || (old !== null && next !== null && Math.abs(old - next) < 2) ? old : next));
     };
     fit();
