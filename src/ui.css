@@ -4056,3 +4056,15 @@
   .donate-free__btn { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .donate-free, .donate-free__play, .donate-free__eyebrow svg { animation: none; } }
+
+/* the voucher's buttons and code may be long: they wrap and shrink inside the ticket instead of running out of it */
+.donate-voucher { min-width: 0; box-sizing: border-box; }
+.donate-voucher__act .btn { height: auto; min-height: 40px; max-width: 100%; padding-block: 8px; white-space: normal; text-align: left; line-height: 1.3; }
+.donate-voucher__row code { max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .donate-voucher__act { width: 100%; }
+  .donate-voucher__act .btn { width: 100%; justify-content: flex-start; }
+}
+@media (max-width: 380px) {
+  .donate-voucher { flex-direction: column; }
+}
