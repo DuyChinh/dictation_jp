@@ -1174,7 +1174,7 @@ describe("MinerMode", () => {
     expect(screen.getByText(/Thuốc nổ \(phím D\)/)).toBeTruthy();
   });
 
-  it("starts at level 1 with a target, a clock, three lives and three dynamite, and the old miner by the winch", () => {
+  it("starts at level 1 with a target, a clock, three lives and three dynamite, and the miner by the winch", () => {
     render(wrap(<MinerMode deckId="deck1" cards={seed()} direction="term" />));
     play();
     expect(screen.getByText("Mục tiêu")).toBeTruthy();
@@ -1183,7 +1183,7 @@ describe("MinerMode", () => {
     expect(screen.getByLabelText("Còn 50 giây")).toBeTruthy();
     expect(screen.getByLabelText("Còn 3 mạng")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Thuốc nổ, còn 3" })).toBeTruthy();
-    expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/old-miner.webp");
+    expect(document.querySelector(".fc-miner__man img")!.getAttribute("src")).toBe("/miner/miner-winch.webp");
     expect(document.querySelector(".fc-miner__winch")).toBeTruthy();
     // four nuggets, each its own kind of treasure with its worth on it
     expect(nuggetButtons()).toHaveLength(4);
