@@ -137,7 +137,7 @@ export function FeedbackCard({
     <article className={`fb-card${item.pinned ? " is-pinned" : ""}${isTeam ? " is-team" : ""}${fresh ? " is-fresh" : ""}`}>
       <header className="fb-card__head">
         {isTeam ? (
-          <img className="fb-card__avatar fb-card__avatar--team" src="/logo.png" alt="" />
+          <img className="fb-card__avatar fb-card__avatar--team" src="/logo-192.png" alt="" />
         ) : (
           <UserAvatar
             user={{ _id: "", email: "", displayName: name, avatar: item.author.avatar ?? undefined }}
@@ -248,7 +248,7 @@ export function FeedbackCard({
       {item.adminReply && (
         <div className="fb-reply">
           <span className="fb-reply__head">
-            <img src="/logo.png" alt="" aria-hidden="true" />
+            <img src="/logo-192.png" alt="" aria-hidden="true" />
             {t("feedback.replyFrom")}
             {item.repliedAt && <time dateTime={item.repliedAt}>{timeAgo(item.repliedAt, uiLang)}</time>}
           </span>

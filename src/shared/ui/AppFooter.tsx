@@ -37,7 +37,7 @@ export function AppFooter() {
 
         <div className="app-footer__row">
           <Link to="/" className="app-footer__brand">
-            <img src="/logo.png" alt="" width={38} height={38} />
+            <img src="/logo-192.png" alt="" width={38} height={38} />
             <span>
               <strong>Kaitiq</strong>
               <span lang="ja">{t("brand.tagline")}</span>

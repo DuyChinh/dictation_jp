@@ -53,6 +53,17 @@ export default defineConfig(({ mode }) => {
           env.SEO_LESSONS ?? (env.VITE_API_BASE_URL ? `${env.VITE_API_BASE_URL.replace(/\/$/, "")}/api/content/lessons` : ""),
       }),
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          // React and the router change rarely, so keeping them in their own file lets visitors reuse the cached copy after a release.
+          manualChunks(id) {
+            if (/node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "vendor";
+            return undefined;
+          },
+        },
+      },
+    },
     // Only lazy pages import these, so pre-bundle them at startup instead of mid-session.
     optimizeDeps: {
       include: ["qrcode"],

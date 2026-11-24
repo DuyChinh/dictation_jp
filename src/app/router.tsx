@@ -2,34 +2,6 @@ import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "../shared/content/LanguageProvider";
 import { HomePage } from "../pages/HomePage";
-import { HistoryPage } from "../pages/HistoryPage";
-import { LessonsPage } from "../pages/LessonsPage";
-import { ExamRoomPage } from "../pages/ExamRoomPage";
-import { ExamHistoryPage } from "../pages/ExamHistoryPage";
-import { LeaderboardPage } from "../pages/LeaderboardPage";
-import { DictionaryPage } from "../pages/DictionaryPage";
-import { FlashcardsPage } from "../pages/FlashcardsPage";
-import { FlashcardCreatePage } from "../pages/FlashcardCreatePage";
-import { FlashcardDeckPage } from "../pages/FlashcardDeckPage";
-import { FlashcardStudyPage } from "../pages/FlashcardStudyPage";
-import { FlashcardSharedPage, FlashcardSharedStudyPage } from "../pages/FlashcardSharedPage";
-import { PricingPage } from "../pages/PricingPage";
-import { ProfilePage } from "../pages/ProfilePage";
-import { FeedbackPage } from "../pages/FeedbackPage";
-import { LessonPage } from "../pages/LessonPage";
-import { DictationPage } from "../pages/DictationPage";
-import { ListeningPage } from "../pages/ListeningPage";
-import { PaperPage } from "../pages/PaperPage";
-import { PaperOverviewPage } from "../pages/PaperOverviewPage";
-import { PaperExamPage } from "../pages/PaperExamPage";
-import { PaperExamSetupPage } from "../pages/PaperExamSetupPage";
-import { PaperExamReviewPage } from "../pages/PaperExamReviewPage";
-import { PaperExamResultPage } from "../pages/PaperExamResultPage";
-import { ListeningResultPage } from "../pages/ListeningResultPage";
-import { AuthPage } from "../pages/AuthPage";
-import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
-import { ResetPasswordPage } from "../pages/ResetPasswordPage";
-import { GoogleCallbackPage } from "../pages/GoogleCallbackPage";
 import { AuthProvider } from "../features/auth/AuthContext";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { UiLanguageProvider } from "../shared/i18n/UiLanguageContext";
@@ -60,6 +32,37 @@ function lazyPage<T extends ComponentType>(load: () => Promise<{ default: T }>) 
   );
 }
 
+// Every page but the landing page is fetched when it is first visited, which keeps the first download small.
+const HistoryPage = lazyPage(() => import("../pages/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const LessonsPage = lazyPage(() => import("../pages/LessonsPage").then((m) => ({ default: m.LessonsPage })));
+const ExamRoomPage = lazyPage(() => import("../pages/ExamRoomPage").then((m) => ({ default: m.ExamRoomPage })));
+const ExamHistoryPage = lazyPage(() => import("../pages/ExamHistoryPage").then((m) => ({ default: m.ExamHistoryPage })));
+const LeaderboardPage = lazyPage(() => import("../pages/LeaderboardPage").then((m) => ({ default: m.LeaderboardPage })));
+const DictionaryPage = lazyPage(() => import("../pages/DictionaryPage").then((m) => ({ default: m.DictionaryPage })));
+const FlashcardsPage = lazyPage(() => import("../pages/FlashcardsPage").then((m) => ({ default: m.FlashcardsPage })));
+const FlashcardCreatePage = lazyPage(() => import("../pages/FlashcardCreatePage").then((m) => ({ default: m.FlashcardCreatePage })));
+const FlashcardDeckPage = lazyPage(() => import("../pages/FlashcardDeckPage").then((m) => ({ default: m.FlashcardDeckPage })));
+const FlashcardStudyPage = lazyPage(() => import("../pages/FlashcardStudyPage").then((m) => ({ default: m.FlashcardStudyPage })));
+const FlashcardSharedPage = lazyPage(() => import("../pages/FlashcardSharedPage").then((m) => ({ default: m.FlashcardSharedPage })));
+const FlashcardSharedStudyPage = lazyPage(() => import("../pages/FlashcardSharedPage").then((m) => ({ default: m.FlashcardSharedStudyPage })));
+const PricingPage = lazyPage(() => import("../pages/PricingPage").then((m) => ({ default: m.PricingPage })));
+const ProfilePage = lazyPage(() => import("../pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const FeedbackPage = lazyPage(() => import("../pages/FeedbackPage").then((m) => ({ default: m.FeedbackPage })));
+const LessonPage = lazyPage(() => import("../pages/LessonPage").then((m) => ({ default: m.LessonPage })));
+const DictationPage = lazyPage(() => import("../pages/DictationPage").then((m) => ({ default: m.DictationPage })));
+const ListeningPage = lazyPage(() => import("../pages/ListeningPage").then((m) => ({ default: m.ListeningPage })));
+const PaperPage = lazyPage(() => import("../pages/PaperPage").then((m) => ({ default: m.PaperPage })));
+const PaperOverviewPage = lazyPage(() => import("../pages/PaperOverviewPage").then((m) => ({ default: m.PaperOverviewPage })));
+const PaperExamPage = lazyPage(() => import("../pages/PaperExamPage").then((m) => ({ default: m.PaperExamPage })));
+const PaperExamSetupPage = lazyPage(() => import("../pages/PaperExamSetupPage").then((m) => ({ default: m.PaperExamSetupPage })));
+const PaperExamReviewPage = lazyPage(() => import("../pages/PaperExamReviewPage").then((m) => ({ default: m.PaperExamReviewPage })));
+const PaperExamResultPage = lazyPage(() => import("../pages/PaperExamResultPage").then((m) => ({ default: m.PaperExamResultPage })));
+const ListeningResultPage = lazyPage(() => import("../pages/ListeningResultPage").then((m) => ({ default: m.ListeningResultPage })));
+const AuthPage = lazyPage(() => import("../pages/AuthPage").then((m) => ({ default: m.AuthPage })));
+const ForgotPasswordPage = lazyPage(() => import("../pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazyPage(() => import("../pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const GoogleCallbackPage = lazyPage(() => import("../pages/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
+
 const AdminApp = lazyPage(() => import("../admin/AdminApp"));
 // The QR library is only needed here, so it stays out of the main bundle.
 const DonatePage = lazyPage(() => import("../pages/DonatePage").then((m) => ({ default: m.DonatePage })));
@@ -74,6 +77,7 @@ export function AppRouter() {
               <BrowserRouter>
               <PageViewTracker />
               <SeoManager />
+              <Suspense fallback={null}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/lessons" element={<LessonsPage />} />
@@ -150,6 +154,7 @@ export function AppRouter() {
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
             </BrowserRouter>
           </LanguageProvider>
         </AuthProvider>

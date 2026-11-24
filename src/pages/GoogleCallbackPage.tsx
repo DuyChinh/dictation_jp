@@ -62,7 +62,7 @@ export function GoogleCallbackPage() {
         <div className="cb__logo">
           <span className="cb__ring" aria-hidden="true" />
           <span className="cb__ring cb__ring--2" aria-hidden="true" />
-          <img src="/logo.png" alt="" />
+          <img src="/logo-192.png" alt="" />
           {stage === "ready" && (
             <span className="cb__tick" aria-hidden="true">
               <Icon name="check" size={20} strokeWidth={3} />

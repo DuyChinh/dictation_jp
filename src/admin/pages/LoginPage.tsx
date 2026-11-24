@@ -35,7 +35,7 @@ export function LoginPage() {
     <div className="adm-login">
       <div className="adm-login__hero">
         <div className="adm-brand">
-          <img className="adm-brand__logo" src="/logo.png" alt="" />
+          <img className="adm-brand__logo" src="/logo-192.png" alt="" />
           <span className="adm-brand__text">
             <span className="adm-brand__name">Kaitiq</span>
             <span className="adm-brand__tag">Bảng quản trị</span>

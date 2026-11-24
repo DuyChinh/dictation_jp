@@ -536,7 +536,7 @@ export function FeedbackAdminPage() {
         f.fromTeam ? (
           <span className="adm-user">
             <span className="adm-avatar" aria-hidden="true">
-              <img src="/logo.png" alt="" />
+              <img src="/logo-192.png" alt="" />
             </span>
             <span className="adm-user__text">
               <strong>Đội ngũ Kaitiq</strong>
