@@ -7,6 +7,7 @@ import type { UiLang } from "../shared/i18n/translations";
 import { useAuth } from "../features/auth/AuthContext";
 import { UserAvatar, planLabel } from "../features/auth/LoginButton";
 import { AvatarImageError, toAvatarDataUrl } from "../features/auth/avatarImage";
+import { AvatarViewer } from "../features/auth/AvatarViewer";
 
 function joinedLabel(iso: string, lang: UiLang): string {
   return new Date(iso).toLocaleDateString(lang === "ja" ? "ja-JP" : lang === "en" ? "en-GB" : "vi-VN", {
@@ -37,8 +38,10 @@ function AvatarEditor() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  const [viewing, setViewing] = useState(false);
   if (!user) return null;
 
+  const pick = () => inputRef.current?.click();
   const run = async (action: () => Promise<void>, done: string) => {
     setBusy(true);
     setStatus(null);
@@ -66,22 +69,46 @@ function AvatarEditor() {
 
   return (
     <div className="profile__avatar-edit">
-      <button
-        type="button"
-        className="profile__avatar-btn"
-        onClick={() => inputRef.current?.click()}
-        disabled={busy}
-        aria-label={t("profile.avatarChange")}
-        title={t("profile.avatarChange")}
-      >
-        <UserAvatar user={user} className="account__avatar profile__avatar" />
-        <span className="profile__avatar-badge" aria-hidden="true">
+      <div className="profile__avatar-wrap">
+        {/* With a photo, clicking it shows it larger; the camera changes it. Without one, both pick a file. */}
+        <button
+          type="button"
+          className="profile__avatar-btn"
+          onClick={user.avatar ? () => setViewing(true) : pick}
+          disabled={busy}
+          aria-label={user.avatar ? t("profile.avatarView") : t("profile.avatarChange")}
+          title={user.avatar ? t("profile.avatarView") : t("profile.avatarChange")}
+        >
+          <UserAvatar user={user} className="account__avatar profile__avatar" />
+        </button>
+        <button
+          type="button"
+          className="profile__avatar-badge"
+          onClick={pick}
+          disabled={busy}
+          aria-label={t("profile.avatarChange")}
+          title={t("profile.avatarChange")}
+        >
           <Icon name="camera" size={16} />
-        </span>
-      </button>
+        </button>
+      </div>
+      {user.avatar && (
+        <AvatarViewer
+          open={viewing}
+          src={user.avatar}
+          alt={user.displayName}
+          closeLabel={t("profile.avatarClose")}
+          onClose={() => setViewing(false)}
+        />
+      )}
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={onPick} />
       <div className="profile__avatar-links">
-        <button type="button" className="link-btn" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {user.avatar && !busy && (
+          <button type="button" className="link-btn" onClick={() => setViewing(true)}>
+            {t("profile.avatarView")}
+          </button>
+        )}
+        <button type="button" className="link-btn" onClick={pick} disabled={busy}>
           {busy ? t("auth.wait") : t("profile.avatarChange")}
         </button>
         {user.avatar && !busy && (
