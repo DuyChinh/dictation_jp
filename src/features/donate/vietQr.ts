@@ -19,9 +19,21 @@ function crc16(payload: string): string {
  * NAPAS VietQR payload for a transfer to a bank account. With an amount the code is a one-off
  * ("12") that bank apps open with the amount filled in; without one it is the reusable kind ("11").
  */
-export function buildVietQr({ bin, account, amount }: { bin: string; account: string; amount?: number }): string {
+export function buildVietQr({
+  bin,
+  account,
+  amount,
+  memo,
+}: {
+  bin: string;
+  account: string;
+  amount?: number;
+  /** Transfer content the bank app pre-fills (tag 62 / 08). Plain ASCII; anything else is dropped. */
+  memo?: string;
+}): string {
   const beneficiary = field("00", bin) + field("01", account);
   const merchant = field("00", "A000000727") + field("01", beneficiary) + field("02", "QRIBFTTA");
+  const note = (memo ?? "").replace(/[^\x20-\x7e]/g, "").trim().slice(0, 50);
   const body =
     field("00", "01") +
     field("01", amount ? "12" : "11") +
@@ -29,6 +41,7 @@ export function buildVietQr({ bin, account, amount }: { bin: string; account: st
     field("53", "704") +
     (amount ? field("54", String(Math.round(amount))) : "") +
     field("58", "VN") +
+    (note ? field("62", field("08", note)) : "") +
     "6304";
   return body + crc16(body);
 }

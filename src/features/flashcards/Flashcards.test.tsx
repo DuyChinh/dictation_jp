@@ -918,7 +918,7 @@ describe("MillionaireMode", () => {
     await frames(1400);
     await frames(1800);
     let card = screen.getByRole("dialog", { name: "Mốc an toàn" });
-    expect(card.textContent).toContain("Chúc mừng! Bạn đã vượt qua câu 5");
+    expect(card.textContent).toContain("Chúc mừng!\nBạn đã vượt qua câu 5");
     expect(card.querySelector(".fc-mil__chequeprize")!.textContent).toBe("2.000.000");
     expect(card.textContent).toContain("Mốc tiếp theo: 22.000.000");
     // the game waits on the card: no question 6 yet, and the answers cannot be touched

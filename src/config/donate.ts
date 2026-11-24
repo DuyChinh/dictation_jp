@@ -6,7 +6,7 @@ export const DONATE = {
   accountNumber: "9964046722",
   accountName: "DOAN DUY CHINH",
   /** Suggested amounts in VND; the first chip is always "any amount". */
-  amounts: [20000, 50000, 100000, 200000],
+  amounts: [20000, 50000, 100000, 200000, 500000],
 };
 
 /** The free way to help: watch the video, comment, like and subscribe. */

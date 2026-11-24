@@ -44,7 +44,7 @@ export function LoginPage() {
         <p className="adm-login__motto" lang="ja">
           続ければ、
           <br />
-          必ず解ける。
+          必ず解答に届く。
         </p>
         <p className="adm-login__sub">Quản lý người học, doanh thu và đề nghe.</p>
         <p className="adm-login__note">Chỉ dành cho quản trị viên. Mọi lần đăng nhập đều được ghi vào nhật ký.</p>

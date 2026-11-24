@@ -14,4 +14,11 @@ describe("buildVietQr", () => {
     expect(qr).toContain("540550000");
     expect(qr).toMatch(/6304[0-9A-F]{4}$/);
   });
+
+  it("carries the transfer content so the bank app can fill it in", () => {
+    const qr = buildVietQr({ bin: "970436", account: "9964046722", amount: 50000, memo: "a@b.com" });
+    expect(qr).toContain("5802VN62110807a@b.com6304");
+    expect(qr).toMatch(/6304[0-9A-F]{4}$/);
+    expect(buildVietQr({ bin: "970436", account: "9964046722", memo: "" })).not.toContain("6211");
+  });
 });

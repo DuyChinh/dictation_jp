@@ -10,7 +10,7 @@ import { DONATE, SUPPORT_VIDEO } from "../config/donate";
 import { buildVietQr } from "../features/donate/vietQr";
 import { claimSupportVoucher, fetchMyVouchers, supportVoucher, type Voucher } from "../shared/api/vouchers";
 
-const AMOUNT_LABELS: TranslationKey[] = ["donate.tier1", "donate.tier2", "donate.tier3", "donate.tier4"];
+const AMOUNT_LABELS: TranslationKey[] = ["donate.tier1", "donate.tier2", "donate.tier3", "donate.tier4", "donate.tier5"];
 
 const STEPS: Array<{ icon: IconName; title: TranslationKey; body: TranslationKey }> = [
   { icon: "camera", title: "donate.step1", body: "donate.step1Body" },
@@ -171,9 +171,17 @@ export function DonatePage() {
   const [qrSvg, setQrSvg] = useState("");
   const [qrPng, setQrPng] = useState("");
 
+  // A signed-in supporter's email goes into the code, so the bank app opens with the transfer content filled in.
+  const transferNote = user?.email ?? "";
   const payload = useMemo(
-    () => buildVietQr({ bin: DONATE.bankBin, account: DONATE.accountNumber, amount: amount ?? undefined }),
-    [amount],
+    () =>
+      buildVietQr({
+        bin: DONATE.bankBin,
+        account: DONATE.accountNumber,
+        amount: amount ?? undefined,
+        memo: transferNote,
+      }),
+    [amount, transferNote],
   );
 
   useEffect(() => {
@@ -191,8 +199,6 @@ export function DonatePage() {
       live = false;
     };
   }, [payload]);
-
-  const transferNote = user?.email ?? "";
 
   return (
     <AppShell title={t("nav.donate")}>
@@ -304,7 +310,7 @@ export function DonatePage() {
                     onClick={() => setAmount(a)}
                   >
                     <strong>{formatVnd(a)}</strong>
-                    <span>{t(AMOUNT_LABELS[i] ?? "donate.tier4")}</span>
+                    <span>{t(AMOUNT_LABELS[i] ?? "donate.tier5")}</span>
                   </button>
                 ))}
               </div>

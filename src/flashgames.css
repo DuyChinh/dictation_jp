@@ -31,7 +31,7 @@
   padding: 4px 18px; border-radius: 999px; font-size: 12.5px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
   color: #fff4d6; background: linear-gradient(180deg, #7c3aed, #4c1d95); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
-.fc-mil__cheque h3 { margin: 4px 0 0; text-wrap: balance; font-size: clamp(17px, 4.6cqw, 22px); line-height: 1.3; color: #3a2400; }
+.fc-mil__cheque h3 { margin: 4px 0 0; text-align: center; white-space: pre-line; text-wrap: balance; font-size: clamp(17px, 4.6cqw, 22px); line-height: 1.3; color: #3a2400; }
 .fc-mil__cheque p { margin: 0; font-size: 14px; line-height: 1.5; color: #5a3b05; }
 .fc-mil__chequelabel { margin-top: 6px !important; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12.5px !important; }
 .fc-mil__chequeprize {

@@ -2536,7 +2536,7 @@
 
 .donate__grid {
   display: grid;
-  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -2592,42 +2592,64 @@
   left: 50%;
   bottom: 10px;
   transform: translateX(-50%);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
-  color: #16181d;
   white-space: nowrap;
 }
 
-.donate-tiers { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.donate-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 
 .donate-tier {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: 1px solid var(--card-border);
   background: var(--surface-2);
   font: inherit;
   color: var(--text-main);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.donate-tier strong { font-size: 14px; font-weight: 700; }
-.donate-tier span { font-size: 12px; color: var(--text-muted); }
-.donate-tier:hover { transform: translateY(-2px); border-color: var(--input-border); }
+/* The amounts are gold leaf: a bright band keeps sweeping across the figures. */
+@keyframes donate-shine { to { background-position: -200% center; } }
+@keyframes donate-sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(260%) skewX(-18deg); } }
+
+.donate-tier strong,
+.donate-qr__amount {
+  background: linear-gradient(100deg, #c98a00 0%, #ffd24a 22%, #fff2b3 38%, #ffb800 55%, #c98a00 78%, #ffd24a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: donate-shine 3.4s linear infinite;
+}
+.donate-tier strong { font-size: 17px; font-weight: 800; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+.donate-tier span { font-size: 13px; font-weight: 600; color: var(--text-main); opacity: 0.88; }
+.donate-tier:hover { transform: translateY(-2px); border-color: #e0a800; box-shadow: 0 8px 20px -10px rgba(224, 168, 0, 0.6); }
 .donate-tier:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 
 .donate-tier[aria-checked="true"] {
-  border-color: var(--heart);
-  background: var(--heart-soft);
-  box-shadow: 0 0 0 1px var(--heart) inset;
+  border-color: #f0b400;
+  background: linear-gradient(135deg, rgba(255, 196, 0, 0.18), rgba(255, 122, 162, 0.14));
+  box-shadow: 0 0 0 1px #f0b400 inset, 0 10px 26px -12px rgba(240, 180, 0, 0.7);
 }
-
-.donate-tier[aria-checked="true"] strong { color: var(--heart); }
+.donate-tier[aria-checked="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: donate-sweep 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
 
 .donate-account { margin: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); }
 .donate-account > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
@@ -2755,7 +2777,7 @@
 
 @media (max-width: 960px) {
   .donate__grid { grid-template-columns: minmax(0, 1fr); }
-  .donate-card { max-width: 440px; width: 100%; justify-self: center; }
+  .donate-card { max-width: 520px; width: 100%; justify-self: center; }
 }
 
 @media (max-width: 640px) {
@@ -2763,6 +2785,7 @@
   .donate-hero h1 { font-size: 28px; }
   .donate-hero__kanji { font-size: 104px; right: 12px; }
   .donate-card__inner { padding: 18px; }
+  .donate-tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .donate-note { flex-direction: column; padding: 18px; }
 }
 
