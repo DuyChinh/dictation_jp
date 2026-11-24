@@ -2606,7 +2606,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
-  padding: 12px 14px;
+  padding: 12px;
   border-radius: 14px;
   border: 1px solid var(--card-border);
   background: var(--surface-2);
@@ -2643,7 +2643,7 @@
   animation: donate-shine 3.4s linear infinite;
 }
 .donate-tier strong { font-size: 17px; font-weight: 800; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
-.donate-tier span { font-size: 13px; font-weight: 600; color: var(--text-main); opacity: 0.88; }
+.donate-tier span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--text-main); opacity: 0.88; }
 .donate-tier:hover { transform: translateY(-2px); border-color: rgb(var(--trgb)); box-shadow: 0 8px 20px -10px rgba(var(--trgb), 0.6); }
 .donate-tier:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 
