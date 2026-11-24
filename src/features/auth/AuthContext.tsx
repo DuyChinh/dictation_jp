@@ -1,6 +1,7 @@
 import { expandSidebar } from "../../shared/storage/sidebarPref";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiUrl } from "../../shared/env";
+import { disableReminder } from "../flashcards/reminderPush";
 import { adoptLocalData, clearAccountData } from "../../shared/storage/accountData";
 
 export interface User {
@@ -150,6 +151,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const removeAvatar = () => sendAccountUpdate("/api/auth/avatar", "DELETE");
 
   const logout = () => {
+    // stop this browser's review reminders for the account; it reads the token before it is cleared below
+    void disableReminder();
     localStorage.removeItem("token");
     clearAccountData();
     setUser(null);

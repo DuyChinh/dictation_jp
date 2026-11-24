@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useFt } from "../features/flashcards/flashText";
+import { ReviewReminder } from "../features/flashcards/ReviewReminder";
 import { createDeck, deckNameTaken, deckStats, deleteDeck, useFlashcards, useReviewDue } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import type { Deck } from "../features/flashcards/types";
@@ -67,6 +68,8 @@ export function FlashcardsPage() {
             <Link to={`/flashcards/${due.topDeckId}/learn?review=1`} className="btn btn--primary">{ft("remind.go")}</Link>
           </aside>
         )}
+
+        <ReviewReminder />
 
         <form className="fc-newdeck" onSubmit={submit} role="search">
           <div className="fc-newdeck__field">

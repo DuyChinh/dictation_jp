@@ -169,3 +169,44 @@ async function keepFirst(req, name, max) {
     return Response.error();
   }
 }
+
+/*
+ * Reminders: the server sends a push when flashcards are due for review ({ title, body, url, tag }).
+ * Tapping it opens (or focuses) the site at that address.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = typeof data.title === "string" && data.title ? data.title : "Kaitiq";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof data.body === "string" ? data.body : "",
+      icon: "/apple-touch-icon.png",
+      badge: "/favicon.png",
+      tag: typeof data.tag === "string" ? data.tag : "review-due",
+      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/flashcards" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/flashcards", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const w of wins) {
+        if (new URL(w.url).origin === self.location.origin && "focus" in w) {
+          await w.focus();
+          if ("navigate" in w) await w.navigate(url).catch(() => undefined);
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});
