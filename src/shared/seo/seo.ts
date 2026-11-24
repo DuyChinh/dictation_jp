@@ -75,7 +75,7 @@ export function metaFor(pathname: string): PageMeta {
 }
 
 const GENERIC_LESSON: PageMeta = {
-  title: "Làm bài luyện thi JLPT | Kaitiq",
+  title: "Kaitiq - Nền tảng luyện thi JLPT trực tuyến",
   description: "Luyện đề JLPT thật: nghe hiểu, từ vựng, ngữ pháp, đọc hiểu, có đáp án và giải thích.",
 };
 

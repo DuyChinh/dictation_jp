@@ -25,7 +25,7 @@ describe("seo", () => {
     expect(paper.title).toContain("phần Từ vựng, Ngữ pháp, Đọc hiểu");
     expect(paper.title).not.toBe(official.title);
     expect(metaFor("/lessons/jlpt-n3-practice-02").title).toBe("Đề dự đoán JLPT N3 số 2: phần Nghe hiểu có đáp án | Kaitiq");
-    expect(metaFor("/lessons/some-other-id").title).toContain("Làm bài luyện thi JLPT");
+    expect(metaFor("/lessons/some-other-id").title).toContain("Nền tảng luyện thi JLPT trực tuyến");
   });
 
   it("keeps one learner's session pages (dictation, listening, exam room, results) out of search results", () => {
