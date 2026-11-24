@@ -3,6 +3,7 @@ import { evaluateTranslation, type TranslationResult } from "../../shared/api/pa
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import type { SentenceStatus } from "../../shared/storage/paperProgressStore";
 import { Icon } from "../../shared/ui/Icon";
+import { LookupLayer } from "../dictionary/LookupLayer";
 import { segmentSentence } from "./paperLabels";
 
 type Props = {
@@ -59,7 +60,7 @@ export function TranslationDrill({ lessonId, sentences, statuses, onStatus, onCl
   const parts = analysis ? segmentSentence(sentence.ja, analysis.chunks) : null;
 
   return (
-    <section className="paper-drill" aria-label={t("paper.drillTitle")}>
+    <LookupLayer className="paper-drill" label={t("paper.drillTitle")}>
       <header className="paper-drill__head">
         <div>
           <h3>{t("paper.drillTitle")}</h3>
@@ -184,6 +185,6 @@ export function TranslationDrill({ lessonId, sentences, statuses, onStatus, onCl
           {t("paper.prev")}
         </button>
       )}
-    </section>
+    </LookupLayer>
   );
 }

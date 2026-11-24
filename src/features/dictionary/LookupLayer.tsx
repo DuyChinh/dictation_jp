@@ -30,7 +30,7 @@ const highlights = (): HighlightRegistry | null =>
  * Makes Japanese text inside it clickable: a click looks up the word under the cursor and shows its
  * meaning in a popup beside it. Text the learner selects, and buttons or links, are left alone.
  */
-export function LookupLayer({ children, className }: { children: ReactNode; className?: string }) {
+export function LookupLayer({ children, className, label }: { children: ReactNode; className?: string; label?: string }) {
   const { t, uiLang } = useUiLanguage();
   const [popup, setPopup] = useState<Popup | null>(null);
   const latest = useRef(0);
@@ -87,7 +87,7 @@ export function LookupLayer({ children, className }: { children: ReactNode; clas
   }
 
   return (
-    <div className={className} onClick={onClick} ref={rootRef}>
+    <div className={className} onClick={onClick} ref={rootRef} {...(label ? { role: "region", "aria-label": label } : {})}>
       {children}
       <SelectionFlashcard containerRef={rootRef} />
       {popup && createPortal(<LookupPopup popup={popup} onClose={close} t={t} uiLang={uiLang} />, document.body)}

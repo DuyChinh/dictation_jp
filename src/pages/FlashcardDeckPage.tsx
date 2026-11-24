@@ -31,7 +31,8 @@ export function FlashcardDeckPage() {
   const { decks, state } = useFlashcards();
   useProgressVersion(); // the "Continue" badges read saved games, which can arrive from the account after this renders
   const deck = decks.find((d) => d.id === deckId);
-  const cards = useMemo(() => cardsOf(state, deckId), [state, deckId]);
+  // newest first in the word list (the study modes read their own copy through cardsOf)
+  const cards = useMemo(() => [...cardsOf(state, deckId)].sort((a, b) => b.createdAt - a.createdAt), [state, deckId]);
   const [direction, setDirection] = useDirection();
   const [hanViet, setHanViet] = useShowHanViet();
   const [hiragana, setHiragana] = useShowHiragana();
