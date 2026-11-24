@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { mergeState } from "./merge";
 import { isAllowedImage } from "./cardImage";
-import { CARD_LANGS, type Card, type CardImage, type CardLang, type Deck, type FlashState } from "./types";
+import { CARD_LANGS, type Card, type CardImage, type CardLang, type Deck, type FlashState, type Folder } from "./types";
 
 /**
  * Decks and cards live in this browser and, when signed in, are merged with the account's copy
@@ -16,7 +16,7 @@ export const MAX_BOX = INTERVAL_DAYS.length - 1;
 /** A card in this box or higher counts as learned. */
 export const LEARNED_BOX = 4;
 
-const EMPTY: FlashState = { decks: [], cards: [] };
+const EMPTY: FlashState = { decks: [], cards: [], folders: [] };
 
 let lastRaw: string | null = null;
 let lastState: FlashState = EMPTY;
@@ -32,7 +32,11 @@ function parse(raw: string | null): FlashState {
   if (!raw) return EMPTY;
   try {
     const v = JSON.parse(raw) as Partial<FlashState>;
-    return { decks: Array.isArray(v.decks) ? v.decks : [], cards: Array.isArray(v.cards) ? v.cards : [] };
+    return {
+      decks: Array.isArray(v.decks) ? v.decks : [],
+      cards: Array.isArray(v.cards) ? v.cards : [],
+      folders: Array.isArray(v.folders) ? v.folders : [],
+    };
   } catch {
     return EMPTY;
   }
@@ -92,6 +96,7 @@ function subscribe(l: () => void): () => void {
 }
 
 export const liveDecks = (s: FlashState): Deck[] => s.decks.filter((d) => !d.deleted);
+export const liveFolders = (s: FlashState): Folder[] => (s.folders ?? []).filter((f) => !f.deleted);
 
 /** Cards that are not deleted and whose deck still exists. */
 export function liveCards(s: FlashState): Card[] {
@@ -101,9 +106,9 @@ export function liveCards(s: FlashState): Card[] {
 
 export const cardsOf = (s: FlashState, deckId: string): Card[] => liveCards(s).filter((c) => c.deckId === deckId);
 
-export function useFlashcards(): { decks: Deck[]; cards: Card[]; state: FlashState } {
+export function useFlashcards(): { decks: Deck[]; cards: Card[]; folders: Folder[]; state: FlashState } {
   const state = useSyncExternalStore(subscribe, readState, () => EMPTY);
-  return { decks: liveDecks(state), cards: liveCards(state), state };
+  return { decks: liveDecks(state), cards: liveCards(state), folders: liveFolders(state), state };
 }
 
 export function newId(): string {
@@ -148,7 +153,7 @@ export function migrateLegacyDefault(): void {
   const to = target.id;
   decks = decks.map((d) => (d.id === DEFAULT_DECK_ID && !d.deleted ? { ...d, deleted: true as const, updatedAt: now } : d));
   const cards = s.cards.map((c) => (c.deckId === DEFAULT_DECK_ID && !c.deleted ? { ...c, deckId: to, updatedAt: now } : c));
-  writeState({ decks, cards });
+  writeState({ ...s, decks, cards });
 }
 
 /** Deck names compare without case or extra spaces. */
@@ -170,8 +175,63 @@ export function deleteDeck(id: string): void {
   const s = readState();
   const now = Date.now();
   writeState({
+    ...s,
     decks: s.decks.map((d) => (d.id === id && !d.deleted ? { ...d, deleted: true, updatedAt: now } : d)),
     cards: s.cards.map((c) => (c.deckId === id && !c.deleted ? { ...c, deleted: true, updatedAt: now } : c)),
+  });
+}
+
+export const MAX_FOLDERS = 100;
+
+/** Folder names compare without case or extra spaces. */
+export function folderNameTaken(folders: Folder[], name: string, exceptId?: string): boolean {
+  const key = nameKey(name);
+  return key !== "" && folders.some((f) => !f.deleted && f.id !== exceptId && nameKey(f.name) === key);
+}
+
+/** Makes a folder; null when the name is empty, already used, or there are too many folders. */
+export function createFolder(name: string): Folder | null {
+  const s = readState();
+  const live = liveFolders(s);
+  if (!clean(name) || folderNameTaken(live, name) || live.length >= MAX_FOLDERS) return null;
+  const now = Date.now();
+  const folder: Folder = { id: newId(), name: clean(name).slice(0, 80), createdAt: now, updatedAt: now };
+  writeState({ ...s, folders: [...(s.folders ?? []), folder] });
+  return folder;
+}
+
+export function renameFolder(id: string, name: string): void {
+  const s = readState();
+  const now = Date.now();
+  writeState({ ...s, folders: (s.folders ?? []).map((f) => (f.id === id ? { ...f, name: clean(name).slice(0, 80), updatedAt: now } : f)) });
+}
+
+/** Deletes the folder only: its decks stay, out of any folder. */
+export function deleteFolder(id: string): void {
+  const s = readState();
+  const now = Date.now();
+  writeState({
+    ...s,
+    folders: (s.folders ?? []).map((f) => (f.id === id && !f.deleted ? { ...f, deleted: true, updatedAt: now } : f)),
+    decks: s.decks.map((d) => {
+      if (d.folderId !== id) return d;
+      const { folderId: _gone, ...rest } = d;
+      return { ...rest, updatedAt: now };
+    }),
+  });
+}
+
+/** Puts a deck in a folder, or takes it out of its folder when `folderId` is undefined. */
+export function moveDeck(deckId: string, folderId: string | undefined): void {
+  const s = readState();
+  const now = Date.now();
+  writeState({
+    ...s,
+    decks: s.decks.map((d) => {
+      if (d.id !== deckId) return d;
+      const { folderId: _old, ...rest } = d;
+      return folderId ? { ...rest, folderId, updatedAt: now } : { ...rest, updatedAt: now };
+    }),
   });
 }
 
@@ -373,7 +433,7 @@ export function importSharedDeck(name: string, shared: SharedCardData[]): Deck {
     updatedAt: now,
   }));
   const s = readState();
-  writeState({ decks: [...s.decks, deck], cards: [...s.cards, ...cards] });
+  writeState({ ...s, decks: [...s.decks, deck], cards: [...s.cards, ...cards] });
   return deck;
 }
 

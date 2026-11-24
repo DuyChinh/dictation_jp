@@ -872,6 +872,43 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
   .fc-remind .btn { width: 100%; }
 }
 
+/* Folders: a collapsible section per folder, with its decks inside. */
+.fc-folderbar { margin: 4px 0 0; }
+.fc-folder { margin-top: 10px; border: 1px solid var(--card-border); border-radius: 16px; background: var(--card-bg); }
+.fc-folder > .fc-decks, .fc-folder > .fc-note, .fc-folder > .fc-more { margin: 0 14px 14px; }
+.fc-folder > .fc-more { display: flex; }
+.fc-folder__head { display: flex; align-items: center; gap: 4px; padding: 6px 8px 6px 6px; }
+.fc-folder__toggle {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px; text-align: left; cursor: pointer;
+  color: var(--text-main); background: transparent; border: 0; border-radius: 12px; font: inherit;
+}
+.fc-folder__toggle:hover { background: var(--primary-light); }
+.fc-folder__toggle > svg { flex: none; color: var(--primary-color); }
+.fc-folder__chev { transition: transform 0.15s ease; }
+.fc-folder__toggle[aria-expanded="true"] .fc-folder__chev { transform: rotate(90deg); }
+.fc-folder__name { font-size: 16px; overflow-wrap: anywhere; }
+.fc-folder__meta { margin-left: auto; padding-left: 8px; font-size: 13.5px; color: var(--text-muted); white-space: nowrap; }
+.fc-folder__btn {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; cursor: pointer;
+  color: var(--text-muted); background: transparent; border: 0; border-radius: 10px;
+}
+.fc-folder__btn:hover, .fc-folder__btn:focus-visible { color: var(--primary-color); background: var(--primary-light); }
+.fc-folder__btn--del:hover, .fc-folder__btn--del:focus-visible { color: var(--bad); background: var(--bad-soft); }
+.fc-folder__rename { flex: 1; padding: 4px; max-width: none; }
+.fc-deck__folder { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-muted); }
+.fc-more { margin-top: 12px; }
+/* The folder button on a deck is a real <select> laid over an icon, so a phone shows its own picker. */
+.fc-deck__move {
+  position: absolute; top: 10px; right: 48px; display: grid; place-items: center; width: 34px; height: 34px; overflow: hidden;
+  color: var(--text-muted); border-radius: 10px; cursor: pointer; transition: color 0.15s ease, background 0.15s ease;
+}
+.fc-deck__move:hover, .fc-deck__move:focus-within { color: var(--primary-color); background: var(--primary-light); }
+.fc-deck__move select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.fc-deck__move > svg { pointer-events: none; }
+.fc-decks__item .fc-deck__name { padding-right: 76px; }
+@media (pointer: coarse) { .fc-deck__move { top: 6px; right: 52px; width: 44px; height: 44px; } .fc-decks__item .fc-deck__name { padding-right: 96px; } }
+@media (max-width: 560px) { .fc-folder__meta { display: none; } }
+
 /* The switch for the daily review notification: same shape as the banner above it, quieter. */
 .fc-reminder {
   display: flex; align-items: center; gap: 14px; margin: 12px 0 4px; padding: 12px 16px; border-radius: 16px;

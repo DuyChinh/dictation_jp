@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useFt } from "../features/flashcards/flashText";
 import { ReviewReminder } from "../features/flashcards/ReviewReminder";
-import { createDeck, deckNameTaken, deckStats, deleteDeck, useFlashcards, useReviewDue } from "../features/flashcards/store";
+import { DeckBrowser } from "../features/flashcards/DeckBrowser";
+import { createDeck, deckNameTaken, deleteDeck, useFlashcards, useReviewDue } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import type { Deck } from "../features/flashcards/types";
 import { fmt } from "../shared/i18n/format";
@@ -20,7 +21,7 @@ export function FlashcardsPage() {
   const ft = useFt();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { decks, cards } = useFlashcards();
+  const { decks, cards, folders } = useFlashcards();
   const due = useReviewDue();
   /** One box: what is typed filters the decks, and "Create deck" makes a deck of that name. */
   const [name, setName] = useState("");
@@ -113,34 +114,14 @@ export function FlashcardsPage() {
             {shown.length === 0 ? (
               <p className="fc-note" role="status">{fmt(ft("page.noMatch"), { q: typed })}</p>
             ) : (
-              <ul className="fc-decks">
-                {shown.map((d) => {
-                  const own = cards.filter((c) => c.deckId === d.id);
-                  const s = deckStats(own);
-                  const learnedPct = s.total ? Math.round((s.learned / s.total) * 100) : 0;
-                  return (
-                    <li key={d.id} className="fc-decks__item">
-                      <Link to={`/flashcards/${d.id}`} className="fc-deck">
-                        <span className="fc-deck__name">{d.name}{d.shareId && <span className="fc-badge fc-badge--inline">{ft("share.badge")}</span>}</span>
-                        <span className="fc-deck__meta">
-                          {fmt(ft("page.cardsCount"), { n: s.total })}
-                          {s.due > 0 && <span className="fc-deck__due"> · {fmt(ft("page.dueCount"), { n: s.due })}</span>}
-                        </span>
-                        <span className="fc-bar" aria-hidden="true"><span style={{ width: `${learnedPct}%` }} /></span>
-                      </Link>
-                      <button
-                        type="button"
-                        className="fc-deck__del"
-                        onClick={() => setToDelete({ deck: d, n: s.total })}
-                        aria-label={fmt(ft("deck.deleteItem"), { name: d.name })}
-                        title={ft("deck.delete")}
-                      >
-                        <Icon name="trash" size={16} />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <DeckBrowser
+                decks={decks}
+                shown={shown}
+                cards={cards}
+                folders={folders}
+                searching={typed !== ""}
+                onDeleteDeck={(deck, n) => setToDelete({ deck, n })}
+              />
             )}
           </>
         )}

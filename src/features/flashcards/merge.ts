@@ -1,4 +1,4 @@
-import type { Card, Deck, FlashState } from "./types";
+import type { Card, Deck, FlashState, Folder } from "./types";
 
 /** Mirrors the server's merge, so a device and the server agree on what survives. */
 export const TOMBSTONE_MS = 60 * 24 * 3600 * 1000;
@@ -21,7 +21,11 @@ const prune = <T extends Item>(items: T[], now: number): T[] =>
   items.filter((i) => !i.deleted || now - i.updatedAt < TOMBSTONE_MS);
 
 export function mergeState(a: FlashState, b: FlashState, now = Date.now()): FlashState {
-  return { decks: prune(mergeById<Deck>(a.decks, b.decks), now), cards: prune(mergeById<Card>(a.cards, b.cards), now) };
+  return {
+    decks: prune(mergeById<Deck>(a.decks, b.decks), now),
+    cards: prune(mergeById<Card>(a.cards, b.cards), now),
+    folders: prune(mergeById<Folder>(a.folders ?? [], b.folders ?? []), now),
+  };
 }
 
 /** True when `local` holds something newer than (or missing from) `remote`, so another upload is needed. */
@@ -30,5 +34,5 @@ export function hasUnsynced(local: FlashState, remote: FlashState): boolean {
     const seen = new Map(theirs.map((i) => [i.id, i.updatedAt]));
     return mine.some((i) => (seen.get(i.id) ?? -1) < i.updatedAt);
   };
-  return newer(local.decks, remote.decks) || newer(local.cards, remote.cards);
+  return newer(local.decks, remote.decks) || newer(local.cards, remote.cards) || newer(local.folders ?? [], remote.folders ?? []);
 }

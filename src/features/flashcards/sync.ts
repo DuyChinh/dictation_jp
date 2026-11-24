@@ -40,7 +40,7 @@ function syncDecks(): Promise<boolean> {
       });
       if (!res.ok) return false;
       const remote = (await res.json()) as FlashState;
-      const merged = mergeIntoLocal({ decks: remote.decks ?? [], cards: remote.cards ?? [] });
+      const merged = mergeIntoLocal({ decks: remote.decks ?? [], cards: remote.cards ?? [], folders: remote.folders ?? [] });
       // Edits made while the request was in flight go up in the next round.
       if (hasUnsynced(merged, remote)) scheduleSync();
       return true;

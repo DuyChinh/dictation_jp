@@ -1,11 +1,22 @@
 export type CardLang = "ja" | "vi" | "en";
 export const CARD_LANGS: CardLang[] = ["ja", "vi", "en"];
 
+/** A folder that groups decks, like on Quizlet. One level only; a deck is in at most one folder. */
+export type Folder = {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: true;
+};
+
 export type Deck = {
   id: string;
   name: string;
   createdAt: number;
   updatedAt: number;
+  /** The folder this deck is in; a missing or deleted folder means the deck is not in one. */
+  folderId?: string;
   /** Set while the deck is public: the id in its share link. */
   shareId?: string;
   /** The deck that used to be called "default", before decks got real ids. */
@@ -50,7 +61,7 @@ export type Card = {
   deleted?: true;
 };
 
-export type FlashState = { decks: Deck[]; cards: Card[] };
+export type FlashState = { decks: Deck[]; cards: Card[]; folders?: Folder[] };
 
 /** One side of a card as it is shown or asked for. */
 export type Side = {
