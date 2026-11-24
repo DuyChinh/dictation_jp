@@ -9,11 +9,13 @@ import {
   DEFAULT_MINUTE,
   disableReminder,
   enableReminder,
+  fetchAccountTime,
   formatTime,
   notificationsBlocked,
   parseTime,
   readReminderPref,
   reminderSupported,
+  saveAccountTime,
   saveReminderTime,
   sendTestReminder,
   updateReminder,
@@ -40,6 +42,20 @@ export function ReviewReminder() {
     const saved = readReminderPref(userId);
     setOn(Boolean(saved?.on) && !notificationsBlocked());
     setDraft(formatTime(saved?.hour ?? DEFAULT_HOUR, saved?.minute ?? DEFAULT_MINUTE));
+  }, [userId]);
+
+  // The time belongs to the account: on a device that has not seen it yet (or after another device changed it), take it from the server.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void fetchAccountTime().then((t) => {
+      if (cancelled || !t) return;
+      saveReminderTime(userId, t.hour, t.minute);
+      setDraft(formatTime(t.hour, t.minute));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // keep the server's copy of the time, language and time zone fresh while the reminder is on
@@ -74,7 +90,9 @@ export function ReviewReminder() {
     if (!t) return setProblem("badTime");
     setProblem(null);
     saveReminderTime(userId!, t.hour, t.minute);
-    if (!on) return;
+    // on the account, whether or not the reminder is on here, so other devices show the same time
+    const saved = await saveAccountTime(t.hour, t.minute);
+    if (!on) return setProblem(saved ? null : "error");
     setProblem((await updateReminder(userId!, t.hour, t.minute, uiLang)) ? null : "error");
   }
 

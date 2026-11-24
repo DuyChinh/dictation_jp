@@ -26,5 +26,11 @@ select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.6;
 /* The open list follows the theme instead of staying white in the dark one. */
 [data-theme="dark"] select { color-scheme: dark; }
 
+/* Native pickers (the clock and calendar icons) follow the theme too; their icon is black on the dark one otherwise. */
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] input[type="date"] { color-scheme: dark; }
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+
 /* The language picker in the collapsed sidebar is a bare flag: no arrow, no room for one. */
 .shell.is-collapsed .shell-lang select { background-image: none; padding-right: 0; }

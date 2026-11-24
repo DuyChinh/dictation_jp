@@ -219,9 +219,11 @@
   flex-shrink: 0;
 }
 
+/* Fills the room beside the sidebar; on a very wide screen it stops at a readable width and is centred, so the spare room is split on both sides instead of piling up on the right. */
 .shell-content {
   width: 100%;
-  max-width: 1320px;
+  max-width: 1760px;
+  margin-inline: auto;
   box-sizing: border-box;
   padding: 40px 40px 64px;
 }
@@ -938,6 +940,10 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+}
+/* A wide monitor has room for a fourth column of cards. */
+@media (min-width: 1700px) {
+  .lesson-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .lesson-card {
@@ -4120,7 +4126,7 @@
 
 /* ---------- Footer: tip, the way around, copyright ---------- */
 .app-footer { margin-top: auto; background: var(--card-bg); border-top: 1px solid var(--card-border); }
-.app-footer__inner { width: 100%; max-width: 1480px; margin-inline: auto; box-sizing: border-box; padding: 32px 40px 24px; display: flex; flex-direction: column; gap: 24px; }
+.app-footer__inner { width: 100%; max-width: 1760px; margin-inline: auto; box-sizing: border-box; padding: 32px 40px 24px; display: flex; flex-direction: column; gap: 24px; }
 .app-footer__tip {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 32px; padding: 20px 24px;
   border-radius: 16px; background: var(--primary-light); border: 1px solid var(--card-border);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { REMINDER_KEY, disableReminder, enableReminder, readReminderPref, reminderSupported, saveReminderTime, parseTime } from "./reminderPush";
+import { REMINDER_KEY, disableReminder, enableReminder, fetchAccountTime, readReminderPref, reminderSupported, saveAccountTime, saveReminderTime, parseTime } from "./reminderPush";
 
 afterEach(() => {
   localStorage.clear();
@@ -26,6 +26,50 @@ describe("reminder preference", () => {
     expect(readReminderPref("u1")).toBeNull();
     localStorage.setItem(REMINDER_KEY, "{not json");
     expect(readReminderPref("u1")).toBeNull();
+  });
+});
+
+describe("the time on the account", () => {
+  const answer = (body: unknown, ok = true) => vi.fn(async () => ({ ok, json: async () => body }));
+
+  it("is read from the server, so a new device starts from it", async () => {
+    localStorage.setItem("token", "t");
+    const fetchMock = answer({ time: { hour: 23, minute: 30 } });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchAccountTime()).toEqual({ hour: 23, minute: 30 });
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ headers: { Authorization: "Bearer t" } });
+  });
+
+  it("is null when there is none, when signed out, or when the server cannot be reached or sends nonsense", async () => {
+    vi.stubGlobal("fetch", answer({ time: null }));
+    expect(await fetchAccountTime()).toBeNull(); // signed out: no call is even made
+    localStorage.setItem("token", "t");
+    expect(await fetchAccountTime()).toBeNull();
+    vi.stubGlobal("fetch", answer({ time: { hour: 99, minute: 0 } }));
+    expect(await fetchAccountTime()).toBeNull();
+    vi.stubGlobal("fetch", answer({}, false));
+    expect(await fetchAccountTime()).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("offline"))));
+    expect(await fetchAccountTime()).toBeNull();
+  });
+
+  it("is saved to the server", async () => {
+    localStorage.setItem("token", "t");
+    const fetchMock = answer({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await saveAccountTime(7, 45)).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url.endsWith("/api/push/preference")).toBe(true);
+    expect(init).toMatchObject({ method: "PUT", body: JSON.stringify({ hour: 7, minute: 45 }) });
+  });
+
+  it("reports a failed save, and does nothing when signed out", async () => {
+    const fetchMock = answer({}, false);
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await saveAccountTime(7, 45)).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+    localStorage.setItem("token", "t");
+    expect(await saveAccountTime(7, 45)).toBe(false);
   });
 });
 

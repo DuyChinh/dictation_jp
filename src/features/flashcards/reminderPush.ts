@@ -56,6 +56,40 @@ export function saveReminderTime(userId: string, hour: number, minute: number): 
   writeReminderPref({ userId, on: readReminderPref(userId)?.on === true, hour, minute });
 }
 
+/**
+ * The time the learner chose is kept on the account, so a new device starts from it instead of the default.
+ * Null when the account has none yet, or when the server cannot be reached (this device's own choice then stands).
+ */
+export async function fetchAccountTime(): Promise<{ hour: number; minute: number } | null> {
+  const t = token();
+  if (!t) return null;
+  try {
+    const res = await fetch(apiUrl("/api/push/preference"), { headers: { Authorization: `Bearer ${t}` } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { time?: { hour?: unknown; minute?: unknown } | null };
+    const { hour, minute } = json.time ?? {};
+    return typeof hour === "number" && typeof minute === "number" && parseTime(formatTime(hour, minute)) ? { hour, minute } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps the time on the account (and moves the account's other browsers to it); false when it could not be saved. */
+export async function saveAccountTime(hour: number, minute: number): Promise<boolean> {
+  const t = token();
+  if (!t) return false;
+  try {
+    const res = await fetch(apiUrl("/api/push/preference"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ hour, minute }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Whether this browser can show push notifications at all. */
 export function reminderSupported(): boolean {
   return typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof window !== "undefined" && "PushManager" in window && "Notification" in window;
