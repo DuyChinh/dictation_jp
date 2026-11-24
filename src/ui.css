@@ -2621,9 +2621,20 @@
 @keyframes donate-shine { to { background-position: -200% center; } }
 @keyframes donate-sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(260%) skewX(-18deg); } }
 
+/* Each amount has its own colour, climbing from silver through green, blue, violet and rose to gold. */
+.donate-tier, .donate-qr {
+  --t1: #c98a00; --t2: #ffd24a; --t3: #fff2b3; --trgb: 240, 180, 0;
+}
+[data-tone="0"] { --t1: #7d8ea3; --t2: #c9d6e4; --t3: #f4f8fc; --trgb: 148, 163, 184; }
+[data-tone="1"] { --t1: #0f9d58; --t2: #4fe08f; --t3: #d9ffea; --trgb: 34, 197, 94; }
+[data-tone="2"] { --t1: #1a73d9; --t2: #4cc2ff; --t3: #dff5ff; --trgb: 56, 160, 240; }
+[data-tone="3"] { --t1: #7d36d6; --t2: #b98aff; --t3: #f1e4ff; --trgb: 150, 90, 240; }
+[data-tone="4"] { --t1: #cf1f66; --t2: #ff74ae; --t3: #ffe3ef; --trgb: 240, 70, 140; }
+[data-tone="5"] { --t1: #c98a00; --t2: #ffd24a; --t3: #fff2b3; --trgb: 240, 180, 0; }
+
 .donate-tier strong,
 .donate-qr__amount {
-  background: linear-gradient(100deg, #c98a00 0%, #ffd24a 22%, #fff2b3 38%, #ffb800 55%, #c98a00 78%, #ffd24a 100%);
+  background: linear-gradient(100deg, var(--t1) 0%, var(--t2) 22%, var(--t3) 38%, var(--t2) 55%, var(--t1) 78%, var(--t2) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -2633,13 +2644,13 @@
 }
 .donate-tier strong { font-size: 17px; font-weight: 800; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
 .donate-tier span { font-size: 13px; font-weight: 600; color: var(--text-main); opacity: 0.88; }
-.donate-tier:hover { transform: translateY(-2px); border-color: #e0a800; box-shadow: 0 8px 20px -10px rgba(224, 168, 0, 0.6); }
+.donate-tier:hover { transform: translateY(-2px); border-color: rgb(var(--trgb)); box-shadow: 0 8px 20px -10px rgba(var(--trgb), 0.6); }
 .donate-tier:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 
 .donate-tier[aria-checked="true"] {
-  border-color: #f0b400;
-  background: linear-gradient(135deg, rgba(255, 196, 0, 0.18), rgba(255, 122, 162, 0.14));
-  box-shadow: 0 0 0 1px #f0b400 inset, 0 10px 26px -12px rgba(240, 180, 0, 0.7);
+  border-color: rgb(var(--trgb));
+  background: linear-gradient(135deg, rgba(var(--trgb), 0.2), rgba(var(--trgb), 0.06));
+  box-shadow: 0 0 0 1px rgb(var(--trgb)) inset, 0 10px 26px -12px rgba(var(--trgb), 0.75);
 }
 .donate-tier[aria-checked="true"]::after {
   content: "";

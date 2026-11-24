@@ -277,7 +277,7 @@ export function DonatePage() {
                 <span className="donate-card__bank">{DONATE.bankName}</span>
               </div>
 
-              <div className="donate-qr">
+              <div className="donate-qr" data-tone={amount ? DONATE.amounts.indexOf(amount) + 1 : 0}>
                 {/* Keyed on the payload so each new code pops in. */}
                 <div
                   key={payload}
@@ -294,6 +294,7 @@ export function DonatePage() {
                   type="button"
                   role="radio"
                   aria-checked={amount === null}
+                  data-tone={0}
                   className="donate-tier"
                   onClick={() => setAmount(null)}
                 >
@@ -306,6 +307,7 @@ export function DonatePage() {
                     type="button"
                     role="radio"
                     aria-checked={amount === a}
+                    data-tone={i + 1}
                     className="donate-tier"
                     onClick={() => setAmount(a)}
                   >
