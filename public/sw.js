@@ -12,7 +12,7 @@
 const BUILD = "__BUILD__";
 const SHELL = "kaitiq-shell-v1";
 const ASSETS = "kaitiq-assets-v1";
-const STATIC = "kaitiq-static-v2"; // v2: the new logo, so installed copies drop the old pictures at once
+const STATIC = "kaitiq-static-v3"; // bumped with a new logo or favicon, so installed copies drop the old pictures at once
 const FONTS = "kaitiq-fonts-v1";
 const PICS = "kaitiq-pics-v1";
 const CURRENT = [SHELL, ASSETS, STATIC, FONTS, PICS];
