@@ -12,7 +12,7 @@
 const BUILD = "__BUILD__";
 const SHELL = "kaitiq-shell-v1";
 const ASSETS = "kaitiq-assets-v1";
-const STATIC = "kaitiq-static-v3"; // bumped with a new logo or favicon, so installed copies drop the old pictures at once
+const STATIC = "kaitiq-static-v4"; // bumped with a new logo or favicon, so installed copies drop the old pictures at once
 const FONTS = "kaitiq-fonts-v1";
 const PICS = "kaitiq-pics-v1";
 const CURRENT = [SHELL, ASSETS, STATIC, FONTS, PICS];
@@ -21,7 +21,7 @@ const ASSETS_MAX = 400;
 const STATIC_MAX = 120;
 const PICS_MAX = 80;
 const SLOW_MS = 4000;
-const WARM = ["/favicon.png", "/logo-192.png", "/apple-touch-icon.png", "/millionaire/logo.webp", "/miner/miner-cut.webp"];
+const WARM = ["/favicon-32x32.png", "/logo-192.png", "/apple-touch-icon.png", "/millionaire/logo.webp", "/miner/miner-cut.webp"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -186,7 +186,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: typeof data.body === "string" ? data.body : "",
       icon: "/apple-touch-icon.png",
-      badge: "/favicon.png",
+      badge: "/favicon-32x32.png",
       tag: typeof data.tag === "string" ? data.tag : "review-due",
       data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/flashcards" },
     }),
