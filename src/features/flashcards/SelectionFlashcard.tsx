@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { fmt } from "../../shared/i18n/format";
 import { Icon } from "../../shared/ui/Icon";
 import { CardEditor, type CardValue } from "./CardEditor";
-import { DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "./DeckPicker";
+import { DeckCount, DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "./DeckPicker";
 import { useFt } from "./flashText";
 import { lastDeckId, loadRightLang, saveLastDeck } from "./prefs";
 import { DEFAULT_DECK_ID, addCard, isDuplicate, useFlashcards } from "./store";
@@ -153,6 +153,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
         {saved ? (
           <div className="fc-selpanel__done" role="status">
             <p><Icon name="check" size={18} /> {fmt(ft("select.saved"), { deck: saved.deckName })}</p>
+            <DeckCount n={cards.filter((c) => c.deckId === saved.deckId).length} />
             <div className="fc-actions">
               <Link className="btn btn--soft btn--sm" to={`/flashcards/${saved.deckId}`} onClick={close}>{ft("select.open")}</Link>
               <button type="button" className="btn btn--ghost btn--sm" onClick={close}>{ft("common.close")}</button>

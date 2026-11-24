@@ -5,7 +5,7 @@ import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import type { DictEntry } from "../../shared/api/dictionary";
 import { LookupLayer } from "../dictionary/LookupLayer";
 import { SelectionZone } from "./SelectionFlashcard";
-import { createDeck, readState, writeState } from "./store";
+import { addCard, createDeck, readState, writeState } from "./store";
 import { syncFlashcards } from "./sync";
 
 const searchDictionary = vi.fn();
@@ -88,6 +88,29 @@ describe("select a word to make a flashcard", () => {
     await waitFor(() => expect((dialog.querySelector('textarea[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect(readState().cards[0]!.deckId).toBe(deck.id);
+  });
+
+  it("says how many words the deck already has, before saving and again after", async () => {
+    const deck = createDeck("Bài 5");
+    for (const [term, definition] of [["犬", "chó"], ["猫", "mèo"]]) addCard({ deckId: deck.id, term: term!, termLang: "ja", definition: definition!, definitionLang: "vi" });
+    render(
+      <MemoryRouter>
+        <UiLanguageProvider>
+          <LookupLayer>
+            <p data-testid="text">食べる</p>
+          </LookupLayer>
+        </UiLanguageProvider>
+      </MemoryRouter>,
+    );
+    act(() => select(screen.getByTestId("text")));
+    fireEvent.click(await screen.findByRole("button", { name: /Tạo flashcard/ }));
+    const dialog = await screen.findByRole("dialog");
+    const count = () => document.querySelector(".fc-deckpick__count")?.textContent;
+    expect(count()).toBe("Có 2 từ");
+    expect(document.querySelector(".fc-deckpick__count strong")?.textContent).toBe("2");
+    await waitFor(() => expect((dialog.querySelector('textarea[aria-label="Nghĩa"]') as HTMLInputElement).value).toBe("ăn"));
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(count()).toBe("Có 3 từ"));
   });
 
   it("makes a new deck when the card is saved, with no button to make it first", async () => {

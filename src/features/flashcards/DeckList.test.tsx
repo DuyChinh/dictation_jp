@@ -48,7 +48,7 @@ describe("the deck list's search and create box", () => {
 
   it("filters the decks as you type", () => {
     page();
-    const box = screen.getByRole("textbox", { name: "Tìm hoặc tạo bộ thẻ" });
+    const box = screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" });
     expect(screen.getByText("Vocab1311")).toBeTruthy();
     fireEvent.change(box, { target: { value: "listen" } });
     expect(screen.queryByText("Vocab1311")).toBeNull();
@@ -59,7 +59,7 @@ describe("the deck list's search and create box", () => {
 
   it("creates the deck that was typed and opens it", () => {
     page();
-    const box = screen.getByRole("textbox", { name: "Tìm hoặc tạo bộ thẻ" });
+    const box = screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" });
     fireEvent.change(box, { target: { value: "Bộ mới" } });
     fireEvent.click(screen.getByRole("button", { name: "Tạo bộ" }));
     expect(liveDecks(readState()).map((d) => d.name)).toContain("Bộ mới");
@@ -68,7 +68,7 @@ describe("the deck list's search and create box", () => {
 
   it("refuses a name that is already used and says so", () => {
     page();
-    const box = screen.getByRole("textbox", { name: "Tìm hoặc tạo bộ thẻ" });
+    const box = screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" });
     fireEvent.change(box, { target: { value: " vocab1311 " } });
     expect(screen.getByRole("alert").textContent).toContain("Đã có bộ thẻ");
     const create = screen.getByRole("button", { name: "Tạo bộ" }) as HTMLButtonElement;

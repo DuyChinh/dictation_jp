@@ -1,6 +1,18 @@
+import { useMemo } from "react";
 import { useFt } from "./flashText";
-import { DEFAULT_DECK_ID, createDeck, ensureDefaultDeck } from "./store";
+import { DEFAULT_DECK_ID, createDeck, ensureDefaultDeck, useFlashcards } from "./store";
 import type { Deck } from "./types";
+
+/** "Has 11 words" with the number picked out in bold and colour. */
+export function DeckCount({ n, role }: { n: number; role?: "status" }) {
+  const ft = useFt();
+  const [before, after] = ft("select.deckCount").split("{n}");
+  return (
+    <p className="fc-deckpick__count" role={role}>
+      {before}<strong>{n}</strong>{after}
+    </p>
+  );
+}
 
 /** The picker's value while "New deck…" is chosen; the deck is only made when a card is saved into it (`resolveDeck`). */
 export const NEW_DECK = "__new__";
@@ -21,7 +33,11 @@ type Props = {
  */
 export function DeckPicker({ decks, value, onChange, label, newName, onNewName }: Props) {
   const ft = useFt();
+  const { cards } = useFlashcards();
   const options = decks.length ? decks : [{ id: DEFAULT_DECK_ID, name: ft("deck.default") }];
+  /** How many words the chosen deck holds now (it grows as cards are saved). */
+  const count = useMemo(() => (value === NEW_DECK ? 0 : cards.filter((c) => c.deckId === value).length), [cards, value]);
+  const known = value !== NEW_DECK && decks.some((d) => d.id === value);
 
   return (
     <div className="fc-deckpick">
@@ -34,6 +50,7 @@ export function DeckPicker({ decks, value, onChange, label, newName, onNewName }
           <option value={NEW_DECK}>{ft("create.newDeckOption")}</option>
         </select>
       </label>
+      {known && <DeckCount n={count} role="status" />}
       {value === NEW_DECK && (
         <div className="fc-deckpick__new">
           <input

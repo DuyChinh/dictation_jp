@@ -37,6 +37,18 @@ export function FlashcardsPage() {
     const q = fold(typed);
     return q ? decks.filter((d) => fold(d.name).includes(q)) : decks;
   }, [decks, typed]);
+  /** Folders whose name matches too: they are shown opened, with every deck inside. */
+  const matchedFolders = useMemo(() => {
+    const q = fold(typed);
+    return q ? folders.filter((f) => fold(f.name).includes(q)) : [];
+  }, [folders, typed]);
+  /** How many decks the search finds: the matching ones plus those inside matching folders. */
+  const found = useMemo(() => {
+    const ids = new Set(shown.map((d) => d.id));
+    const inMatched = new Set(matchedFolders.map((f) => f.id));
+    for (const d of decks) if (d.folderId && inMatched.has(d.folderId)) ids.add(d.id);
+    return ids.size;
+  }, [shown, matchedFolders, decks]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -109,9 +121,9 @@ export function FlashcardsPage() {
           <>
             <h2 className="fc-section">
               {ft("page.decks")}
-              {typed && <span className="fc-section__count"> · {fmt(ft("page.matchCount"), { shown: shown.length, total: decks.length })}</span>}
+              {typed && <span className="fc-section__count"> · {fmt(ft("page.matchCount"), { shown: found, total: decks.length })}</span>}
             </h2>
-            {shown.length === 0 ? (
+            {shown.length === 0 && matchedFolders.length === 0 ? (
               <p className="fc-note" role="status">{fmt(ft("page.noMatch"), { q: typed })}</p>
             ) : (
               <DeckBrowser
@@ -120,6 +132,7 @@ export function FlashcardsPage() {
                 cards={cards}
                 folders={folders}
                 searching={typed !== ""}
+                matchedFolders={matchedFolders}
                 onDeleteDeck={(deck, n) => setToDelete({ deck, n })}
               />
             )}

@@ -36,13 +36,15 @@ type Props = {
   shown: Deck[];
   cards: Card[];
   folders: Folder[];
-  /** True while something is typed: matches are listed flat, each saying which folder it is in. */
+  /** True while something is typed: matching folders are shown opened, then matching decks flat, each saying which folder it is in. */
   searching: boolean;
+  /** The folders whose name matches what was typed (only used while searching). */
+  matchedFolders?: Folder[];
   onDeleteDeck: (deck: Deck, cardCount: number) => void;
 };
 
 /** The deck list: folders (collapsible) with their decks, then the decks that are in no folder. */
-export function DeckBrowser({ decks, shown, cards, folders, searching, onDeleteDeck }: Props) {
+export function DeckBrowser({ decks, shown, cards, folders, searching, matchedFolders = [], onDeleteDeck }: Props) {
   const ft = useFt();
   const [open, setOpen] = useState<Set<string>>(readOpen);
   const [adding, setAdding] = useState(false);
@@ -133,17 +135,8 @@ export function DeckBrowser({ decks, shown, cards, folders, searching, onDeleteD
     </div>
   );
 
-  if (searching) return <>{grid(shown, true)}</>;
-
-  const loose = shown.filter((d) => !folderOf(d));
-
-  return (
-    <>
-      {toolbar}
-
-      {sortedFolders.map((f) => {
-        const inside = shown.filter((d) => folderOf(d) === f.id);
-        const isOpen = open.has(f.id);
+  const folderSection = (f: Folder, inside: Deck[], forceOpen: boolean) => {
+        const isOpen = forceOpen || open.has(f.id);
         const due = inside.reduce((n, d) => n + (stats.get(d.id)?.due ?? 0), 0);
         const editing = renaming?.id === f.id;
         return (
@@ -187,26 +180,49 @@ export function DeckBrowser({ decks, shown, cards, folders, searching, onDeleteD
             {isOpen && (inside.length > 0 ? grid(inside, false) : <p className="fc-note">{ft("folder.empty")}</p>)}
           </section>
         );
-      })}
+  };
 
+  const dialog = toDelete && (
+    <ConfirmDialog
+      open
+      danger
+      title={ft("folder.dlg.title")}
+      message={fmt(ft("folder.dlg.body"), { name: toDelete.name })}
+      confirmLabel={ft("folder.dlg.confirm")}
+      cancelLabel={ft("common.cancel")}
+      onConfirm={() => {
+        deleteFolder(toDelete.id);
+        setToDelete(null);
+      }}
+      onCancel={() => setToDelete(null)}
+    />
+  );
+
+  if (searching) {
+    // Matching folders come first, opened, with all their decks; then the matching decks that are not inside one of them.
+    const matched = new Set(matchedFolders.map((f) => f.id));
+    const sections = sortedFolders.filter((f) => matched.has(f.id));
+    const decksFound = shown.filter((d) => !matched.has(folderOf(d) ?? ""));
+    return (
+      <>
+        {sections.length > 0 && <h2 className="fc-section">{ft("search.folders")}</h2>}
+        {sections.map((f) => folderSection(f, decks.filter((d) => folderOf(d) === f.id), true))}
+        {sections.length > 0 && decksFound.length > 0 && <h2 className="fc-section">{ft("search.decks")}</h2>}
+        {decksFound.length > 0 && grid(decksFound, true)}
+        {dialog}
+      </>
+    );
+  }
+
+  const loose = shown.filter((d) => !folderOf(d));
+
+  return (
+    <>
+      {toolbar}
+      {sortedFolders.map((f) => folderSection(f, shown.filter((d) => folderOf(d) === f.id), false))}
       {sortedFolders.length > 0 && loose.length > 0 && <h2 className="fc-section">{ft("folder.loose")}</h2>}
       {loose.length > 0 && grid(loose, false)}
-
-      {toDelete && (
-        <ConfirmDialog
-          open
-          danger
-          title={ft("folder.dlg.title")}
-          message={fmt(ft("folder.dlg.body"), { name: toDelete.name })}
-          confirmLabel={ft("folder.dlg.confirm")}
-          cancelLabel={ft("common.cancel")}
-          onConfirm={() => {
-            deleteFolder(toDelete.id);
-            setToDelete(null);
-          }}
-          onCancel={() => setToDelete(null)}
-        />
-      )}
+      {dialog}
     </>
   );
 }

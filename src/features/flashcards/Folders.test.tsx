@@ -134,10 +134,52 @@ describe("the deck list with folders", () => {
     createDeck("Ngữ pháp", "b");
     moveDeck("a", f.id);
     page();
-    fireEvent.change(screen.getByRole("textbox", { name: "Tìm hoặc tạo bộ thẻ" }), { target: { value: "kanji" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" }), { target: { value: "kanji" } });
     const item = screen.getByText("Kanji bài 1").closest("li")!;
     expect(within(item).getByText("N3", { selector: ".fc-deck__folder" })).toBeTruthy();
     expect(screen.queryByText("Ngữ pháp")).toBeNull();
+  });
+
+  it("finds a folder by its name and shows it opened with all its decks", () => {
+    const f = createFolder("Kanji N3")!;
+    createDeck("Bài 1", "a");
+    createDeck("Bài 2", "b");
+    createDeck("Ngoài", "c");
+    moveDeck("a", f.id);
+    moveDeck("b", f.id);
+    page();
+    fireEvent.change(screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" }), { target: { value: "kanji" } });
+    expect(screen.getByRole("heading", { name: "Thư mục" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Kanji N3/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText("Bài 1")).toBeTruthy();
+    expect(screen.getByText("Bài 2")).toBeTruthy();
+    expect(screen.queryByText("Ngoài")).toBeNull();
+    expect(screen.getByRole("heading", { name: /Bộ thẻ của bạn/ }).textContent).toContain("2/3");
+  });
+
+  it("shows matching folders and matching decks together, without repeating a deck", () => {
+    const f = createFolder("Từ vựng", )!;
+    createDeck("Từ vựng bài 1", "a"); // inside the matching folder: listed once, under the folder
+    createDeck("Từ vựng bài 2", "b"); // matches by its own name, outside any folder
+    createDeck("Ngữ pháp", "c");
+    moveDeck("a", f.id);
+    page();
+    fireEvent.change(screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" }), { target: { value: "từ vựng" } });
+    expect(screen.getAllByText("Từ vựng bài 1")).toHaveLength(1);
+    expect(screen.getByText("Từ vựng bài 2")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Bộ thẻ" })).toBeTruthy();
+    expect(screen.queryByText("Ngữ pháp")).toBeNull();
+  });
+
+  it("says nothing matches only when neither a folder nor a deck does", () => {
+    createFolder("Kanji")!;
+    createDeck("A", "a");
+    page();
+    const box = screen.getByRole("textbox", { name: "Tìm thư mục, bộ thẻ hoặc tạo bộ mới" });
+    fireEvent.change(box, { target: { value: "kanji" } });
+    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.change(box, { target: { value: "zzz" } });
+    expect(screen.getByRole("status").textContent).toContain("zzz");
   });
 
   it("deletes only the folder after confirmation, keeping its decks", () => {

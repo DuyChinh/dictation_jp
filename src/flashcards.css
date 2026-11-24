@@ -86,6 +86,8 @@
 .fc-deckpick { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .fc-deckpick label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--text-muted); }
 .fc-deckpick__new { display: flex; gap: 8px; }
+.fc-deckpick__count { margin: 0; font-size: 13px; color: var(--text-muted); }
+.fc-deckpick__count strong { font-size: 15px; font-weight: 800; color: var(--primary-color); }
 
 /* ----- one side of a card ----- */
 .fc-side__text { white-space: pre-line; }
