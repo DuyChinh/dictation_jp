@@ -1706,8 +1706,8 @@
 .profile__avatar-edit { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .profile__avatar-edit .alert { width: 100%; box-sizing: border-box; text-align: left; }
 
+.profile__avatar-wrap { position: relative; display: inline-flex; }
 .profile__avatar-btn {
-  position: relative;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -1715,7 +1715,8 @@
   cursor: pointer;
 }
 
-.profile__avatar-btn:disabled { cursor: progress; opacity: 0.6; }
+.profile__avatar-btn:disabled, .profile__avatar-badge:disabled { cursor: progress; opacity: 0.6; }
+.profile__avatar-btn:hover:not(:disabled) .profile__avatar { filter: brightness(1.06); }
 .profile__avatar-btn:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 3px; }
 
 .profile__avatar-badge {
@@ -1731,11 +1732,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  cursor: pointer;
   transition: transform 0.15s ease;
 }
 
-.profile__avatar-btn:hover:not(:disabled) .profile__avatar-badge { transform: scale(1.08); }
-.profile__avatar-links { display: flex; gap: 16px; font-size: 14px; }
+.profile__avatar-badge:hover:not(:disabled) { transform: scale(1.12); }
+.profile__avatar-badge:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
+
+/* The photo at a larger size. */
+.avatar-viewer { padding: 0; border: 0; background: transparent; max-width: none; max-height: none; overflow: visible; }
+.avatar-viewer::backdrop { background: rgba(8, 10, 16, 0.78); backdrop-filter: blur(3px); }
+.avatar-viewer[open] { animation: cdlg-in 0.18s ease-out; }
+.avatar-viewer__inner { position: relative; display: grid; place-items: center; padding: 24px; }
+.avatar-viewer__img {
+  display: block; width: min(86vw, 86vh, 560px); height: auto; aspect-ratio: 1; object-fit: contain;
+  border-radius: 24px; background: var(--card-bg); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+.avatar-viewer__close {
+  position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--card-border); border-radius: 50%; color: var(--text-main); background: var(--card-bg); cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.avatar-viewer__close:hover { color: var(--bad); }
+.avatar-viewer__close:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
+.profile__avatar-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 14px; }
 .profile__avatar-links .link-btn:disabled { color: var(--text-muted); cursor: progress; }
 .profile__avatar-remove { color: var(--text-muted); }
 .profile__avatar-remove:hover { color: var(--bad); }

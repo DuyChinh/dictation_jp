@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { apiUrl } from "../../shared/env";
 import { disableReminder } from "../flashcards/reminderPush";
 import { adoptLocalData, clearAccountData } from "../../shared/storage/accountData";
+import { useAccountLevelSync } from "./accountLevel";
 
 export interface User {
   _id: string;
@@ -12,6 +13,8 @@ export interface User {
   authProvider?: "local" | "google";
   hasPassword?: boolean;
   plan?: string;
+  /** The level the learner picked; kept on the account so every device starts from it. */
+  jlptLevel?: string;
   createdAt?: string;
 }
 
@@ -34,6 +37,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  useAccountLevelSync(user);
 
   const checkAuth = async () => {
     const token = localStorage.getItem("token");
