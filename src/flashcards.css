@@ -921,13 +921,14 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-reminder .fc-remind__text strong { font-size: 15px; color: var(--text-main); }
 .fc-reminder .fc-remind__text span { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
 .fc-reminder__hour { flex: none; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--ink-2); }
-.fc-reminder__hour select { padding: 6px 8px; min-width: 92px; }
+.fc-reminder__hour input { padding: 6px 8px; min-width: 110px; }
+.fc-reminder__hour input[aria-invalid="true"] { border-color: var(--heart); }
 .fc-reminder .btn { flex: none; }
 @media (max-width: 560px) {
   .fc-reminder { flex-wrap: wrap; }
   .fc-reminder .fc-remind__text { flex-basis: calc(100% - 56px); }
   .fc-reminder__hour { flex: 1; }
-  .fc-reminder__hour select { width: 100%; }
+  .fc-reminder__hour input { width: 100%; }
 }
 
 /* How many cards were added on this visit, left of the add button. */

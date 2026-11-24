@@ -4,12 +4,24 @@ import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
 import { useFt } from "./flashText";
-import { DEFAULT_HOUR, disableReminder, enableReminder, notificationsBlocked, readReminderPref, reminderSupported, updateReminder } from "./reminderPush";
+import {
+  DEFAULT_HOUR,
+  DEFAULT_MINUTE,
+  disableReminder,
+  enableReminder,
+  formatTime,
+  notificationsBlocked,
+  parseTime,
+  readReminderPref,
+  reminderSupported,
+  saveReminderTime,
+  sendTestReminder,
+  updateReminder,
+} from "./reminderPush";
 
-const HOURS = Array.from({ length: 24 }, (_, h) => h);
-type Problem = "blocked" | "unavailable" | "unsupported" | "error" | null;
+type Problem = "blocked" | "unavailable" | "unsupported" | "error" | "badTime" | "testSent" | "testFailed" | null;
 
-/** Turns the daily "cards to review" push notification on or off for this browser, and picks its hour. */
+/** Turns the daily "cards to review" push notification on or off for this browser, and picks its time. */
 export function ReviewReminder() {
   const ft = useFt();
   const { uiLang } = useUiLanguage();
@@ -17,22 +29,32 @@ export function ReviewReminder() {
   const userId = user?._id;
   const pref = readReminderPref(userId);
   const [on, setOn] = useState(Boolean(pref?.on) && !notificationsBlocked());
-  const [hour, setHour] = useState(pref?.hour ?? DEFAULT_HOUR);
+  // what is in the box (it can be half typed); `time` is the last valid time in it
+  const [draft, setDraft] = useState(formatTime(pref?.hour ?? DEFAULT_HOUR, pref?.minute ?? DEFAULT_MINUTE));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem>(null);
+  const time = parseTime(draft);
 
-  // keep the server's copy of the hour, language and time zone fresh while the reminder is on
+  // the account may only be known after the first render, so take the saved choice again once it is
   useEffect(() => {
-    if (userId && on) void updateReminder(userId, hour, uiLang);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const saved = readReminderPref(userId);
+    setOn(Boolean(saved?.on) && !notificationsBlocked());
+    setDraft(formatTime(saved?.hour ?? DEFAULT_HOUR, saved?.minute ?? DEFAULT_MINUTE));
+  }, [userId]);
+
+  // keep the server's copy of the time, language and time zone fresh while the reminder is on
+  useEffect(() => {
+    const saved = readReminderPref(userId);
+    if (userId && saved?.on && !notificationsBlocked()) void updateReminder(userId, saved.hour, saved.minute, uiLang);
   }, [userId, uiLang]);
 
   if (!userId || !reminderSupported()) return null;
 
-  async function turnOn(h: number) {
+  async function turnOn() {
+    if (!time) return setProblem("badTime");
     setBusy(true);
     setProblem(null);
-    const r = await enableReminder(userId!, h, uiLang);
+    const r = await enableReminder(userId!, time.hour, time.minute, uiLang);
     setBusy(false);
     if (r === "ok") setOn(true);
     else setProblem(r === "denied" ? "blocked" : r);
@@ -46,28 +68,54 @@ export function ReviewReminder() {
     setOn(false);
   }
 
-  async function pickHour(h: number) {
-    setHour(h);
+  async function pickTime(text: string) {
+    setDraft(text);
+    const t = parseTime(text);
+    if (!t) return setProblem("badTime");
+    setProblem(null);
+    saveReminderTime(userId!, t.hour, t.minute);
     if (!on) return;
-    setProblem((await updateReminder(userId!, h, uiLang)) ? null : "error");
+    setProblem((await updateReminder(userId!, t.hour, t.minute, uiLang)) ? null : "error");
   }
+
+  async function test() {
+    setBusy(true);
+    const ok = await sendTestReminder(uiLang);
+    setBusy(false);
+    setProblem(ok ? "testSent" : "testFailed");
+  }
+
+  const status = problem
+    ? ft(`reminder.${problem}`)
+    : on && time
+      ? fmt(ft("reminder.enabled"), { t: formatTime(time.hour, time.minute) })
+      : ft("reminder.sub");
 
   return (
     <aside className="fc-reminder" aria-label={ft("reminder.title")}>
       <span className="fc-remind__icon" aria-hidden="true"><Icon name="bell" size={22} /></span>
       <div className="fc-remind__text">
         <strong>{ft("reminder.title")}</strong>
-        <span>{problem ? ft(`reminder.${problem}`) : on ? fmt(ft("reminder.enabled"), { h: hour }) : ft("reminder.sub")}</span>
+        <span role={problem === "badTime" ? "alert" : undefined}>{status}</span>
       </div>
       <label className="fc-reminder__hour">
         <span>{ft("reminder.hour")}</span>
-        <select className="fc-input" value={hour} onChange={(e) => void pickHour(Number(e.target.value))} disabled={busy}>
-          {HOURS.map((h) => (
-            <option key={h} value={h}>{`${String(h).padStart(2, "0")}:00`}</option>
-          ))}
-        </select>
+        <input
+          type="time"
+          step={60}
+          className="fc-input"
+          value={draft}
+          onChange={(e) => void pickTime(e.target.value)}
+          aria-invalid={!time}
+          disabled={busy}
+        />
       </label>
-      <button type="button" className={`btn ${on ? "btn--ghost" : "btn--primary"}`} onClick={() => void (on ? turnOff() : turnOn(hour))} disabled={busy} aria-pressed={on}>
+      {on && (
+        <button type="button" className="btn btn--ghost" onClick={() => void test()} disabled={busy}>
+          {ft("reminder.test")}
+        </button>
+      )}
+      <button type="button" className={`btn ${on ? "btn--ghost" : "btn--primary"}`} onClick={() => void (on ? turnOff() : turnOn())} disabled={busy || (!on && !time)} aria-pressed={on}>
         {on ? ft("reminder.off") : ft("reminder.on")}
       </button>
     </aside>

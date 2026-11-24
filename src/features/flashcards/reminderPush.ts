@@ -7,8 +7,17 @@ import { apiUrl } from "../../shared/env";
  */
 export const REMINDER_KEY = "jd.review_reminder.v1";
 export const DEFAULT_HOUR = 19;
+export const DEFAULT_MINUTE = 0;
 
-export type ReminderPref = { userId: string; on: boolean; hour: number };
+export type ReminderPref = { userId: string; on: boolean; hour: number; minute: number };
+
+/** "19:30" -> { hour: 19, minute: 30 }; anything that is not a real 24-hour time gives null. */
+export function parseTime(text: string): { hour: number; minute: number } | null {
+  const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(text.trim());
+  return m ? { hour: Number(m[1]), minute: Number(m[2]) } : null;
+}
+
+export const formatTime = (hour: number, minute: number): string => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 export type ReminderLang = "vi" | "en" | "ja";
 export type EnableResult = "ok" | "unsupported" | "unavailable" | "denied" | "error";
 
@@ -25,7 +34,9 @@ export function readReminderPref(userId: string | undefined): ReminderPref | nul
   try {
     const v = JSON.parse(localStorage.getItem(REMINDER_KEY) ?? "null") as Partial<ReminderPref> | null;
     if (!v || v.userId !== userId || typeof v.hour !== "number" || !Number.isInteger(v.hour) || v.hour < 0 || v.hour > 23) return null;
-    return { userId, on: v.on === true, hour: v.hour };
+    const minute = v.minute === undefined ? DEFAULT_MINUTE : v.minute;
+    if (typeof minute !== "number" || !Number.isInteger(minute) || minute < 0 || minute > 59) return null;
+    return { userId, on: v.on === true, hour: v.hour, minute };
   } catch {
     return null;
   }
@@ -38,6 +49,11 @@ function writeReminderPref(pref: ReminderPref | null): void {
   } catch {
     /* the choice just is not remembered on this device */
   }
+}
+
+/** Remembers the time on this device, whether or not the reminder is on, so a reload keeps the learner's choice. */
+export function saveReminderTime(userId: string, hour: number, minute: number): void {
+  writeReminderPref({ userId, on: readReminderPref(userId)?.on === true, hour, minute });
 }
 
 /** Whether this browser can show push notifications at all. */
@@ -67,14 +83,14 @@ async function serverKey(): Promise<string | null> {
 /** Where the learner is on the clock, so "19:00" means 19:00 for them. Minutes east of UTC. */
 const utcOffsetMin = (): number => -new Date().getTimezoneOffset();
 
-async function register(sub: PushSubscription, hour: number, lang: ReminderLang): Promise<boolean> {
+async function register(sub: PushSubscription, hour: number, minute: number, lang: ReminderLang): Promise<boolean> {
   const t = token();
   if (!t) return false;
   try {
     const res = await fetch(apiUrl("/api/push/subscription"), {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
-      body: JSON.stringify({ subscription: sub.toJSON(), lang, hour, utcOffsetMin: utcOffsetMin() }),
+      body: JSON.stringify({ subscription: sub.toJSON(), lang, hour, minute, utcOffsetMin: utcOffsetMin() }),
     });
     return res.ok;
   } catch {
@@ -83,7 +99,7 @@ async function register(sub: PushSubscription, hour: number, lang: ReminderLang)
 }
 
 /** Asks for permission if needed, subscribes this browser and tells the server the hour and language. */
-export async function enableReminder(userId: string, hour: number, lang: ReminderLang): Promise<EnableResult> {
+export async function enableReminder(userId: string, hour: number, minute: number, lang: ReminderLang): Promise<EnableResult> {
   if (!reminderSupported()) return "unsupported";
   try {
     const key = await serverKey();
@@ -94,8 +110,8 @@ export async function enableReminder(userId: string, hour: number, lang: Reminde
     if (!reg) return "unsupported"; // the service worker only runs in the built site
     let sub = await reg.pushManager.getSubscription();
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) as BufferSource });
-    if (!(await register(sub, hour, lang))) return "error";
-    writeReminderPref({ userId, on: true, hour });
+    if (!(await register(sub, hour, minute, lang))) return "error";
+    writeReminderPref({ userId, on: true, hour, minute });
     return "ok";
   } catch {
     return "error";
@@ -103,13 +119,13 @@ export async function enableReminder(userId: string, hour: number, lang: Reminde
 }
 
 /** Changes the hour (or language) of a reminder that is already on. */
-export async function updateReminder(userId: string, hour: number, lang: ReminderLang): Promise<boolean> {
+export async function updateReminder(userId: string, hour: number, minute: number, lang: ReminderLang): Promise<boolean> {
   if (!reminderSupported() || notificationsBlocked()) return false;
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();
-    if (!sub || !(await register(sub, hour, lang))) return false;
-    writeReminderPref({ userId, on: true, hour });
+    if (!sub || !(await register(sub, hour, minute, lang))) return false;
+    writeReminderPref({ userId, on: true, hour, minute });
     return true;
   } catch {
     return false;
@@ -119,8 +135,10 @@ export async function updateReminder(userId: string, hour: number, lang: Reminde
 /** Stops the reminders for this browser: the server forgets it, then the browser drops the subscription. */
 export async function disableReminder(userId?: string): Promise<void> {
   const t = token(); // read now: signing out clears it right after
-  if (userId) writeReminderPref({ userId, on: false, hour: readReminderPref(userId)?.hour ?? DEFAULT_HOUR });
-  else writeReminderPref(null);
+  if (userId) {
+    const saved = readReminderPref(userId);
+    writeReminderPref({ userId, on: false, hour: saved?.hour ?? DEFAULT_HOUR, minute: saved?.minute ?? DEFAULT_MINUTE });
+  } else writeReminderPref(null);
   if (!reminderSupported()) return;
   try {
     const reg = await navigator.serviceWorker.getRegistration();
@@ -137,5 +155,24 @@ export async function disableReminder(userId?: string): Promise<void> {
     await sub.unsubscribe();
   } catch {
     /* nothing more to do */
+  }
+}
+
+/** Asks the server to send a test notification to this browser right now, to check the whole chain works. */
+export async function sendTestReminder(lang: ReminderLang): Promise<boolean> {
+  const t = token();
+  if (!t || !reminderSupported() || notificationsBlocked()) return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return false;
+    const res = await fetch(apiUrl("/api/push/test"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ endpoint: sub.endpoint, lang }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
