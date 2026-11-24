@@ -45,11 +45,11 @@ const NAV_LEARN: NavItem[] = [
   { to: "/leaderboard", label: "nav.leaderboard", icon: "trophy" },
 ];
 
-/** Everything else: feedback, the plan page and support. */
+/** Everything else: support, feedback and the plan page. */
 const NAV_MORE: NavItem[] = [
+  { to: "/donate", label: "nav.donate", icon: "heart", heart: true },
   { to: "/feedback", label: "nav.feedback", icon: "message" },
   { to: "/pricing", label: "nav.pro", icon: "crown" },
-  { to: "/donate", label: "nav.donate", icon: "heart", heart: true },
 ];
 
 const LANGS: Array<{ value: UiLang; label: string }> = [
