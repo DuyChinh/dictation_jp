@@ -139,9 +139,83 @@ function ListeningExam() {
   );
 }
 
-/** The exam page picks the written or the listening room from the sitting stored for this lesson. */
+/**
+ * The full exam: the written part, then the listening part (each with its own clock), then one result
+ * with the scaled score. The sitting says which part is on screen, so a reload comes back to it.
+ */
+function FullExam() {
+  const { lessonId = "" } = useParams();
+  const navigate = useNavigate();
+  const { t, uiLang } = useUiLanguage();
+  const { lesson } = useLesson(lessonId);
+  const { paper, error: paperError, loading: paperLoading } = usePaperPractice(lessonId);
+  const { practice, error: practiceError, loading: practiceLoading } = usePractice(lessonId);
+  const [session, setSession] = useState<ExamSession | null>(() => getExam(lessonId));
+  useEffect(() => touchLesson(lessonId), [lessonId]);
+
+  const lessonHref = `/lessons/${encodeURIComponent(lessonId)}`;
+  const setupHref = `${lessonHref}/paper/exam/setup?scope=full`;
+  const fallback = (lesson && getLocalizedText(lesson.title, uiLang)) || lessonId;
+  const crumbs = [
+    { label: t("nav.exams"), to: "/exams" },
+    { label: lessonShortTitle(lesson?.source, fallback), to: lessonHref },
+    { label: t("exam.scope.full") },
+  ];
+  const loading = paperLoading || practiceLoading;
+  const ready = !!paper && !!practice;
+
+  return (
+    <AppShell breadcrumbs={crumbs}>
+      {loading && <div className="notice">{t("dictation.loading")}</div>}
+
+      {!loading && (paperError || practiceError || !ready) && (
+        <div className="notice notice--error" role="alert">
+          <Icon name="alert" />
+          {t("paper.notAvailable")}
+          <Link to={lessonHref} className="btn btn--outline btn--sm" style={{ marginLeft: "auto" }}>
+            {t("paper.backToLesson")}
+          </Link>
+        </div>
+      )}
+
+      {ready && !session && (
+        <div className="notice">
+          <Icon name="clock" />
+          {t("exam.noSession")}
+          <Link to={setupHref} className="paper-soft" style={{ marginLeft: "auto" }}>
+            {t("exam.title")}
+          </Link>
+        </div>
+      )}
+
+      {ready && session && !session.submittedAt && session.phase !== "listening" && (
+        <ExamRunner lessonId={lessonId} paper={paper} session={session} onChange={setSession} />
+      )}
+
+      {ready && session && !session.submittedAt && session.phase === "listening" && (
+        <ExamListeningRunner lessonId={lessonId} practice={practice} session={session} onChange={setSession} />
+      )}
+
+      {ready && session?.submittedAt && (
+        <ExamResultView
+          lessonId={lessonId}
+          session={session}
+          source={practice.source}
+          onRetake={() => {
+            clearExam(lessonId);
+            setSession(null);
+            navigate(setupHref);
+          }}
+        />
+      )}
+    </AppShell>
+  );
+}
+
+/** The exam page picks the full, the written or the listening room from the sitting stored for this lesson. */
 export function PaperExamPage() {
   const { lessonId = "" } = useParams();
   const scope = useMemo(() => getExam(lessonId)?.scope, [lessonId]);
+  if (scope === "full") return <FullExam />;
   return scope === "listening" ? <ListeningExam /> : <WrittenExam />;
 }

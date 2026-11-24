@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { submitPaperExam, type PaperItem, type PaperPassage, type PaperPractice } from "../../shared/api/paper";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import {
+  advanceToListening,
   clearExamAnswer,
   finishExam,
   formatClock,
@@ -30,7 +31,10 @@ const DANGER_MS = 60_000;
 export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
   const { t, uiLang } = useUiLanguage();
   const items = useMemo(
-    () => paper.items.filter((i) => session.scope === "all" || i.part === session.scope).sort((a, b) => a.no - b.no),
+    () =>
+      paper.items
+        .filter((i) => session.scope === "all" || session.scope === "full" || i.part === session.scope)
+        .sort((a, b) => a.no - b.no),
     [paper, session.scope],
   );
   const [currentId, setCurrentId] = useState(() =>
@@ -43,6 +47,8 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const submittedOnce = useRef(false);
 
+  /** In the full exam, handing in the written part starts the listening part instead of grading. */
+  const isFull = session.scope === "full";
   const remaining = session.endsAt - now;
   const answeredCount = items.filter((i) => session.answers[i.id]).length;
   const flaggedCount = items.filter((i) => session.flagged[i.id]).length;
@@ -55,8 +61,14 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
   const submit = useCallback(async () => {
     if (submittedOnce.current) return;
     submittedOnce.current = true;
-    setSubmitting(true);
     setConfirming(false);
+    if (isFull) {
+      const next = advanceToListening(lessonId);
+      if (next) onChange(next);
+      else submittedOnce.current = false;
+      return;
+    }
+    setSubmitting(true);
     setError(null);
     try {
       const { result } = await submitPaperExam({
@@ -76,7 +88,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [lessonId, onChange, session.answers, session.scope, t]);
+  }, [isFull, lessonId, onChange, session.answers, session.scope, t]);
 
   // The clock: derived from the stored deadline, so a reload keeps it honest.
   useEffect(() => {
@@ -188,7 +200,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
           <strong>{formatClock(remaining)}</strong>
           <small>{t("exam.timeLeft").toLowerCase()}</small>
         </div>
-        <span className="exam-bar__scope">{scopeTitle(session.scope, t)}</span>
+        <span className="exam-bar__scope">{isFull ? t("exam.full.phaseWritten") : scopeTitle(session.scope, t)}</span>
         <div className="exam-bar__count">
           <strong>
             {answeredCount}/{items.length}
@@ -196,7 +208,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
           {t("exam.answered")}
         </div>
         <button type="button" className="paper-primary" disabled={submitting} onClick={() => setConfirming(true)}>
-          {t("exam.submit")}
+          {isFull ? t("exam.full.toListening") : t("exam.submit")}
         </button>
       </div>
       <div className="exam-sr" role="status" aria-live="polite">
@@ -219,8 +231,8 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
         >
           <div className="exam-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exam-confirm-title">
             <div className="exam-confirm__head">
-              <h3 id="exam-confirm-title">{t("exam.confirmTitle")}</h3>
-              <p>{t("exam.confirmWarn")}</p>
+              <h3 id="exam-confirm-title">{isFull ? t("exam.full.confirmTitle") : t("exam.confirmTitle")}</h3>
+              <p>{isFull ? t("exam.full.confirmWarn") : t("exam.confirmWarn")}</p>
             </div>
             <ul>
               <li>
@@ -249,7 +261,7 @@ export function ExamRunner({ lessonId, paper, session, onChange }: Props) {
                 {t("exam.keepGoing")}
               </button>
               <button type="button" className="paper-primary" onClick={() => void submit()}>
-                {t("exam.submitNow")}
+                {isFull ? t("exam.full.toListening") : t("exam.submitNow")}
               </button>
             </div>
           </div>

@@ -4,7 +4,7 @@ import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { lessonShortTitle } from "../../shared/content/lessonLabels";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { sittingKey, type ExamHistoryEntry } from "../../shared/storage/paperExamStore";
-import { scopeTitle } from "./paperLabels";
+import { scopeTitle, scoreSummary } from "./paperLabels";
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0);
 
@@ -61,10 +61,21 @@ export function ExamHistoryTable({
             </td>
             <td>{scopeTitle(h.scope, t)}</td>
             <td className="tabular">
-              <strong>
-                {h.correct}/{h.total}
-              </strong>{" "}
-              ({pct(h.correct, h.total)}%)
+              {h.score ? (
+                <>
+                  <strong>{scoreSummary(h.score, t)}</strong>
+                  <small className="muted" style={{ display: "block" }}>
+                    {h.correct}/{h.total} ({pct(h.correct, h.total)}%)
+                  </small>
+                </>
+              ) : (
+                <>
+                  <strong>
+                    {h.correct}/{h.total}
+                  </strong>{" "}
+                  ({pct(h.correct, h.total)}%)
+                </>
+              )}
             </td>
             <td className="tabular">
               {Math.max(1, Math.round((h.submittedAt - h.startedAt) / 60000))}/{h.minutes} {t("exams.minutes")}

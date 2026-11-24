@@ -1,5 +1,5 @@
 import { refreshMyScore } from "./myScoreStore";
-import type { ExamResult, ExamScope } from "../api/paper";
+import type { ExamResult, ExamScope, JlptScore } from "../api/paper";
 import { apiUrl } from "../env";
 
 /**
@@ -18,14 +18,46 @@ export const PRESET_MINUTES = [20, 25, 35, 40, 60] as const;
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 180;
 export const DEFAULT_MINUTES = 40;
-/** Minutes suggested when a part is picked on the setup screen (JLPT N2 timing). */
-export const SCOPE_MINUTES: Record<ExamScope, number> = {
-  all: 105,
-  vocab: 40,
-  grammar: 40,
-  reading: 65,
-  listening: 40,
+/**
+ * Official JLPT time per level, in minutes: the written block (言語知識・読解) and the listening block (聴解).
+ * N3–N5 print the written block as two booklets (e.g. N3: 30 + 70); they are added here.
+ */
+export const LEVEL_MINUTES: Record<string, { written: number; listening: number }> = {
+  N1: { written: 110, listening: 60 },
+  N2: { written: 105, listening: 50 },
+  N3: { written: 100, listening: 40 },
+  N4: { written: 80, listening: 35 },
+  N5: { written: 60, listening: 30 },
 };
+
+/** The level's timing; a lesson of no known level is timed as N2. */
+export function levelMinutes(level?: string): { written: number; listening: number } {
+  return LEVEL_MINUTES[(level ?? "").toUpperCase()] ?? LEVEL_MINUTES.N2!;
+}
+
+/** Share of the written time a question of each part takes: a reading question takes about three times a vocabulary one. */
+const PART_WEIGHT = { vocab: 1, grammar: 1.5, reading: 3 } as const;
+const TYPICAL_COUNTS = { vocab: 30, grammar: 21, reading: 20 };
+
+/**
+ * Minutes suggested when a part is picked on the setup screen: the whole written block or the
+ * listening block take the level's official time, a single written part takes its share of the
+ * written block (by how many questions it has and how long each usually takes), rounded to 5.
+ */
+export function suggestedMinutes(
+  level: string | undefined,
+  scope: ExamScope,
+  counts: Partial<Record<"vocab" | "grammar" | "reading", number>> = TYPICAL_COUNTS,
+): number {
+  const { written, listening } = levelMinutes(level);
+  if (scope === "listening") return listening;
+  if (scope === "all") return written;
+  if (scope === "full") return written + listening;
+  const weight = (p: keyof typeof PART_WEIGHT) => (counts[p] ?? TYPICAL_COUNTS[p]) * PART_WEIGHT[p];
+  const total = weight("vocab") + weight("grammar") + weight("reading");
+  const share = total > 0 ? weight(scope) / total : 1 / 3;
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round((written * share) / 5) * 5));
+}
 
 export type ExamSession = {
   lessonId: string;
@@ -42,6 +74,10 @@ export type ExamSession = {
   played?: Record<string, true>;
   /** The question on screen (item id, or listening unit id), so a reload comes back to it. */
   cursor?: string;
+  /** Full exam only: the written part comes first, then the listening part; `endsAt` is the end of the part on screen. */
+  phase?: "written" | "listening";
+  writtenMinutes?: number;
+  listeningMinutes?: number;
   submittedAt?: number;
   result?: ExamResult;
 };
@@ -111,6 +147,47 @@ export function startExam(
   return session;
 }
 
+/**
+ * Starts the full exam: the written part with the level's official time, then (see advanceToListening)
+ * the listening part with its own. The time is fixed by the level, so it is not a choice.
+ */
+export function startFullExam(
+  lessonId: string,
+  level: string | undefined,
+  now = Date.now(),
+  opts: { allowReplay?: boolean } = {},
+): ExamSession {
+  const { written, listening } = levelMinutes(level);
+  const session: ExamSession = {
+    lessonId,
+    scope: "full",
+    minutes: written + listening,
+    startedAt: now,
+    endsAt: now + written * 60_000,
+    answers: {},
+    flagged: {},
+    allowReplay: opts.allowReplay === true,
+    played: {},
+    phase: "written",
+    writtenMinutes: written,
+    listeningMinutes: listening,
+  };
+  const store = read();
+  store[lessonId] = session;
+  write(store);
+  return session;
+}
+
+/** Hands in the written part of a full exam and starts the listening clock. Written answers are kept for the final grading. */
+export function advanceToListening(lessonId: string, now = Date.now()): ExamSession | null {
+  return update(lessonId, (s) => {
+    if (s.scope !== "full" || s.phase === "listening") return;
+    s.phase = "listening";
+    s.endsAt = now + (s.listeningMinutes ?? levelMinutes().listening) * 60_000;
+    delete s.cursor;
+  });
+}
+
 function update(lessonId: string, fn: (s: ExamSession) => void): ExamSession | null {
   const store = read();
   const s = store[lessonId];
@@ -161,6 +238,8 @@ export type ExamHistoryEntry = {
   total: number;
   answered: number;
   correct: number;
+  /** The JLPT-style scaled score, kept on the line so the list can show it even when the detail is gone. */
+  score?: JlptScore;
   /** Every question with the pick and the right answer, so the sitting can be reviewed later. */
   result?: ExamResult;
 };
@@ -241,6 +320,7 @@ export function finishExam(lessonId: string, result: ExamResult, now = Date.now(
       total: result.total,
       answered: result.answered,
       correct: result.correct,
+      ...(result.score ? { score: result.score } : {}),
       result,
     };
     recordExamHistory(entry);

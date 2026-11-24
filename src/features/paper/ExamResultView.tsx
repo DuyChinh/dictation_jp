@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
-import type { ExamItemResult } from "../../shared/api/paper";
+import type { ExamItemResult, JlptScore, ScaleScore } from "../../shared/api/paper";
+import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import type { TranslationKey } from "../../shared/i18n/translations";
 import { partLabel, partType } from "../../shared/content/lessonLabels";
 import { formatClock, type ExamSession } from "../../shared/storage/paperExamStore";
 import { mondaiLabel, mondaiNo, scopeTitle } from "./paperLabels";
@@ -17,6 +19,61 @@ type Props = {
 
 const pctOf = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0);
 const state = (i: ExamItemResult) => (i.selected === null ? "blank" : i.correct ? "right" : "wrong");
+
+const scaleKey = (id: ScaleScore["id"]) => `exam.scale.${id}` as TranslationKey;
+
+/** The scaled score: per section out of 60 (120 for language + reading at N4/N5), the total out of 180 and pass or fail. */
+function ScoreBoard({ score }: { score: JlptScore }) {
+  const { t } = useUiLanguage();
+  const anyPartial = score.scales.some((s) => s.partial);
+  return (
+    <section className="exam-result__section exam-score" aria-labelledby="exam-score-title">
+      <div className="exam-score__head">
+        <h2 id="exam-score-title">{t("exam.score.title")}</h2>
+        {score.total !== null && (
+          <span className={`exam-pass is-${score.passed ? "yes" : "no"}`}>
+            {score.passed ? t("exam.score.passed") : t("exam.score.failed")}
+          </span>
+        )}
+      </div>
+      <div className="exam-scales">
+        {score.scales.map((s) => {
+          const below = !s.partial && s.score < s.min;
+          return (
+            <article key={s.id} className={`exam-scale${below ? " is-below" : ""}`}>
+              <div className="exam-scale__head">
+                <span>{t(scaleKey(s.id))}</span>
+                {s.partial && <em className="exam-scale__tag">{t("exam.score.estimate")}</em>}
+              </div>
+              <b className="exam-scale__score">
+                {s.score}
+                <small>/{s.max}</small>
+              </b>
+              <div
+                className="exam-scale__bar"
+                role="img"
+                aria-label={`${s.score}/${s.max}`}
+              >
+                <span style={{ width: `${(s.score / s.max) * 100}%` }} />
+                <i style={{ left: `${(s.min / s.max) * 100}%` }} aria-hidden="true" />
+              </div>
+              <small className="exam-scale__meta">
+                {s.correct}/{s.total} · {fmt(t(below ? "exam.score.belowMin" : "exam.score.min"), { m: s.min })}
+              </small>
+            </article>
+          );
+        })}
+      </div>
+      {score.total !== null ? (
+        <p className="exam-score__rule">
+          {fmt(t("exam.score.passMark"), { level: score.level, n: score.pass_total })} · {t("exam.score.minSection")}
+        </p>
+      ) : (
+        <p className="exam-score__rule">{anyPartial ? t("exam.score.partialNote") : t("exam.score.writtenNote")}</p>
+      )}
+    </section>
+  );
+}
 
 /** The result of a submitted sitting: the score, where it was lost, and every miss linked to its answer. */
 export function ExamResultView({ lessonId, session, source, sittingAt, onRetake }: Props) {
@@ -38,8 +95,7 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
       : i || result.scope !== "listening"
         ? reviewHref(i?.no)
         : `/lessons/${encodeURIComponent(lessonId)}/listening`;
-  const mondaiName = (m: number) =>
-    result.scope === "listening" ? partLabel(partType(source, m), uiLang) : mondaiLabel(m, uiLang, lessonId);
+
   const limit = session.minutes * 60_000;
   const used = Math.min((session.submittedAt ?? session.endsAt) - session.startedAt, limit);
   const total = result.total;
@@ -48,12 +104,26 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
   const blank = result.items.filter((i) => state(i) === "blank").length;
   const review = result.items.filter((i) => state(i) !== "right");
 
-  const mondai = [...new Set(result.items.map((i) => i.mondai))]
-    .sort((a, b) => a - b)
-    .map((m) => {
-      const list = result.items.filter((i) => i.mondai === m);
-      return { m, list, right: list.filter((i) => state(i) === "right").length };
-    });
+  // The written parts and the listening part number their 問題 separately, so a full exam groups by both.
+  const keyOf = (i: ExamItemResult) => `${i.part === "listening" ? "L" : "W"}${i.mondai}`;
+  const mondai = [...new Set(result.items.map(keyOf))]
+    .map((key) => {
+      const list = result.items.filter((i) => keyOf(i) === key);
+      const listening = list[0]!.part === "listening";
+      const m = list[0]!.mondai;
+      return {
+        key,
+        m,
+        listening,
+        name: listening ? partLabel(partType(source, m), uiLang) : mondaiLabel(m, uiLang, lessonId),
+        no: listening ? m : mondaiNo(m, lessonId),
+        list,
+        right: list.filter((i) => state(i) === "right").length,
+      };
+    })
+    .sort((a, b) => Number(a.listening) - Number(b.listening) || a.m - b.m);
+  const score = result.score;
+  const headline = score?.total != null;
 
   return (
     <div className="exam-result">
@@ -71,13 +141,29 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
             {t("exam.result.eyebrow")} · {scopeTitle(result.scope, t)}
           </span>
           <div className="exam-result__big">
-            <strong>
-              {right}
-              <small>/{total}</small>
-            </strong>
-            <span>
-              {t("exam.correctOf")} · <b>{pctOf(right, total)}%</b>
-            </span>
+            {headline && score ? (
+              <>
+                <strong>
+                  {score.total}
+                  <small>/{score.total_max}</small>
+                </strong>
+                <span>
+                  {t("exam.score.total")} · <b>{score.passed ? t("exam.score.passed") : t("exam.score.failed")}</b>
+                  {" · "}
+                  {right}/{total} {t("exam.correctOf")} ({pctOf(right, total)}%)
+                </span>
+              </>
+            ) : (
+              <>
+                <strong>
+                  {right}
+                  <small>/{total}</small>
+                </strong>
+                <span>
+                  {t("exam.correctOf")} · <b>{pctOf(right, total)}%</b>
+                </span>
+              </>
+            )}
           </div>
           <div
             className="exam-meter"
@@ -101,7 +187,7 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
               {t("exam.blankLabel")} <strong>{blank}</strong>
             </li>
           </ul>
-          <p className="exam-result__note">{t("exam.note")}</p>
+          <p className="exam-result__note">{score ? t("exam.score.method") : t("exam.note")}</p>
         </div>
 
         <div className="exam-result__side">
@@ -129,15 +215,19 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
         </div>
       </section>
 
+      {score && <ScoreBoard score={score} />}
+
       <section className="exam-result__section">
         <h2>{t("exam.byType")}</h2>
         <div className="exam-types">
           {mondai.map((g) => (
-            <article key={g.m} className="exam-type">
+            <article key={g.key} className="exam-type">
               <div className="exam-type__head">
                 <div>
-                  <strong className="jp">問題{result.scope === "listening" ? g.m : mondaiNo(g.m, lessonId)}</strong>
-                  <span>{mondaiName(g.m)}</span>
+                  <strong className="jp">
+                    {g.listening && result.scope === "full" ? "聴解 " : ""}問題{g.no}
+                  </strong>
+                  <span>{g.name}</span>
                 </div>
                 <b>
                   {g.right}
@@ -175,7 +265,10 @@ export function ExamResultView({ lessonId, session, source, sittingAt, onRetake 
             {review.map((i) => (
               <li key={i.item_id}>
                 <Link to={itemHref(i)} className={`exam-review__item is-${state(i)}`}>
-                  <strong>{i.no}</strong>
+                  <strong>
+                    {i.part === "listening" && result.scope === "full" ? "聴 " : ""}
+                    {i.no}
+                  </strong>
                   <span>{state(i) === "blank" ? t("exam.blank") : t("exam.wrongTag")}</span>
                 </Link>
               </li>

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { LevelFilter, useLessonList } from "../features/lessons/LessonGrid";
 import { matchesLessonQuery } from "../features/lessons/lessonSearch";
 import { ExamHistoryTable, useExamLabel } from "../features/paper/ExamHistoryTable";
-import { scopeTitle } from "../features/paper/paperLabels";
+import { scopeTitle, scoreSummary } from "../features/paper/paperLabels";
 import type { LessonSummary } from "../shared/api/content";
 import { getLocalizedText } from "../shared/content/getLocalizedText";
 import { lessonTitle } from "../shared/content/lessonLabels";
@@ -240,7 +240,8 @@ export function ExamRoomPage() {
                 <p className={`exam-pick__last${last ? "" : " is-empty"}`}>
                   {last ? (
                     <>
-                      {t("exams.last")} ({scopeTitle(last.scope, t)}): <strong>{last.correct}/{last.total}</strong> ({pct(last.correct, last.total)}%)
+                      {t("exams.last")} ({scopeTitle(last.scope, t)}):{" "}
+                      <strong>{last.score ? scoreSummary(last.score, t) : `${last.correct}/${last.total}`}</strong> ({last.correct}/{last.total} · {pct(last.correct, last.total)}%)
                       {sittings.length > 1 && <span> · {sittings.length} {t("exams.times")}</span>}
                     </>
                   ) : (
@@ -248,8 +249,14 @@ export function ExamRoomPage() {
                   )}
                 </p>
                 <div className="exam-pick__actions">
+                  {written > 0 && listeningTotal > 0 && (
+                    <Link to={`${setup}?scope=full`} className="btn btn--primary">
+                      {t("exams.startFull")}
+                      <Icon name="chevronRight" size={16} strokeWidth={2} />
+                    </Link>
+                  )}
                   {written > 0 && (
-                    <Link to={setup} className="btn btn--primary">
+                    <Link to={setup} className={`btn ${listeningTotal > 0 ? "btn--outline" : "btn--primary"}`}>
                       {listeningTotal > 0 ? t("exams.startWritten") : t("exams.start")}
                       <Icon name="chevronRight" size={16} strokeWidth={2} />
                     </Link>

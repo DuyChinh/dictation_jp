@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import type { PaperItem, PaperPractice } from "../../shared/api/paper";
-import { getExam, startExam, type ExamSession } from "../../shared/storage/paperExamStore";
+import { getExam, startExam, suggestedMinutes, type ExamSession } from "../../shared/storage/paperExamStore";
 import { getPaperProgress } from "../../shared/storage/paperProgressStore";
 import { ExamRunner } from "./ExamRunner";
 import { ExamSetup } from "./ExamSetup";
@@ -123,19 +123,19 @@ describe("ExamSetup", () => {
     expect(getExam("l")?.scope).toBe("vocab");
   });
 
-  it("suggests the usual time for each part when it is picked", () => {
+  it("suggests the usual time for the whole written part and for each part when it is picked", () => {
     renderCard();
     const start = () => fireEvent.click(screen.getByRole("button", { name: /Bắt đầu thi/ }));
     const pick = (name: RegExp) => fireEvent.click(screen.getByRole("radio", { name }));
 
-    pick(/^Đọc hiểu/);
-    expect((screen.getByPlaceholderText("Số phút") as HTMLInputElement).value).toBe("65");
+    // A lesson of no known level is timed as N2: 105 minutes for the written block.
     pick(/^Từ vựng - Ngữ pháp/);
     expect((screen.getByPlaceholderText("Số phút") as HTMLInputElement).value).toBe("105");
     pick(/^Từ vựng(?! -)/);
-    expect(screen.getByRole("radio", { name: /^40/ }).getAttribute("aria-checked")).toBe("true");
+    const vocab = suggestedMinutes(undefined, "vocab", paper.counts);
+    expect(vocab).toBeGreaterThan(0);
     start();
-    expect(getExam("l")).toMatchObject({ scope: "vocab", minutes: 40 });
+    expect(getExam("l")).toMatchObject({ scope: "vocab", minutes: vocab });
   });
 });
 

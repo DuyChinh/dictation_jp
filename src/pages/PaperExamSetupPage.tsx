@@ -11,7 +11,7 @@ import { useUiLanguage } from "../shared/i18n/UiLanguageContext";
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
-const SCOPES: ExamScope[] = ["all", "vocab", "grammar", "reading", "listening"];
+const SCOPES: ExamScope[] = ["full", "all", "vocab", "grammar", "reading", "listening"];
 
 /** Where a sitting starts: choose the part (written or listening) and the time. */
 export function PaperExamSetupPage() {

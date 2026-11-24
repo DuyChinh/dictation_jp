@@ -11,7 +11,7 @@ import { getExamHistory, reviewableSittings, syncExamHistoryFromServer } from ".
 import { AppShell } from "../shared/ui/AppShell";
 import { Icon } from "../shared/ui/Icon";
 
-const SCOPES: ExamScope[] = ["all", "vocab", "grammar", "reading", "listening"];
+const SCOPES: ExamScope[] = ["full", "all", "vocab", "grammar", "reading", "listening"];
 
 /** Every sitting ever submitted in this browser, with search and filters by exam and part, each one reopenable. */
 export function ExamHistoryPage() {

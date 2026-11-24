@@ -145,10 +145,23 @@ export function segmentSentence<T extends { ja: string }>(
   return out;
 }
 
-import type { ExamScope } from "../../shared/api/paper";
+import type { ExamScope, JlptScore } from "../../shared/api/paper";
 
 /** Display name of the part (or the whole written part) an exam sitting covers. */
 export function scopeTitle(scope: ExamScope, t: (key: never) => string): string {
   if (scope === "listening") return t("exam.scope.listening" as never);
+  if (scope === "full") return t("exam.scope.full" as never);
   return scope === "all" ? t("exam.scope.all" as never) : t(`paper.title.${scope}` as never);
+}
+
+/**
+ * The scaled score of a sitting in a line: "126/180 · Đạt" for a whole exam, otherwise the sections
+ * that were sat ("Ngôn ngữ 45/60 · Đọc 38/60"). Empty when the sitting has no scaled score.
+ */
+export function scoreSummary(score: JlptScore | undefined, t: (key: never) => string): string {
+  if (!score) return "";
+  if (score.total !== null) {
+    return `${score.total}/${score.total_max} · ${t((score.passed ? "exam.score.passed" : "exam.score.failed") as never)}`;
+  }
+  return score.scales.map((x) => `${t(`exam.scale.short.${x.id}` as never)} ${x.score}/${x.max}`).join(" · ");
 }

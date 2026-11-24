@@ -8,11 +8,14 @@ import {
   MAX_MINUTES,
   MIN_MINUTES,
   parseMinutes,
+  levelMinutes,
   PRESET_MINUTES,
-  SCOPE_MINUTES,
   startExam,
+  startFullExam,
+  suggestedMinutes,
 } from "../../shared/storage/paperExamStore";
-import { PARTS, PART_KANJI, scopeTitle } from "./paperLabels";
+import { fmt } from "../../shared/i18n/format";
+import { levelOfLesson, PARTS, PART_KANJI, scopeTitle } from "./paperLabels";
 
 type Props = {
   lessonId: string;
@@ -44,17 +47,24 @@ function perQuestion(minutes: number | null, count: number): string {
 export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initialScope }: Props) {
   const { t } = useUiLanguage();
   const navigate = useNavigate();
-  const available = (id: ExamScope): boolean => (id === "listening" ? listeningCount > 0 : !!paper);
+  const level = levelOfLesson(lessonId);
+  const hasFull = !!paper && listeningCount > 0;
+  const available = (id: ExamScope): boolean =>
+    id === "listening" ? listeningCount > 0 : id === "full" ? hasFull : !!paper;
+  // The whole exam is the default when the lesson has both parts: it is what the real exam is.
   const [scope, setScope] = useState<ExamScope>(() =>
-    initialScope && available(initialScope) ? initialScope : paper ? "all" : "listening",
+    initialScope && available(initialScope) ? initialScope : hasFull ? "full" : paper ? "all" : "listening",
   );
   const [allowReplay, setAllowReplay] = useState(false);
   const initial = lastMinutes();
   const [preset, setPreset] = useState<number | null>(isPreset(initial) ? initial : null);
   const [custom, setCustom] = useState(isPreset(initial) ? "" : String(initial));
 
-  const minutes = preset ?? parseMinutes(custom);
-  const customInvalid = preset === null && custom.trim() !== "" && parseMinutes(custom) === null;
+  const full = scope === "full";
+  const timing = levelMinutes(level);
+  // The full exam is timed by the level and cannot be changed; the other scopes take any time.
+  const minutes = full ? timing.written + timing.listening : (preset ?? parseMinutes(custom));
+  const customInvalid = !full && preset === null && custom.trim() !== "" && parseMinutes(custom) === null;
   const count =
     scope === "listening"
       ? listeningCount
@@ -62,7 +72,9 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
         ? 0
         : scope === "all"
           ? paper.items.length
-          : paper.counts[scope];
+          : scope === "full"
+            ? paper.items.length + listeningCount
+            : paper.counts[scope];
   const running = getExam(lessonId);
   const unfinished = running && !running.submittedAt;
   const examHref = `/lessons/${encodeURIComponent(lessonId)}/paper/exam`;
@@ -70,18 +82,20 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
 
   function pickScope(id: ExamScope) {
     setScope(id);
-    const m = SCOPE_MINUTES[id];
+    const m = suggestedMinutes(level, id, paper?.counts);
     setPreset(isPreset(m) ? m : null);
     setCustom(isPreset(m) ? "" : String(m));
   }
 
   function start() {
     if (minutes === null || count === 0) return;
-    startExam(lessonId, scope, minutes, Date.now(), { allowReplay });
+    if (scope === "full") startFullExam(lessonId, level, Date.now(), { allowReplay });
+    else startExam(lessonId, scope, minutes, Date.now(), { allowReplay });
     navigate(examHref);
   }
 
   const scopes: Array<{ id: ExamScope; kanji: string; n: number }> = [
+    ...(hasFull ? [{ id: "full" as ExamScope, kanji: "総", n: paper!.items.length + listeningCount }] : []),
     ...(paper
       ? [
           { id: "all" as ExamScope, kanji: "全", n: paper.items.length },
@@ -91,9 +105,11 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
     ...(listeningCount > 0 ? [{ id: "listening" as ExamScope, kanji: "聴", n: listeningCount }] : []),
   ];
   const listening = scope === "listening";
-  const rules = listening
-    ? (["exam.listen.rule1", "exam.listen.rule2", "exam.listen.rule3"] as const)
-    : (["exam.rule1", "exam.rule2", "exam.rule3"] as const);
+  const rules = full
+    ? (["exam.rule1", "exam.full.rule1", "exam.full.rule2", "exam.full.rule3"] as const)
+    : listening
+      ? (["exam.listen.rule1", "exam.listen.rule2", "exam.listen.rule3"] as const)
+      : (["exam.rule1", "exam.rule2", "exam.rule3"] as const);
 
   return (
     <div className="exam-setup">
@@ -140,6 +156,26 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
             </div>
           </fieldset>
 
+          {full ? (
+            <fieldset className="exam-field">
+              <legend>{t("exam.setup.step2")}</legend>
+              <ul className="exam-phases">
+                <li>
+                  <span>{t("exam.full.writtenTime")}</span>
+                  <strong>
+                    {timing.written} {t("exam.minutesUnit")}
+                  </strong>
+                </li>
+                <li>
+                  <span>{t("exam.full.listeningTime")}</span>
+                  <strong>
+                    {timing.listening} {t("exam.minutesUnit")}
+                  </strong>
+                </li>
+              </ul>
+              <p className="exam-hint">{fmt(t("exam.full.fixed"), { level: level ?? "N2" })}</p>
+            </fieldset>
+          ) : (
           <fieldset className="exam-field">
             <legend>{t("exam.setup.step2")}</legend>
             <div className="exam-options" role="radiogroup" aria-label={t("exam.minutes")}>
@@ -182,8 +218,9 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
               {customInvalid ? `${t("exam.range")} (${MIN_MINUTES}–${MAX_MINUTES})` : t("exam.setup.hint")}
             </p>
           </fieldset>
+          )}
 
-          {listening && (
+          {(listening || full) && (
             <label className="exam-option">
               <input type="checkbox" checked={allowReplay} onChange={(e) => setAllowReplay(e.target.checked)} />
               <span>
@@ -196,7 +233,7 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
           <ul className="exam-rules">
             {rules.map((k, i) => (
               <li key={k}>
-                <span aria-hidden="true">{["①", "②", "③"][i]}</span>
+                <span aria-hidden="true">{["①", "②", "③", "④"][i]}</span>
                 {t(k)}
               </li>
             ))}
@@ -221,6 +258,11 @@ export function ExamSetup({ lessonId, paper, listeningCount, lessonLabel, initia
               <div>
                 <span className="exam-slip__label">{t("exam.slip.time")}</span>
                 <strong className={`exam-slip__clock${customInvalid ? " is-bad" : ""}`}>{clock(minutes)}</strong>
+                {full && (
+                  <small className="exam-slip__split">
+                    {t("exam.full.writtenTime")} {timing.written}' + {t("exam.full.listeningTime")} {timing.listening}'
+                  </small>
+                )}
               </div>
               <div className="exam-slip__facts">
                 <div>

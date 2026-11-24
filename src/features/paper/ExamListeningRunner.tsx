@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PracticePackage } from "../../shared/api/content";
-import { submitListeningExam } from "../../shared/api/paper";
+import { submitFullExam, submitListeningExam } from "../../shared/api/paper";
 import { useAudioEngine } from "../../shared/audio/useAudioEngine";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
 import { partLabel, partType } from "../../shared/content/lessonLabels";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { recordListeningAnswer } from "../../shared/storage/listeningScoreStore";
+import { saveAnswer } from "../../shared/storage/paperProgressStore";
 import {
   clearExamAnswer,
   finishExam,
@@ -58,6 +59,8 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
   const range = primary ? { startMs: primary.audio.start_ms, endMs: primary.audio.end_ms } : null;
   const played = !!current && !!session.played?.[current.unitId];
   const playing = audio.state === "playing";
+  /** In the full exam this is its second part: the written answers are already in the session, and handing in grades both. */
+  const isFull = session.scope === "full";
   const remaining = session.endsAt - now;
   const answeredUnits = units.filter((u) => unitAnswered(u, session.answers)).length;
   const flaggedUnits = units.filter((u) => session.flagged[u.unitId]).length;
@@ -118,18 +121,26 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
     setConfirming(false);
     setError(null);
     try {
-      const { result } = await submitListeningExam({
-        lesson_id: lessonId,
-        answers: Object.entries(session.answers).map(([question_id, choice_id]) => ({ question_id, choice_id })),
-      });
-      // What was answered counts as progress in the listening practice too.
+      const { result } = isFull
+        ? await submitFullExam({
+            lesson_id: lessonId,
+            answers: Object.entries(session.answers).map(([item_id, choice_id]) => ({ item_id, choice_id })),
+          })
+        : await submitListeningExam({
+            lesson_id: lessonId,
+            answers: Object.entries(session.answers).map(([question_id, choice_id]) => ({ question_id, choice_id })),
+          });
+      // What was answered counts as progress in the practice screens too.
       for (const r of result.items) {
-        if (r.selected) {
+        if (!r.selected) continue;
+        if (r.part === "listening") {
           recordListeningAnswer(lessonId, r.item_id, {
             choiceId: r.selected,
             correct: r.correct,
             correctChoiceId: r.correct_choice_id,
           });
+        } else {
+          saveAnswer(lessonId, r.item_id, { choiceId: r.selected, correct: r.correct, at: Date.now(), part: r.part, mondai: r.mondai });
         }
       }
       audio.pause();
@@ -142,7 +153,7 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId, onChange, session.answers, t]);
+  }, [isFull, lessonId, onChange, session.answers, t]);
 
   useEffect(() => {
     if (remaining <= 0 && !submittedOnce.current && !submitting && !error) {
@@ -317,7 +328,7 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
           <strong>{formatClock(remaining)}</strong>
           <small>{t("exam.timeLeft").toLowerCase()}</small>
         </div>
-        <span className="exam-bar__scope">{t("exam.scope.listening")}</span>
+        <span className="exam-bar__scope">{isFull ? t("exam.full.phaseListening") : t("exam.scope.listening")}</span>
         <div className="exam-bar__count">
           <strong>
             {answeredUnits}/{units.length}

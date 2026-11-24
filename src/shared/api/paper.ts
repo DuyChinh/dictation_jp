@@ -110,7 +110,35 @@ export function evaluateTranslation(body: { lesson_id: string; sentence_id: stri
   });
 }
 
-export type ExamScope = PaperPart | "all" | "listening";
+/** "full" is the whole exam: the written part, then the listening part, each with the level's official time. */
+export type ExamScope = PaperPart | "all" | "listening" | "full";
+
+export type ScaleId = "language" | "reading" | "languageReading" | "listening";
+
+export type ScaleScore = {
+  id: ScaleId;
+  score: number;
+  max: number;
+  /** Published minimum for the section; below it the candidate fails whatever the total. */
+  min: number;
+  correct: number;
+  total: number;
+  /** Only part of the section was sat, so the score is an estimate. */
+  partial: boolean;
+};
+
+/** The JLPT-style scaled score of a sitting (IRT 3PL, EAP ability), computed by the server. */
+export type JlptScore = {
+  method: string;
+  level: string;
+  scales: ScaleScore[];
+  /** Out of 180; null unless the whole exam was sat. */
+  total: number | null;
+  total_max: number;
+  pass_total: number;
+  /** null unless the whole exam was sat. */
+  passed: boolean | null;
+};
 
 export type ExamItemResult = {
   item_id: string;
@@ -130,6 +158,8 @@ export type ExamResult = {
   answered: number;
   correct: number;
   items: ExamItemResult[];
+  /** Scaled score; absent on sittings recorded before scaled scoring existed, and on lessons outside a JLPT level. */
+  score?: JlptScore;
 };
 
 export function submitPaperExam(body: {
@@ -138,6 +168,17 @@ export function submitPaperExam(body: {
   answers: Array<{ item_id: string; choice_id: string }>;
 }) {
   return apiFetch<{ result: ExamResult }>("/api/evaluate/paper-exam", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Grade a full sitting: one pick per question id, written items and listening questions together. */
+export function submitFullExam(body: {
+  lesson_id: string;
+  answers: Array<{ item_id: string; choice_id: string }>;
+}) {
+  return apiFetch<{ result: ExamResult }>("/api/evaluate/full-exam", {
     method: "POST",
     body: JSON.stringify(body),
   });

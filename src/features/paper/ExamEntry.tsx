@@ -37,8 +37,14 @@ export function ExamEntry({
           </ul>
         </div>
         <div className="exam-entry__ctas">
+          {hasWritten && hasListening && (
+            <Link to={`${setup}?scope=full`} className="exam-entry__cta">
+              {t("exams.startFull")}
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
           {hasWritten && (
-            <Link to={setup} className="exam-entry__cta">
+            <Link to={setup} className={hasListening ? "exam-entry__cta exam-entry__cta--alt" : "exam-entry__cta"}>
               {t("exam.entry.cta")}
               <span aria-hidden="true">→</span>
             </Link>

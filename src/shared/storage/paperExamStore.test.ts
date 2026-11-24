@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  advanceToListening,
   clearExam,
   finishExam,
   formatClock,
@@ -7,12 +8,15 @@ import {
   getExamHistory,
   getExamSitting,
   lastMinutes,
+  levelMinutes,
   listRunningExams,
   markExamPlayed,
   parseMinutes,
   reviewableSittings,
   setExamAnswer,
   startExam,
+  startFullExam,
+  suggestedMinutes,
   syncExamHistoryFromServer,
   toggleExamFlag,
 } from "./paperExamStore";
@@ -43,6 +47,86 @@ describe("formatClock", () => {
   it("rounds a partial second up and never goes negative", () => {
     expect(formatClock(1_200)).toBe("0:02");
     expect(formatClock(-5_000)).toBe("0:00");
+  });
+});
+
+describe("official time per level", () => {
+  it("is the JLPT written + listening time of each level", () => {
+    expect(levelMinutes("N1")).toEqual({ written: 110, listening: 60 });
+    expect(levelMinutes("N2")).toEqual({ written: 105, listening: 50 });
+    expect(levelMinutes("N3")).toEqual({ written: 100, listening: 40 });
+    expect(levelMinutes("N4")).toEqual({ written: 80, listening: 35 });
+    expect(levelMinutes("n5")).toEqual({ written: 60, listening: 30 });
+  });
+
+  it("times a lesson of no known level as N2", () => {
+    expect(levelMinutes(undefined)).toEqual(levelMinutes("N2"));
+    expect(levelMinutes("N9")).toEqual(levelMinutes("N2"));
+  });
+
+  it("suggests the block time for the whole written part, listening and the full exam", () => {
+    expect(suggestedMinutes("N1", "all")).toBe(110);
+    expect(suggestedMinutes("N4", "listening")).toBe(35);
+    expect(suggestedMinutes("N3", "full")).toBe(140);
+    expect(suggestedMinutes("N2", "full")).toBe(155);
+  });
+
+  it("splits the written time over the parts by their size, in steps of 5, and the parts add up to about the block", () => {
+    const counts = { vocab: 30, grammar: 21, reading: 20 };
+    const parts = (["vocab", "grammar", "reading"] as const).map((p) => suggestedMinutes("N2", p, counts));
+    expect(parts.every((m) => m % 5 === 0 && m > 0)).toBe(true);
+    expect(parts[2]).toBeGreaterThan(parts[0]!); // reading takes the longest
+    expect(Math.abs(parts.reduce((a, b) => a + b, 0) - 105)).toBeLessThanOrEqual(10);
+  });
+});
+
+describe("full exam session", () => {
+  it("starts on the written part with the level's written time", () => {
+    const s = startFullExam("l", "N2", 1_000_000);
+    expect(s).toMatchObject({ scope: "full", phase: "written", writtenMinutes: 105, listeningMinutes: 50, minutes: 155 });
+    expect(s.endsAt).toBe(1_000_000 + 105 * 60_000);
+    expect(s.played).toEqual({});
+    expect(getExam("l")?.phase).toBe("written");
+  });
+
+  it("hands the written part in and starts the listening clock, keeping the written answers", () => {
+    startFullExam("l", "N1", 1_000_000);
+    setExamAnswer("l", "w1", "2");
+    const s = advanceToListening("l", 9_000_000)!;
+    expect(s.phase).toBe("listening");
+    expect(s.endsAt).toBe(9_000_000 + 60 * 60_000);
+    expect(s.answers).toEqual({ w1: "2" });
+    expect(s.cursor).toBeUndefined();
+  });
+
+  it("advances only once and only a full exam", () => {
+    startFullExam("l", "N2", 0);
+    const first = advanceToListening("l", 100)!;
+    const again = advanceToListening("l", 500_000)!;
+    expect(again.endsAt).toBe(first.endsAt);
+    startExam("v", "vocab", 20);
+    expect(advanceToListening("v")?.phase).toBeUndefined();
+  });
+
+  it("stays running until it is graded, even while its listening clock runs", () => {
+    startFullExam("l", "N2", 0);
+    advanceToListening("l", 100);
+    expect(listRunningExams().map((s) => s.lessonId)).toEqual(["l"]);
+  });
+
+  it("keeps the scaled score on the history line", () => {
+    startFullExam("l", "N2", 1_000);
+    const score = {
+      method: "irt-3pl-eap",
+      level: "N2",
+      scales: [],
+      total: 120,
+      total_max: 180,
+      pass_total: 90,
+      passed: true,
+    };
+    finishExam("l", { scope: "full", total: 2, answered: 2, correct: 2, items: [], score }, 5_000);
+    expect(getExamHistory()[0]).toMatchObject({ scope: "full", minutes: 155, score: { total: 120, passed: true } });
   });
 });
 

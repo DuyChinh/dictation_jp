@@ -58,14 +58,16 @@ export function PaperExamReviewPage() {
   const filter: Filter = FILTERS.some((f) => f.id === requestedFilter) ? (requestedFilter as Filter) : "review";
   const requestedNo = Number(params.get("q"));
 
-  const counts = useMemo(() => {
-    const items = result?.items ?? [];
-    return Object.fromEntries(FILTERS.map((f) => [f.id, items.filter((i) => matches(f.id, i)).length])) as Record<Filter, number>;
-  }, [result]);
-  const list = useMemo(() => (result?.items ?? []).filter((i) => matches(filter, i)), [result, filter]);
+  // A full exam also holds listening questions; those are reviewed in the listening practice, not here.
+  const written = useMemo(() => (result?.items ?? []).filter((i) => i.part !== "listening"), [result]);
+  const counts = useMemo(
+    () => Object.fromEntries(FILTERS.map((f) => [f.id, written.filter((i) => matches(f.id, i)).length])) as Record<Filter, number>,
+    [written],
+  );
+  const list = useMemo(() => written.filter((i) => matches(filter, i)), [written, filter]);
   // A question that is not in the chosen group (e.g. opened from the result) switches to "all" so it can show.
-  const current = (result?.items ?? []).find((i) => i.no === requestedNo) ?? list[0];
-  const shown = current && list.includes(current) ? list : (result?.items ?? []);
+  const current = written.find((i) => i.no === requestedNo) ?? list[0];
+  const shown = current && list.includes(current) ? list : written;
 
   function open(no: number, f: Filter = filter) {
     const next = new URLSearchParams(params);
@@ -140,7 +142,7 @@ export function PaperExamReviewPage() {
                   aria-selected={filter === f.id}
                   className={`exam-filter${filter === f.id ? " is-on" : ""}`}
                   onClick={() => {
-                    const first = result.items.find((i) => matches(f.id, i));
+                    const first = written.find((i) => matches(f.id, i));
                     const next = new URLSearchParams(params);
                     next.set("filter", f.id);
                     if (first) next.set("q", String(first.no));

@@ -618,3 +618,33 @@
   .exam-result__side { flex-basis: 100%; }
   .exam-slip__clock { font-size: 44px; }
 }
+
+/* Full exam: fixed per-level timing on the setup screen */
+.exam-phases { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.exam-phases li { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); }
+.exam-phases span { color: var(--text-muted); font-size: 13px; }
+.exam-phases strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.exam-slip__split { display: block; margin-top: 6px; color: var(--text-muted); font-size: 12px; }
+
+/* Scaled score (JLPT scale) on the result */
+.exam-score__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.exam-pass { padding: 4px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+.exam-pass.is-yes { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.exam-pass.is-no { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.exam-scales { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+.exam-scale { display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--card-border); border-radius: 14px; background: var(--card-bg); }
+.exam-scale.is-below { border-color: var(--bad); }
+.exam-scale__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text-muted); }
+.exam-scale__tag { font-style: normal; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+.exam-scale__score { font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.exam-scale__score small { font-size: 16px; color: var(--text-muted); font-weight: 500; }
+.exam-scale__bar { position: relative; height: 8px; border-radius: 999px; background: var(--surface-3); }
+.exam-scale__bar span { display: block; height: 100%; border-radius: inherit; background: var(--acc); }
+.exam-scale.is-below .exam-scale__bar span { background: var(--bad); }
+.exam-scale__bar i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text-muted); }
+.exam-scale__meta { color: var(--text-muted); font-size: 12px; }
+.exam-score__rule { margin: 14px 0 0; color: var(--text-muted); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .exam-phases { grid-template-columns: 1fr; }
+}
