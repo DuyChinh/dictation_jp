@@ -95,11 +95,13 @@ describe("ImageChoiceGrid", () => {
   it("selects image choice", () => {
     const onSelect = vi.fn();
     render(
-      <ImageChoiceGrid
-        choices={imageChoices}
-        selectedId={null}
-        onSelect={onSelect}
-      />,
+      <UiLanguageProvider>
+        <ImageChoiceGrid
+          choices={imageChoices}
+          selectedId={null}
+          onSelect={onSelect}
+        />
+      </UiLanguageProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: /1\. 図1/ }));
     expect(onSelect).toHaveBeenCalledWith("1");
@@ -108,11 +110,13 @@ describe("ImageChoiceGrid", () => {
   it("falls back to text caption when image errors", () => {
     const onSelect = vi.fn();
     render(
-      <ImageChoiceGrid
-        choices={[imageChoices[1]!]}
-        selectedId={null}
-        onSelect={onSelect}
-      />,
+      <UiLanguageProvider>
+        <ImageChoiceGrid
+          choices={[imageChoices[1]!]}
+          selectedId={null}
+          onSelect={onSelect}
+        />
+      </UiLanguageProvider>,
     );
     const img = screen.getByRole("img", { name: "図2" });
     fireEvent.error(img);

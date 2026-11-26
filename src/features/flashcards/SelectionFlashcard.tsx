@@ -7,7 +7,7 @@ import { CardEditor, type CardValue } from "./CardEditor";
 import { DeckCount, DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "./DeckPicker";
 import { useFt } from "./flashText";
 import { lastDeckId, loadRightLang, saveLastDeck } from "./prefs";
-import { DEFAULT_DECK_ID, addCard, isDuplicate, useFlashcards } from "./store";
+import { DEFAULT_DECK_ID, addCard, findTermDuplicate, isDuplicate, useFlashcards } from "./store";
 import { guessLang } from "./suggest";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import "./sync";
@@ -79,7 +79,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("dialog.avatar-viewer[open]") && close();
     const onDown = (e: PointerEvent) => {
       // a box opened from inside the panel (the picture picker) is part of it, though it sits elsewhere in the page
       if (!panelRef.current?.contains(e.target as Node) && !(e.target as Element).closest?.("[data-keep-open]")) close();
@@ -172,6 +172,7 @@ export function SelectionFlashcard({ containerRef }: { containerRef: RefObject<H
               }}
               submitLabel={ft("common.save")}
               onSubmit={save}
+              duplicateOf={(term) => (effectiveDeck === NEW_DECK ? undefined : findTermDuplicate(cards, effectiveDeck, term))}
               onCancel={close}
             />
           </>

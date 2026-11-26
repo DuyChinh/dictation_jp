@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { creditText, isAllowedImage } from "./cardImage";
 import type { CardImage } from "./types";
 
@@ -13,7 +14,9 @@ export function CardPicture({ image }: { image: CardImage }) {
   const credit = creditText(image);
   return (
     <span className="fc-side__pic">
-      <img src={image.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" draggable={false} onError={() => setBroken(true)} />
+      <Zoomable src={image.url}>
+        <img src={image.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" draggable={false} onError={() => setBroken(true)} />
+      </Zoomable>
       {credit && <small className="fc-side__credit">{credit}</small>}
     </span>
   );

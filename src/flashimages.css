@@ -96,10 +96,13 @@
 .fc-imgfield { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .fc-imgfield__thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1px solid var(--card-border); flex: none; }
 .fc-imgfield__credit { flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-muted); }
+.fc-row__thumbwrap, .fc-imgfield .zoomable { flex: none; }
+.fc-imgpick__current .zoomable { flex: none; }
+.fc-imgpick__zoom { display: block; width: 100%; height: 100%; }
 .fc-row__thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; flex: none; background: var(--surface-2); }
 @media (max-width: 640px) {
   .fc-row.has-image { grid-template-columns: 44px minmax(0, 1fr) auto; }
-  .fc-row.has-image .fc-row__thumb { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+  .fc-row.has-image .fc-row__thumbwrap { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
   .fc-row.has-image > .fc-side { grid-column: 2; }
   .fc-row.has-image .fc-row__tools { grid-column: 3; }
   .fc-row.has-image .fc-row__tag { grid-column: 3; }

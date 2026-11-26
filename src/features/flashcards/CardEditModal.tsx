@@ -8,7 +8,7 @@ import type { Card } from "./types";
 export function CardEditModal({ card, onClose }: { card: Card; onClose: () => void }) {
   const ft = useFt();
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("dialog.avatar-viewer[open]") && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);

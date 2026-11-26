@@ -20,6 +20,7 @@ import { saveListeningAttempt } from "../../shared/storage/listeningAttemptStore
 import { fmt } from "../../shared/i18n/format";
 import { buildAttempt } from "./attempts";
 import { Icon } from "../../shared/ui/Icon";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { LookupLayer } from "../dictionary/LookupLayer";
 import { SelectionZone } from "../flashcards/SelectionFlashcard";
 import { ChoiceCards } from "./ChoiceCards";
@@ -401,10 +402,12 @@ export function ListeningWorkspace({
                 )}
                 {q.image?.url && (
                   <figure className="listen-figure">
-                    <img
-                      src={q.image.url}
-                      alt={getLocalizedText(q.image.alt, uiLang) || t("listening.figureAlt")}
-                    />
+                    <Zoomable corner src={q.image.url} alt={getLocalizedText(q.image.alt, uiLang) || t("listening.figureAlt")}>
+                      <img
+                        src={q.image.url}
+                        alt={getLocalizedText(q.image.alt, uiLang) || t("listening.figureAlt")}
+                      />
+                    </Zoomable>
                   </figure>
                 )}
                 {mode === "image" ? (

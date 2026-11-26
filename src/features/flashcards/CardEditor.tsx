@@ -1,14 +1,16 @@
-import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "../../shared/api/dictionary";
+import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { creditText, imageKeywordsFrom, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
 import { useFt } from "./flashText";
 import { ImagePicker } from "./ImagePicker";
 import { useImgText } from "./imageText";
 import { loadRightLang, saveRightLang } from "./prefs";
 import { isFallback, suggestionsFromEntries, textFor, type Suggestion } from "./suggest";
-import { CARD_LANGS, type CardImage, type CardLang } from "./types";
+import { CARD_LANGS, type Card, type CardImage, type CardLang } from "./types";
 
 export type CardValue = {
   term: string;
@@ -35,6 +37,8 @@ type Props = {
   autoFocus?: boolean;
   /** Told what is typed in the boxes whenever it changes: a complete card, or null while a box is empty. */
   onDraft?: (draft: CardValue | null) => void;
+  /** The card already in the chosen deck with this term, if any: the term box then warns (yellow) before the word is added again. */
+  duplicateOf?: (term: string) => Card | undefined;
   /** Shown at the left of the buttons, e.g. how many cards were added so far. */
   status?: ReactNode;
 };
@@ -82,7 +86,7 @@ const meaningHint = (leftLang: CardLang, rightLang: CardLang): MeaningPair =>
  * its own language. Typing in the left box looks the word up and fills the right box with the meaning in the
  * language chosen there, until the learner types in the right box themselves.
  */
-export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft, status }: Props) {
+export function CardEditor({ initial, compact = false, submitLabel, onSubmit, onCancel, clearAfterSubmit = false, autoFocus = false, onDraft, status, duplicateOf }: Props) {
   const { uiLang } = useUiLanguage();
   const ft = useFt();
   const it = useImgText();
@@ -102,11 +106,13 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
   // Once the learner writes in the right box, lookups stop overwriting it.
   const rightTouched = useRef(Boolean(initial?.definition));
   const leftRef = useRef<HTMLTextAreaElement>(null);
+  const termWarnId = useId();
   // The left box text a picked suggestion put there itself: no need to look that up again.
   const skipSearchFor = useRef<string | null>(null);
   const rightLangRef = useRef(rightLang);
   rightLangRef.current = rightLang;
   const hasJapanese = leftLang === "ja" || rightLang === "ja";
+  const duplicate = duplicateOf?.(left.trim());
 
   function apply(s: Suggestion, index: number, lang: CardLang = rightLangRef.current) {
     setPicked(index);
@@ -307,7 +313,8 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
           </label>
           <GrowBox
             ref={leftRef}
-            className={leftLang === "ja" ? "jp" : ""}
+            className={`${leftLang === "ja" ? "jp" : ""}${duplicate ? " is-warn" : ""}`}
+            aria-describedby={duplicate ? termWarnId : undefined}
             value={left}
             onChange={(e) => {
               skipSearchFor.current = null;
@@ -324,6 +331,12 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
             maxLength={200}
             autoFocus={autoFocus}
           />
+          {duplicate && (
+            <p className="fc-field__warn" id={termWarnId} role="status">
+              <Icon name="alert" size={16} strokeWidth={2.2} />
+              <span>{fmt(ft("editor.termExists"), { meaning: duplicate.definition })}</span>
+            </p>
+          )}
         </div>
 
         <button type="button" className="fc-swap" onClick={swap} aria-label={ft("editor.swap")} title={ft("editor.swap")}>
@@ -390,7 +403,9 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
       <div className="fc-imgfield">
         {image && isAllowedImage(image) ? (
           <>
-            <img className="fc-imgfield__thumb" src={image.url} alt={it("img.cardPicture")} referrerPolicy="no-referrer" draggable={false} />
+            <Zoomable src={image.url} alt={it("img.cardPicture")}>
+              <img className="fc-imgfield__thumb" src={image.url} alt={it("img.cardPicture")} referrerPolicy="no-referrer" draggable={false} />
+            </Zoomable>
             <span className="fc-imgfield__credit">{creditText(image)}</span>
             <button type="button" className="btn btn--outline btn--sm" onClick={() => setPicking(true)}>
               <Icon name="image" size={16} />

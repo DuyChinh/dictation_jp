@@ -18,6 +18,7 @@ import {
   type ExamSession,
 } from "../../shared/storage/paperExamStore";
 import { Icon } from "../../shared/ui/Icon";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { ChoiceCards } from "../listening/ChoiceCards";
 import { ImageChoiceGrid } from "../listening/ImageChoiceGrid";
 import { flattenUnits, resolveListeningUi, sectionNo, type ListeningUnit } from "../listening/listeningUnits";
@@ -280,7 +281,9 @@ export function ExamListeningRunner({ lessonId, practice, session, onChange }: P
             )}
             {q.image?.url && (
               <figure className="listen-figure">
-                <img src={q.image.url} alt={getLocalizedText(q.image.alt, uiLang) || ""} />
+                <Zoomable corner src={q.image.url} alt={getLocalizedText(q.image.alt, uiLang) || ""}>
+                  <img src={q.image.url} alt={getLocalizedText(q.image.alt, uiLang) || ""} />
+                </Zoomable>
               </figure>
             )}
             {mode === "image" ? (

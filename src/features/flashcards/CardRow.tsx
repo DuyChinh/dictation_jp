@@ -1,4 +1,5 @@
 import { Icon } from "../../shared/ui/Icon";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { creditText, isAllowedImage } from "./cardImage";
 import { useFt } from "./flashText";
 import { sidesOf } from "./quiz";
@@ -12,7 +13,9 @@ export function CardRow({ card, isNew = false, onEdit, onDelete }: { card: Card;
   return (
     <li className={`fc-row${isNew ? " is-new" : ""}${isAllowedImage(card.image) ? " has-image" : ""}`}>
       {isAllowedImage(card.image) && (
-        <img className="fc-row__thumb" src={card.image.url} alt="" title={creditText(card.image)} loading="lazy" decoding="async" referrerPolicy="no-referrer" draggable={false} />
+        <Zoomable className="fc-row__thumbwrap" src={card.image.url}>
+          <img className="fc-row__thumb" src={card.image.url} alt="" title={creditText(card.image)} loading="lazy" decoding="async" referrerPolicy="no-referrer" draggable={false} />
+        </Zoomable>
       )}
       <SideView side={prompt} />
       <span className="fc-row__sep" aria-hidden="true">→</span>

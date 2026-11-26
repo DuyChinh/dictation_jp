@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PracticeChoice } from "../../shared/api/content";
 import { getLocalizedText } from "../../shared/content/getLocalizedText";
+import { Zoomable } from "../../shared/ui/Zoomable";
 
 type Props = {
   choices: PracticeChoice[];
@@ -102,21 +103,23 @@ function ImageChoiceCard({
                 Loading…
               </span>
             )}
-            <img
-              src={choice.image.url}
-              alt={alt}
-              onLoad={() => setLoading(false)}
-              onError={() => {
-                setImgError(true);
-                setLoading(false);
-              }}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                opacity: loading ? 0 : 1,
-              }}
-            />
+            <Zoomable corner src={choice.image.url} alt={alt} style={{ width: "100%", height: "100%" }}>
+              <img
+                src={choice.image.url}
+                alt={alt}
+                onLoad={() => setLoading(false)}
+                onError={() => {
+                  setImgError(true);
+                  setLoading(false);
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  opacity: loading ? 0 : 1,
+                }}
+              />
+            </Zoomable>
           </>
         ) : (
           <span style={{ padding: 8, fontSize: "0.9rem", textAlign: "center" }}>

@@ -6,7 +6,7 @@ import { CardRow } from "../features/flashcards/CardRow";
 import { DeckPicker, NEW_DECK, needsDeckName, resolveDeck } from "../features/flashcards/DeckPicker";
 import { useFt } from "../features/flashcards/flashText";
 import { saveLastDeck } from "../features/flashcards/prefs";
-import { DEFAULT_DECK_ID, addCard, cardsOf, isDuplicate, liveCards, liveDecks, readState, useFlashcards } from "../features/flashcards/store";
+import { DEFAULT_DECK_ID, addCard, cardsOf, findTermDuplicate, isDuplicate, liveCards, liveDecks, readState, useFlashcards } from "../features/flashcards/store";
 import { syncFlashcards } from "../features/flashcards/sync";
 import { useUndoDelete } from "../features/flashcards/UndoDelete";
 import type { Card } from "../features/flashcards/types";
@@ -137,6 +137,7 @@ export function FlashcardCreatePage() {
           <CardEditor
             submitLabel={ft("create.add")}
             onSubmit={save}
+            duplicateOf={(term) => (effective === NEW_DECK ? undefined : findTermDuplicate(liveCards(state), effective, term))}
             onDraft={(d) => (draft.current = d)}
             clearAfterSubmit
             autoFocus

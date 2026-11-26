@@ -387,6 +387,12 @@ export function isDuplicate(cards: Card[], deckId: string, term: string, definit
   return cards.some((c) => c.deckId === deckId && !c.deleted && sameText(c.term, term) && sameText(c.definition, definition));
 }
 
+/** A live card in the deck with this same term (whatever its meaning), if there is one. */
+export function findTermDuplicate(cards: Card[], deckId: string, term: string): Card | undefined {
+  if (!clean(term)) return undefined;
+  return cards.find((c) => c.deckId === deckId && !c.deleted && sameText(c.term, term));
+}
+
 /** Fills in the Sino-Vietnamese reading of every card made from these dictionary entries that has none yet. */
 export function applyHanViet(byEntry: Record<number, string>): void {
   const s = readState();

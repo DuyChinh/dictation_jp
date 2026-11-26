@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { searchImages, suggestImageQueries, type ImageHit } from "../../shared/api/images";
 import { Icon } from "../../shared/ui/Icon";
+import { Zoomable } from "../../shared/ui/Zoomable";
 import { isAllowedImage } from "./cardImage";
 import { useImgText } from "./imageText";
 import type { CardImage } from "./types";
@@ -144,7 +145,7 @@ export function ImagePicker({ initialQuery, fallbackQuery, word, suggestions, cu
   // Escape closes this box only, not a box it was opened from (the capture phase gets there first)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || document.querySelector("dialog.avatar-viewer[open]")) return;
       e.stopPropagation();
       onCloseRef.current();
     };
@@ -314,7 +315,9 @@ export function ImagePicker({ initialQuery, fallbackQuery, word, suggestions, cu
 
         {current && isAllowedImage(current) && (
           <div className="fc-imgpick__current">
-            <img src={current.url} alt="" referrerPolicy="no-referrer" draggable={false} />
+            <Zoomable src={current.url}>
+              <img src={current.url} alt="" referrerPolicy="no-referrer" draggable={false} />
+            </Zoomable>
             <span>{it("img.current")}</span>
             {onRemove && (
               <button type="button" className="btn btn--outline btn--sm" onClick={onRemove}>
@@ -360,15 +363,17 @@ export function ImagePicker({ initialQuery, fallbackQuery, word, suggestions, cu
                 return (
                   <li key={hit.url}>
                     <button type="button" className="fc-imgpick__tile" onClick={() => onPick(hit)} aria-label={`${it("img.use")}: ${hit.title || hit.by || ""}`.trim()} title={[hit.title, credit].filter(Boolean).join(" — ")}>
-                      <img
-                        src={hit.url}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        referrerPolicy="no-referrer"
-                        draggable={false}
-                        onError={() => setBroken((b) => new Set(b).add(hit.url))}
-                      />
+                      <Zoomable corner className="fc-imgpick__zoom" src={hit.url}>
+                        <img
+                          src={hit.url}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          draggable={false}
+                          onError={() => setBroken((b) => new Set(b).add(hit.url))}
+                        />
+                      </Zoomable>
                       {credit && <span className="fc-imgpick__credit">{credit}</span>}
                     </button>
                   </li>
