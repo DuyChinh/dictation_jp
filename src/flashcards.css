@@ -670,8 +670,11 @@ a.fc-mode:hover { border-color: var(--primary-color); transform: translateY(-1px
 .fc-learn__meta .fc-learn__count { margin: 0; }
 .fc-autochip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 999px; }
 .fc-autochip:hover { border-color: var(--primary-color); }
+.fc-autochip--icon { flex: none; width: 34px; padding: 0; justify-content: center; }
+.fc-autochip:disabled { opacity: 0.4; cursor: default; }
+.fc-autochip:disabled:hover { border-color: var(--card-border); }
 .fc-autochip.is-on { color: var(--primary-color); background: var(--primary-light); border-color: var(--primary-color); }
-@media (pointer: coarse) { .fc-autochip { min-height: 44px; } .fc-auto__secs select { min-height: 44px; font-size: 16px; } }
+@media (pointer: coarse) { .fc-autochip { min-height: 44px; } .fc-autochip--icon { width: 44px; } .fc-auto__secs select { min-height: 44px; font-size: 16px; } }
 
 /* sharing a deck */
 .fc-share { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--card-border); }

@@ -452,6 +452,34 @@ describe("LearnMode keeps your place", () => {
     expect(screen.getByRole("button", { name: "Bắt đầu" })).toBeTruthy();
   });
 
+  it("undo takes back the last answer: same card again, box and counts as before, and it is not marked missed", () => {
+    begin(deckCards());
+    const undoBtn = () => screen.getByRole("button", { name: /Quay lại thẻ trước/ }) as HTMLButtonElement;
+    expect(undoBtn().disabled).toBe(true);
+    const first = promptNow();
+    const before = readState().cards.map((c) => ({ id: c.id, box: c.box, right: c.right, wrong: c.wrong, due: c.due }));
+    fireEvent.click(screen.getByRole("button", { name: /Chưa nhớ/ }));
+    expect(readState().cards.some((c) => c.wrong === 1)).toBe(true);
+    expect(promptNow()).not.toBe(first);
+    expect(undoBtn().disabled).toBe(false);
+    fireEvent.click(undoBtn());
+    expect(promptNow()).toBe(first);
+    expect(undoBtn().disabled).toBe(true);
+    expect(readState().cards.map((c) => ({ id: c.id, box: c.box, right: c.right, wrong: c.wrong, due: c.due }))).toEqual(before);
+    // answering again after the undo works, and finishing with a correct answer leaves nothing missed
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(readState().cards.filter((c) => c.right === 1)).toHaveLength(1);
+  });
+
+  it("undo is also there on the finished screen, for a slip on the last card", () => {
+    begin(deckCards().slice(0, 1));
+    fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));
+    expect(screen.getByText("Hoàn thành!")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Quay lại thẻ trước/ }));
+    expect(screen.queryByText("Hoàn thành!")).toBeNull();
+    expect(readState().cards[0]!.right).toBe(0);
+  });
+
   it("start over goes back to the start screen and drops the saved place", () => {
     begin(deckCards());
     fireEvent.click(screen.getByRole("button", { name: /Đã nhớ/ }));

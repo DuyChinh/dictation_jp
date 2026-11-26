@@ -174,7 +174,7 @@ function RecentChip({ lessonId, position, at }: { lessonId: string; position?: P
   const inner = (
     <>
       <Icon name="clock" size={14} strokeWidth={2} />
-      {text}
+      <span className="lesson-card__recent-text">{text}</span>
     </>
   );
   return position ? (

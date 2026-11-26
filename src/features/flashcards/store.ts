@@ -325,6 +325,22 @@ export function recordAnswers(results: Array<{ cardId: string; correct: boolean 
 
 export const recordAnswer = (cardId: string, correct: boolean) => recordAnswers([{ cardId, correct }]);
 
+/** What an answer changes on a card, so that one answer can be taken back. */
+export type CardProgress = Pick<Card, "box" | "due" | "right" | "wrong">;
+
+export function progressOf(cardId: string): CardProgress | null {
+  const c = readState().cards.find((x) => x.id === cardId && !x.deleted);
+  return c ? { box: c.box, due: c.due, right: c.right, wrong: c.wrong } : null;
+}
+
+/** Puts a card's box, due date and counts back as they were before an answer. */
+export function restoreProgress(cardId: string, before: CardProgress): void {
+  const s = readState();
+  if (!s.cards.some((c) => c.id === cardId && !c.deleted)) return;
+  const now = Date.now();
+  writeState({ ...s, cards: s.cards.map((c) => (c.id === cardId && !c.deleted ? { ...c, ...before, updatedAt: now } : c)) });
+}
+
 export type DeckStats = { total: number; fresh: number; learning: number; learned: number; due: number };
 
 export function deckStats(cards: Card[], now = Date.now()): DeckStats {

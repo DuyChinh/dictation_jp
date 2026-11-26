@@ -1,6 +1,10 @@
 /* Pictures on flashcards: shown with the question, the picker, the card form and the card list. */
 
 /* ---------- a picture with the asked side ---------- */
+/* A side with a picture is as wide as its credit line unless it is held to its card: a long credit ("Corps photographer LT. Stephen E. Korpanty; restored by Adam Cuerden · Public domain") is one unbroken line,
+   so on a phone the whole side grew past the card and was cut off on both sides. Holding the side to its card lets the credit end in an ellipsis. */
+.fc-side { max-width: 100%; }
+.fc-side__credit { min-width: 0; }
 .fc-side__pic { flex: 1 0 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; min-width: 0; }
 .fc-side__pic img {
   display: block; width: auto; height: auto; max-width: min(100%, 320px); max-height: 180px; object-fit: contain;

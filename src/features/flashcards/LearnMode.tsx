@@ -8,7 +8,7 @@ import { useBackTo } from "./StudyContext";
 import { pickFlip, shuffle, sidesOf } from "./quiz";
 import { AUTO_FLIP_CHOICES, loadAutoFlip, saveAutoFlip, useShuffle, type AutoFlip } from "./prefs";
 import { clearLearn, resumeLearn, saveLearn } from "./learnProgress";
-import { isReviewDue, recordAnswer } from "./store";
+import { isReviewDue, progressOf, recordAnswer, restoreProgress, type CardProgress } from "./store";
 import { SideView } from "./SideView";
 import type { Card, Direction } from "./types";
 
@@ -16,6 +16,8 @@ type Props = { deckId: string; cards: Card[]; direction: Direction };
 type Scope = "all" | "due" | "review";
 
 type Item = { card: Card; flip: boolean };
+/** An answer given in this round, with what the card was like before it, so it can be taken back. */
+type Given = { cardId: string; before: CardProgress | null; known: boolean };
 
 /** How far (px) a card must be dragged sideways to count as an answer, and how far a press may move and still be a tap. */
 const SWIPE_MIN = 70;
@@ -44,6 +46,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
   const [index, setIndex] = useState(resumed?.index ?? 0);
   const [flipped, setFlipped] = useState(false);
   const [unknown, setUnknown] = useState<string[]>(resumed?.unknown ?? []);
+  const [given, setGiven] = useState<Given[]>([]);
   const [showResumed, setShowResumed] = useState(resumed !== null);
   const [auto, setAutoState] = useState<AutoFlip>(loadAutoFlip);
   const [linger, setLinger] = useState<string | null>(null);
@@ -75,6 +78,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
     setIndex(0);
     setFlipped(false);
     setUnknown([]);
+    setGiven([]);
   }
 
   // remember the round after every answer, and forget it once it is finished
@@ -102,6 +106,7 @@ export function LearnMode({ deckId, cards, direction }: Props) {
     setIndex(0);
     setFlipped(false);
     setUnknown([]);
+    setGiven([]);
     setShowResumed(false);
   }
 
@@ -110,6 +115,9 @@ export function LearnMode({ deckId, cards, direction }: Props) {
 
   function answer(known: boolean) {
     if (!item) return;
+    // read before it is written; an updater function would run after
+    const entry: Given = { cardId: item.card.id, before: progressOf(item.card.id), known };
+    setGiven((g) => [...g, entry]);
     recordAnswer(item.card.id, known);
     setShowResumed(false);
     if (!known) setUnknown((u) => [...u, item.card.id]);
@@ -119,6 +127,22 @@ export function LearnMode({ deckId, cards, direction }: Props) {
     setDragging(false);
     setLeaving(null);
   }
+
+  /** Takes back the last answer (a mis-tap): the card returns to the front with the box and counts it had before. */
+  function undo() {
+    const last = given[given.length - 1];
+    if (!last || leaving) return;
+    clearTimeout(leaveTimer.current);
+    if (last.before) restoreProgress(last.cardId, last.before);
+    if (!last.known) setUnknown((u) => u.filter((id) => id !== last.cardId));
+    setGiven((g) => g.slice(0, -1));
+    setIndex((i) => Math.max(0, i - 1));
+    setFlipped(false);
+    setDx(0);
+    setDragging(false);
+    setLeaving(null);
+  }
+  const canUndo = given.length > 0 && !leaving;
 
   // the card turns over by itself after a while, unless it is being dragged
   useEffect(() => {
@@ -263,6 +287,11 @@ export function LearnMode({ deckId, cards, direction }: Props) {
             {ft("learn.again")}
           </button>
           <Link className="btn btn--ghost" to={backTo}>{ft("common.backToDeck")}</Link>
+          {canUndo && (
+            <button type="button" className="btn btn--ghost" onClick={undo}>
+              <Icon name="undo" size={18} /> {ft("learn.undo")}
+            </button>
+          )}
         </div>
       </section>
     );
@@ -277,6 +306,9 @@ export function LearnMode({ deckId, cards, direction }: Props) {
       </div>
       <div className="fc-learn__meta">
         <p className="fc-learn__count">{index + 1} / {session.length}</p>
+        <button type="button" className="fc-autochip fc-autochip--icon" onClick={undo} disabled={!canUndo} aria-label={ft("learn.undo")} title={ft("learn.undo")}>
+          <Icon name="undo" size={16} />
+        </button>
         <button
           type="button"
           className={`fc-autochip${auto.on ? " is-on" : ""}`}

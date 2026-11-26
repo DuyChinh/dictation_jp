@@ -956,7 +956,7 @@
   gap: 18px;
 }
 
-.lesson-card__top { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.lesson-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 26px; }
 .lesson-card__recent {
   margin-left: auto;
   min-width: 0;
@@ -970,11 +970,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .lesson-card__recent svg { flex-shrink: 0; }
+/* a long "where · when" drops to its own line (the row wraps) and is cut with an ellipsis only if even that is too narrow */
+.lesson-card__recent-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lesson-card__recent:is(a) { text-decoration: none; }
 .lesson-card__recent:is(a):hover { filter: brightness(1.12); }
 
