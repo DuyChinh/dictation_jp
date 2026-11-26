@@ -97,7 +97,7 @@
 .dict-entry__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
 /* the word keeps its full width on one line; the badges drop below it when there is no room beside it */
 .dict-entry__word { display: flex; flex-direction: column; flex: 1 1 auto; min-width: min(100%, 7em); }
-.dict-entry__reading { font-size: 13px; color: var(--text-muted); line-height: 1.3; }
+.dict-entry__headword rt { font-size: 0.45em; font-weight: 400; color: var(--text-muted); letter-spacing: 0; }
 .dict-entry__line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .dict-examples__ja { display: flex; align-items: center; gap: 8px; }
 .speak-btn {
@@ -108,7 +108,7 @@
 .speak-btn:hover { background: var(--primary-light); border-color: var(--primary-color); }
 .speak-btn.is-speaking { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
 .dict-entry--compact .speak-btn { width: 28px; height: 28px; }
-.dict-entry__headword { font-size: 28px; line-height: 1.3; font-weight: 600; color: var(--text-main); text-decoration: none; overflow-wrap: break-word; word-break: keep-all; }
+.dict-entry__headword { font-size: 28px; line-height: 1.6; font-weight: 600; color: var(--text-main); text-decoration: none; overflow-wrap: break-word; word-break: keep-all; }
 a.dict-entry__headword:hover { color: var(--primary-color); }
 .dict-entry--compact .dict-entry__headword { font-size: 22px; }
 .dict-entry__hv { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: var(--primary-hover); }

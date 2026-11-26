@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { DictEntry } from "../../shared/api/dictionary";
 import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
+import { Furigana } from "../../shared/ui/Furigana";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
 import { AddEntryButton } from "../flashcards/AddEntryButton";
 import { EntryImageButton } from "../flashcards/EntryImageButton";
@@ -50,14 +51,13 @@ export function EntryCard({ entry, meaning = "both", compact = false, linkHeadwo
     <article className={`dict-entry${compact ? " dict-entry--compact" : ""}`}>
       <header className="dict-entry__head">
         <div className="dict-entry__word">
-          {reading && <span className="dict-entry__reading jp" lang="ja">{reading}</span>}
           <div className="dict-entry__line">
             {linkHeadword ? (
               <Link className="dict-entry__headword jp" lang="ja" to={`/dictionary?q=${encodeURIComponent(word)}&lang=ja`}>
-                {word}
+                <Furigana word={word} reading={reading} />
               </Link>
             ) : (
-              <strong className="dict-entry__headword jp" lang="ja">{word}</strong>
+              <strong className="dict-entry__headword jp" lang="ja"><Furigana word={word} reading={reading} /></strong>
             )}
             <SpeakButton text={reading || word} />
             {hanViet && (

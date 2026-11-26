@@ -1,4 +1,6 @@
+import { Furigana } from "../../shared/ui/Furigana";
 import { SpeakButton } from "../../shared/ui/SpeakButton";
+import { furiganaSegments } from "../../shared/utils/furigana";
 import { CardPicture } from "./CardPicture";
 import { useShowHanViet, useShowHiragana, useShowImages } from "./prefs";
 import type { Side } from "./types";
@@ -13,18 +15,20 @@ export function SideView({ side, big = false, speak = true }: { side: Side; big?
   const [images] = useShowImages();
   const ja = side.lang === "ja";
   const showReading = ja && side.reading && side.reading !== side.text && side.showReading !== false;
+  // The reading sits right above the kanji it belongs to (not above the okurigana); a word with no kanji keeps the line above.
+  const withRuby = Boolean(showReading) && furiganaSegments(side.text, side.reading) !== null;
   return (
     <span className={`fc-side${big ? " fc-side--big" : ""}${ja ? " jp" : ""}`} lang={ja ? "ja" : side.lang}>
       {big && images && side.image && <CardPicture image={side.image} />}
-      {showReading && <span className="fc-side__reading">{side.reading}</span>}
-      <span className="fc-side__text">
+      {showReading && !withRuby && <span className="fc-side__reading">{side.reading}</span>}
+      <span className={`fc-side__text${withRuby ? " fc-side__text--ruby" : ""}`}>
         {side.lead && hiragana && (
           <>
             <span className="fc-side__lead jp" lang="ja">{side.lead}</span>
             <span className="fc-side__colon">: </span>
           </>
         )}
-        {side.text}
+        {withRuby ? <Furigana word={side.text} reading={side.reading} /> : side.text}
       </span>
       {side.trail && hanViet && <span className="fc-side__trail" title="Âm Hán Việt">{side.trail}</span>}
       {ja && speak && <SpeakButton text={side.reading || side.text} />}
