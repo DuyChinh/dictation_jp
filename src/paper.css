@@ -184,9 +184,10 @@
 .paper-qhint { font-size: 14px; color: var(--text-muted); }
 .paper-stem { margin: 0; font-size: 22px; line-height: 1.8; font-weight: 500; padding: 2px 0 6px; }
 .paper-stem u { text-decoration: none; border-bottom: 3px solid var(--primary-color); padding-bottom: 2px; }
+/* two answers per row at any width (a 400px minimum let three fit on wide screens and left the fourth alone); phones and the side panel stack them */
 .paper-choices { display: flex; flex-wrap: wrap; gap: 16px; }
 .paper-tile {
-  flex: 1 1 400px; min-width: 0; display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-radius: 16px; text-align: left;
+  flex: 1 1 calc(50% - 8px); min-width: 0; display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border-radius: 16px; text-align: left;
   border: 1.5px solid var(--card-border); background: var(--card-bg); color: var(--text-main); font: inherit; cursor: pointer;
   -webkit-user-select: text; user-select: text;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
