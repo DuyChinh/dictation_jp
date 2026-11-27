@@ -23,12 +23,16 @@ export function FlashcardCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const { decks, state } = useFlashcards();
+  const { decks, folders, state } = useFlashcards();
+  // Opened from a folder (?folder=) the new deck is made inside it.
+  const folderParam = params.get("folder") ?? "";
   // Opened from a deck (?deck=) it adds there; opened from "Create flashcard" it asks for a new deck's name first.
   // The remembered deck is only what the picker offers again after a card was added.
-  const [deckId, setDeckId] = useState(() => params.get("deck") ?? (decks.length ? NEW_DECK : DEFAULT_DECK_ID));
+  const [deckId, setDeckId] = useState(() => params.get("deck") ?? (decks.length || folderParam ? NEW_DECK : DEFAULT_DECK_ID));
   // the name typed for a deck that is made when the first card is added
   const [newName, setNewName] = useState("");
+  // the folder a new deck goes into (empty: none)
+  const [newFolder, setNewFolder] = useState(() => (folders.some((f) => f.id === folderParam) ? folderParam : ""));
   // cards made on this visit, to point out in the list
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Card | null>(null);
@@ -48,7 +52,7 @@ export function FlashcardCreatePage() {
   /** Adds a card to the chosen deck (making the default deck if there is none). A repeat of a card already there is skipped. */
   function put(v: CardValue): Card | null {
     const current = readState();
-    const target = resolveDeck(liveDecks(current), deckRef.current, nameRef.current, newNameRef.current);
+    const target = resolveDeck(liveDecks(current), deckRef.current, nameRef.current, newNameRef.current, folderRef.current);
     if (isDuplicate(liveCards(readState()), target, v.term, v.definition)) return null;
     const card = addCard({ deckId: target, ...v, reading: v.reading || undefined, hanViet: v.hanViet || undefined });
     saveLastDeck(target);
@@ -70,8 +74,10 @@ export function FlashcardCreatePage() {
   const deckRef = useRef(effective);
   const nameRef = useRef(ft("deck.default"));
   const newNameRef = useRef("");
+  const folderRef = useRef(newFolder);
   deckRef.current = effective;
   newNameRef.current = newName;
+  folderRef.current = newFolder;
   nameRef.current = ft("deck.default");
   const flush = useCallback(() => {
     const v = draft.current;
@@ -133,6 +139,8 @@ export function FlashcardCreatePage() {
             label={ft("create.deck")}
             newName={newName}
             onNewName={setNewName}
+            folder={newFolder}
+            onFolder={setNewFolder}
           />
           <CardEditor
             submitLabel={ft("create.add")}

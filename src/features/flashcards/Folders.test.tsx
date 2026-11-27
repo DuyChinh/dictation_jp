@@ -109,6 +109,14 @@ describe("the deck list with folders", () => {
     expect(screen.getByText("Trong thư mục")).toBeTruthy();
   });
 
+  it("has a plus on each folder that opens the create page for that folder", () => {
+    const f = createFolder("N3")!;
+    createDeck("A", "a");
+    page();
+    const add = screen.getByRole("link", { name: "Thêm flashcard vào thư mục N3" });
+    expect(add.getAttribute("href")).toBe(`/flashcards/create?folder=${f.id}`);
+  });
+
   it("creates a folder from the toolbar and opens it", () => {
     createDeck("A", "a");
     page();

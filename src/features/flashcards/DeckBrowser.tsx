@@ -168,6 +168,9 @@ export function DeckBrowser({ decks, shown, cards, folders, searching, matchedFo
                       {due > 0 && <span className="fc-deck__due"> · {fmt(ft("page.dueCount"), { n: due })}</span>}
                     </span>
                   </button>
+                  <Link to={`/flashcards/create?folder=${encodeURIComponent(f.id)}`} className="fc-folder__btn fc-folder__btn--add" aria-label={fmt(ft("folder.addCardItem"), { name: f.name })} title={ft("folder.addCard")}>
+                    <Icon name="plus" size={18} strokeWidth={2.2} />
+                  </Link>
                   <button type="button" className="fc-folder__btn" onClick={() => setRenaming({ id: f.id, name: f.name })} aria-label={fmt(ft("folder.renameItem"), { name: f.name })} title={ft("folder.rename")}>
                     <Icon name="pencil" size={16} />
                   </button>

@@ -119,10 +119,11 @@ export function newId(): string {
 
 const clean = (s: string) => s.normalize("NFC").trim();
 
-export function createDeck(name: string, id: string = newId()): Deck {
+export function createDeck(name: string, id: string = newId(), folderId?: string): Deck {
   const now = Date.now();
-  const deck: Deck = { id, name: clean(name).slice(0, 80), createdAt: now, updatedAt: now };
   const s = readState();
+  const inFolder = folderId && liveFolders(s).some((f) => f.id === folderId) ? { folderId } : {};
+  const deck: Deck = { id, name: clean(name).slice(0, 80), createdAt: now, updatedAt: now, ...inFolder };
   writeState({ ...s, decks: [...s.decks.filter((d) => d.id !== id), deck] });
   return deck;
 }

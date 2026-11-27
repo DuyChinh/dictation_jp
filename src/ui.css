@@ -947,7 +947,7 @@
 }
 
 .lesson-card {
-  padding: 24px;
+  padding: 18px;
   border-radius: 16px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -956,25 +956,25 @@
   gap: 18px;
 }
 
-.lesson-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 26px; }
+.lesson-card__top { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-height: 26px; }
 .lesson-card__recent {
   margin-left: auto;
   min-width: 0;
   height: 26px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 6px;
   background: var(--acc-soft);
   color: var(--acc);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   max-width: 100%;
   white-space: nowrap;
 }
 .lesson-card__recent svg { flex-shrink: 0; }
-/* a long "where · when" drops to its own line (the row wraps) and is cut with an ellipsis only if even that is too narrow */
+/* the badge and the "where · when" chip always share one line; the chip is cut with an ellipsis only if the card is too narrow for it (the full text is in its title) */
 .lesson-card__recent-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lesson-card__recent:is(a) { text-decoration: none; }
 .lesson-card__recent:is(a):hover { filter: brightness(1.12); }

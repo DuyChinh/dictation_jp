@@ -4,7 +4,7 @@ import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom
 import { UiLanguageProvider } from "../../shared/i18n/UiLanguageContext";
 import { FlashcardCreatePage } from "../../pages/FlashcardCreatePage";
 import { FlashcardDeckPage } from "../../pages/FlashcardDeckPage";
-import { addCard, cardsOf, createDeck, liveCards, readState } from "./store";
+import { addCard, cardsOf, createDeck, createFolder, liveCards, readState } from "./store";
 import { saveGame } from "./gameProgress";
 import { loadDirection } from "./prefs";
 
@@ -242,5 +242,26 @@ describe("editing and deleting on the create page", () => {
     expect(terms()).toEqual(["犬", "猫"]);
     fireEvent.click(screen.getByRole("button", { name: "Sửa: 犬" }));
     expect(screen.getByRole("dialog", { name: "Sửa" })).toBeTruthy();
+  });
+});
+
+describe("choosing a folder while creating cards", () => {
+  it("puts a new deck in the folder it was opened from", () => {
+    const folder = createFolder("N2 FINAL")!;
+    open([`/flashcards/create?folder=${folder.id}`]);
+    fireEvent.change(screen.getByPlaceholderText("Tên bộ thẻ"), { target: { value: "Bộ mới" } });
+    expect((screen.getByLabelText("Thư mục (không bắt buộc)") as HTMLSelectElement).value).toBe(folder.id);
+    type("犬", "chó");
+    fireEvent.click(screen.getByRole("button", { name: "Thêm thẻ" }));
+    expect(readState().decks.find((d) => d.name === "Bộ mới")?.folderId).toBe(folder.id);
+  });
+
+  it("lets the folder be picked for a new deck, and moves an existing deck when it is changed", () => {
+    const folder = createFolder("Tuần 1")!;
+    open([CREATE]);
+    const select = screen.getByLabelText("Thư mục (không bắt buộc)") as HTMLSelectElement;
+    expect(select.value).toBe("");
+    fireEvent.change(select, { target: { value: folder.id } });
+    expect(readState().decks.find((d) => d.id === "deck1")?.folderId).toBe(folder.id);
   });
 });
