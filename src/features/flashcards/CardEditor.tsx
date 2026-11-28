@@ -3,6 +3,7 @@ import { lookupWord, searchDictionary, type DictEntry, type MeaningPair } from "
 import { fmt } from "../../shared/i18n/format";
 import { useUiLanguage } from "../../shared/i18n/UiLanguageContext";
 import { Icon } from "../../shared/ui/Icon";
+import { SpeakButton } from "../../shared/ui/SpeakButton";
 import { Zoomable } from "../../shared/ui/Zoomable";
 import { creditText, imageKeywordsFrom, imageQueryFrom, isAllowedImage, toCardImage } from "./cardImage";
 import { useFt } from "./flashText";
@@ -303,14 +304,17 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
     <form className={`fc-editor${compact ? " fc-editor--compact" : ""}`} onSubmit={submit}>
       <div className="fc-editor__pair">
         <div className="fc-field">
-          <label className="fc-field__lang">
-            <span className="visually-hidden">{ft("editor.leftLang")}</span>
-            <select value={leftLang} onChange={(e) => changeLeftLang(e.target.value as CardLang)}>
-              {CARD_LANGS.map((l) => (
-                <option key={l} value={l}>{langName(l)}</option>
-              ))}
-            </select>
-          </label>
+          <div className="fc-field__top">
+            <label className="fc-field__lang">
+              <span className="visually-hidden">{ft("editor.leftLang")}</span>
+              <select value={leftLang} onChange={(e) => changeLeftLang(e.target.value as CardLang)}>
+                {CARD_LANGS.map((l) => (
+                  <option key={l} value={l}>{langName(l)}</option>
+                ))}
+              </select>
+            </label>
+            {leftLang === "ja" && <SpeakButton text={reading.trim() || left.trim()} />}
+          </div>
           <GrowBox
             ref={leftRef}
             className={`${leftLang === "ja" ? "jp" : ""}${duplicate ? " is-warn" : ""}`}
@@ -344,14 +348,17 @@ export function CardEditor({ initial, compact = false, submitLabel, onSubmit, on
         </button>
 
         <div className="fc-field">
-          <label className="fc-field__lang">
-            <span className="visually-hidden">{ft("editor.rightLang")}</span>
-            <select value={rightLang} onChange={(e) => changeRightLang(e.target.value as CardLang)}>
-              {CARD_LANGS.map((l) => (
-                <option key={l} value={l}>{langName(l)}</option>
-              ))}
-            </select>
-          </label>
+          <div className="fc-field__top">
+            <label className="fc-field__lang">
+              <span className="visually-hidden">{ft("editor.rightLang")}</span>
+              <select value={rightLang} onChange={(e) => changeRightLang(e.target.value as CardLang)}>
+                {CARD_LANGS.map((l) => (
+                  <option key={l} value={l}>{langName(l)}</option>
+                ))}
+              </select>
+            </label>
+            {rightLang === "ja" && <SpeakButton text={leftLang === "ja" ? right.trim() : reading.trim() || right.trim()} />}
+          </div>
           <GrowBox
             className={rightLang === "ja" ? "jp" : ""}
             value={right}
